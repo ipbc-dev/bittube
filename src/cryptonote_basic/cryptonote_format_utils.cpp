@@ -41,6 +41,7 @@ using namespace epee;
 #include "crypto/crypto.h"
 #include "crypto/hash.h"
 #include "ringct/rctSigs.h"
+#include "serialization/binary_utils.h"
 
 #undef MONERO_DEFAULT_LOG_CATEGORY
 #define MONERO_DEFAULT_LOG_CATEGORY "cn"
@@ -497,6 +498,26 @@ namespace cryptonote
     return true;
   }
   //---------------------------------------------------------------
+  bool append_mm_tag_to_extra(std::vector<uint8_t>& tx_extra, const tx_extra_merge_mining_tag& mm_tag)
+  {
+	blobdata blob;
+	if (!t_serializable_object_to_blob(mm_tag, blob))
+	  return false;
+
+	tx_extra.push_back(TX_EXTRA_MERGE_MINING_TAG);
+	std::copy(reinterpret_cast<const uint8_t*>(blob.data()), reinterpret_cast<const uint8_t*>(blob.data() + blob.size()), std::back_inserter(tx_extra));
+	return true;
+  }
+  //---------------------------------------------------------------
+  bool get_mm_tag_from_extra(const std::vector<uint8_t>& tx_extra, tx_extra_merge_mining_tag& mm_tag)
+  {
+	std::vector<tx_extra_field> tx_extra_fields;
+	if (!parse_tx_extra(tx_extra, tx_extra_fields))
+	  return false;
+
+	return find_tx_extra_field_by_type(tx_extra_fields, mm_tag);
+  }
+  //---------------------------------------------------------------
   void set_payment_id_to_tx_extra_nonce(blobdata& extra_nonce, const crypto::hash& payment_id)
   {
     extra_nonce.clear();
@@ -872,39 +893,25 @@ namespace cryptonote
     return get_transaction_hash(t, res, &blob_size);
   }
   //---------------------------------------------------------------
-  blobdata get_block_hashing_blob(const block& b)
+   bool get_block_hashing_blob(const block& b, blobdata& blob)
   {
-    blobdata blob = t_serializable_object_to_blob(static_cast<block_header>(b));
+    blob = t_serializable_object_to_blob(static_cast<block_header>(b));
     crypto::hash tree_root_hash = get_tx_tree_hash(b);
     blob.append(reinterpret_cast<const char*>(&tree_root_hash), sizeof(tree_root_hash));
     blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
-    return blob;
+    return true;
+  }
+ //---------------------------------------------------------------
+  bool get_bytecoin_block_hashing_blob(const block& b, blobdata& blob)
+  {
+	auto sbb = make_serializable_bytecoin_block(b, true, true);
+	return t_serializable_object_to_blob(sbb, blob);
   }
   //---------------------------------------------------------------
-  bool calculate_block_hash(const block& b, crypto::hash& res)
+ bool calculate_block_hash(const block& b, crypto::hash& res)
   {
-    // EXCEPTION FOR BLOCK 202612
-    const std::string correct_blob_hash_202612 = "3a8a2b3a29b50fc86ff73dd087ea43c6f0d6b8f936c849194d5c84c737903966";
-    const std::string existing_block_id_202612 = "bbd604d2ba11ba27935e006ed39c9bfdd99b76bf4a50654bc1e1e61217962698";
-    crypto::hash block_blob_hash = get_blob_hash(block_to_blob(b));
-
-    if (string_tools::pod_to_hex(block_blob_hash) == correct_blob_hash_202612)
-    {
-      string_tools::hex_to_pod(existing_block_id_202612, res);
-      return true;
-    }
+    get_blob_hash(block_to_blob(b));
     bool hash_result = get_object_hash(get_block_hashing_blob(b), res);
-
-    if (hash_result)
-    {
-      // make sure that we aren't looking at a block with the 202612 block id but not the correct blobdata
-      if (string_tools::pod_to_hex(res) == existing_block_id_202612)
-      {
-        LOG_ERROR("Block with block id for 202612 but incorrect block blob hash found!");
-        res = null_hash;
-        return false;
-      }
-    }
     return hash_result;
   }
   //---------------------------------------------------------------
@@ -920,12 +927,60 @@ namespace cryptonote
       return true;
     }
     ++block_hashes_calculated_count;
-    bool ret = calculate_block_hash(b, res);
+    blobdata blob;
+	if (!get_block_hashing_blob(b, blob))
+		return false;
+
+	if (BLOCK_MAJOR_VERSION_2 <= b.major_version)
+	{
+		blobdata parent_blob;
+		auto sbb = make_serializable_bytecoin_block(b, true, false);
+		if (!t_serializable_object_to_blob(sbb, parent_blob))
+			return false;
+
+		blob.append(parent_blob);
+	}
+
+    bool ret = get_object_hash(blob, res);
     if (!ret)
       return false;
     b.hash = res;
     b.set_hash_valid(true);
     return true;
+  }
+  //---------------------------------------------------------------
+  bool get_genesis_block_hash(crypto::hash& h)
+  {
+	  static std::atomic<bool> cached(false);
+	  static crypto::hash genesis_block_hash;
+	  if (!cached)
+	  {
+		  static std::mutex m;
+		  std::unique_lock<std::mutex> lock(m);
+		  if (!cached)
+		  {
+			  block genesis_block;
+			  if (!generate_genesis_block(genesis_block))
+				  return false;
+
+			  if (!get_block_hash(genesis_block, genesis_block_hash))
+				  return false;
+
+			  cached = true;
+		  }
+	  }
+
+	  h = genesis_block_hash;
+	  return true;
+  }
+  //---------------------------------------------------------------
+  bool get_block_header_hash(const block& b, crypto::hash& res)
+  {
+	blobdata blob;
+	if (!get_block_hashing_blob(b, blob))
+	return false;
+
+	return get_object_hash(blob, res);
   }
   //---------------------------------------------------------------
   crypto::hash get_block_hash(const block& b)
