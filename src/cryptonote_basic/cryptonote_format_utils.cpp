@@ -42,6 +42,8 @@ using namespace epee;
 #include "crypto/hash.h"
 #include "ringct/rctSigs.h"
 #include "serialization/binary_utils.h"
+#include "cryptonote_core/cryptonote_tx_utils.h"
+#include "miner.h"
 
 #undef MONERO_DEFAULT_LOG_CATEGORY
 #define MONERO_DEFAULT_LOG_CATEGORY "cn"
@@ -802,7 +804,7 @@ namespace cryptonote
   bool calculate_transaction_hash(const transaction& t, crypto::hash& res, size_t* blob_size)
   {
     // v1 transactions hash the entire blob
-    if (t.version == 1)
+    if (t.version <= 1)
     {
       size_t ignored_blob_size, &blob_size_ref = blob_size ? *blob_size : ignored_blob_size;
       return get_object_hash(t, res, blob_size_ref);
@@ -893,7 +895,16 @@ namespace cryptonote
     return get_transaction_hash(t, res, &blob_size);
   }
   //---------------------------------------------------------------
-   bool get_block_hashing_blob(const block& b, blobdata& blob)
+   blobdata get_block_hashing_blob(const block& b)
+  {
+	  blobdata blob = t_serializable_object_to_blob(static_cast<block_header>(b));
+	  crypto::hash tree_root_hash = get_tx_tree_hash(b);
+	  blob.append(reinterpret_cast<const char*>(&tree_root_hash), sizeof(tree_root_hash));
+	  blob.append(tools::get_varint_data(b.tx_hashes.size() + 1));
+	  return blob;
+  }
+  //---------------------------------------------------------------
+  bool get_block_hashing_blob(const block& b, blobdata& blob)
   {
     blob = t_serializable_object_to_blob(static_cast<block_header>(b));
     crypto::hash tree_root_hash = get_tx_tree_hash(b);
@@ -901,14 +912,14 @@ namespace cryptonote
     blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
     return true;
   }
- //---------------------------------------------------------------
+  //---------------------------------------------------------------
   bool get_bytecoin_block_hashing_blob(const block& b, blobdata& blob)
   {
 	auto sbb = make_serializable_bytecoin_block(b, true, true);
 	return t_serializable_object_to_blob(sbb, blob);
   }
   //---------------------------------------------------------------
- bool calculate_block_hash(const block& b, crypto::hash& res)
+  bool calculate_block_hash(const block& b, crypto::hash& res)
   {
     get_blob_hash(block_to_blob(b));
     bool hash_result = get_object_hash(get_block_hashing_blob(b), res);
@@ -931,7 +942,7 @@ namespace cryptonote
 	if (!get_block_hashing_blob(b, blob))
 		return false;
 
-	if (BLOCK_MAJOR_VERSION_2 <= b.major_version)
+	if (b.major_version == BLOCK_MAJOR_VERSION_2 || b.major_version == BLOCK_MAJOR_VERSION_3)
 	{
 		blobdata parent_blob;
 		auto sbb = make_serializable_bytecoin_block(b, true, false);
@@ -960,7 +971,7 @@ namespace cryptonote
 		  if (!cached)
 		  {
 			  block genesis_block;
-			  if (!generate_genesis_block(genesis_block))
+			if (!generate_genesis_block(genesis_block, config::GENESIS_TX, config::GENESIS_NONCE))
 				  return false;
 
 			  if (!get_block_hash(genesis_block, genesis_block_hash))
@@ -990,15 +1001,15 @@ namespace cryptonote
     return p;
   }
   //---------------------------------------------------------------
-  bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
+bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
-
     blobdata bd = get_block_hashing_blob(b);
-    const int cn_variant = b.major_version >= 7 ? b.major_version - 6 : 0;
+    // PoW variant 1 appeared in block version 4, so our current PoW variant is calculated with "block version - 3"
+    const int cn_variant = b.major_version >= BLOCK_MAJOR_VERSION_4 ? b.major_version - 3 : 0;
     crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant);
     return true;
   }
-  bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
+ bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
   {
 	  blobdata bd;
 	  if (!get_bytecoin_block_hashing_blob(b, bd))
@@ -1009,7 +1020,7 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
   {
-	  if (BLOCK_MAJOR_VERSION_1 != bl.major_version)
+	  if (BLOCK_MAJOR_VERSION_1 != bl.major_version && BLOCK_MAJOR_VERSION_4 != bl.major_version)
 		  return false;
 
 	  proof_of_work = get_block_longhash(bl, 0);
@@ -1017,14 +1028,19 @@ namespace cryptonote
   }
   //---------------------------------------------------------------
   bool check_proof_of_work_v2(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
-  { 
-	  if (BLOCK_MAJOR_VERSION_2 != bl.major_version)
+  {
+	  MDEBUG("Checking POW V2 - diff " << current_diffic);
+	  if (bl.major_version < BLOCK_MAJOR_VERSION_2)
 		  return false;
 
-	  if (!get_bytecoin_block_longhash(bl, proof_of_work))
+	  if (!get_bytecoin_block_longhash(bl, proof_of_work)) {
+		  MDEBUG("Failed to get bytecoin block longhash");
 		  return false;
-	  if (!check_hash(proof_of_work, current_diffic))
+	  }
+	  if (!check_hash(proof_of_work, current_diffic)) {
+		  MDEBUG("Failed to check hash for pow");
 		  return false;
+	  }
 
 	  tx_extra_merge_mining_tag mm_tag;
 	  if (!get_mm_tag_from_extra(bl.parent_block.miner_tx.extra, mm_tag))
@@ -1034,15 +1050,21 @@ namespace cryptonote
 	  }
 
 	  crypto::hash genesis_block_hash;
-	  if (!get_genesis_block_hash(genesis_block_hash))
+	  if (!get_genesis_block_hash(genesis_block_hash)) {
+		  MDEBUG("Failed to get genesis block hash");
 		  return false;
+	  }
 
-	  if (8 * sizeof(genesis_block_hash) < bl.parent_block.blockchain_branch.size())
+	  if (8 * sizeof(genesis_block_hash) < bl.parent_block.blockchain_branch.size()) {
+		  MDEBUG("Failed genesis block and parent block branch size comparison");
 		  return false;
+	  }
 
 	  crypto::hash aux_block_header_hash;
-	  if (!get_block_header_hash(bl, aux_block_header_hash))
+	  if (!get_block_header_hash(bl, aux_block_header_hash)) {
+		  MDEBUG("Failed to get aux header hash");
 		  return false;
+	  }
 
 	  crypto::hash aux_blocks_merkle_root;
 	  crypto::tree_hash_from_branch(bl.parent_block.blockchain_branch.data(), bl.parent_block.blockchain_branch.size(),
@@ -1056,8 +1078,10 @@ namespace cryptonote
   {
 	  switch (bl.major_version)
 	  {
-	  case BLOCK_MAJOR_VERSION_1: return check_proof_of_work_v1(bl, current_diffic, proof_of_work);
-	  case BLOCK_MAJOR_VERSION_2: 
+	  case BLOCK_MAJOR_VERSION_1: 
+	  case BLOCK_MAJOR_VERSION_4: 
+		  return check_proof_of_work_v1(bl, current_diffic, proof_of_work);
+	  case BLOCK_MAJOR_VERSION_2:
 	  case BLOCK_MAJOR_VERSION_3:
 		  return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
 	  }

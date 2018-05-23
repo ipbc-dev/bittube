@@ -36,6 +36,7 @@
 #include <cstring>  // memcmp
 #include <sstream>
 #include <atomic>
+#include "serialization/serialization.h"
 #include "serialization/variant.h"
 #include "serialization/vector.h"
 #include "serialization/binary_archive.h"
@@ -444,20 +445,23 @@ const uint8_t CURRENT_BYTECOIN_BLOCK_MAJOR_VERSION = 3;
   struct block_header
   {
     uint8_t major_version;
-	if (major_version > BLOCK_MAJOR_VERSION_3) return false;
-    uint8_t minor_version;  
-    if (BLOCK_MAJOR_VERSION_1 == major_version)
-	    VARINT_FIELD(timestamp)
-    crypto::hash  prev_id;
-    if (BLOCK_MAJOR_VERSION_1 == major_version)
-		FIELD(nonce)
+	uint8_t minor_version;  // now used as a voting mechanism, rather than how this particular block is built
+    uint64_t timestamp;
+    crypto::hash prev_id;
+    uint32_t nonce;
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(major_version)
+	  if (major_version > BLOCK_MAJOR_VERSION_4) {
+			MERROR("Block version is too high " << (unsigned)major_version);
+			return false;
+		}
       VARINT_FIELD(minor_version)
-      VARINT_FIELD(timestamp)
+      if (major_version == BLOCK_MAJOR_VERSION_1 || major_version >= BLOCK_MAJOR_VERSION_4)
+		  VARINT_FIELD(timestamp)
       FIELD(prev_id)
-      FIELD(nonce)
+      if (major_version == BLOCK_MAJOR_VERSION_1 || major_version >= BLOCK_MAJOR_VERSION_4)
+		FIELD(nonce)
     END_SERIALIZE()
   };
 

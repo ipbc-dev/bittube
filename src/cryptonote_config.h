@@ -41,12 +41,13 @@
 #define CRYPTONOTE_MAX_TX_SIZE                          1000000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
 #define CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW            10
-#define CURRENT_TRANSACTION_VERSION                     1 
+#define CURRENT_TRANSACTION_VERSION                     2 
 #define CURRENT_BLOCK_MAJOR_VERSION                     1
 #define CURRENT_BLOCK_MINOR_VERSION                     0
 #define BLOCK_MAJOR_VERSION_1                           1
 #define BLOCK_MAJOR_VERSION_2                           2
 #define BLOCK_MAJOR_VERSION_3                           3
+#define BLOCK_MAJOR_VERSION_4                           4
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              500
 #define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10
 
@@ -77,7 +78,7 @@
 
 
 #define DIFFICULTY_TARGET_V2                            120  // seconds
-#define DIFFICULTY_TARGET_V1                            60  // seconds - before first fork
+#define DIFFICULTY_TARGET_V1                            120  // seconds - before first fork
 #define DIFFICULTY_WINDOW                               720 // blocks
 #define DIFFICULTY_LAG                                  15  // !!!
 #define DIFFICULTY_CUT                                  60  // timestamps to cut after sorting
@@ -163,7 +164,7 @@ namespace config
   boost::uuids::uuid const NETWORK_ID = { {
       0x78, 0x18, 0x3A, 0x89, 0x15, 0xA5, 0x92, 0xB4, 0x67, 0x12, 0x29, 0x49, 0x19, 0xA1, 0x41, 0x78
     } }; // Bender's nightmare
-  std::string const GENESIS_TX = "013c01ff0001ffffffffffff03029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121017767aafcde9be00dcfd098715ebcf7f410daebc582fda69d24a28e9d0bc890d1";
+  std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
   uint32_t const GENESIS_NONCE = 70;
 
   namespace testnet
