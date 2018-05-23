@@ -41,7 +41,7 @@
 #define CRYPTONOTE_MAX_TX_SIZE                          1000000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
 #define CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW            10
-#define CURRENT_TRANSACTION_VERSION                     2
+#define CURRENT_TRANSACTION_VERSION                     1 
 #define CURRENT_BLOCK_MAJOR_VERSION                     1
 #define CURRENT_BLOCK_MINOR_VERSION                     0
 #define BLOCK_MAJOR_VERSION_1                           1
@@ -180,7 +180,7 @@ namespace config
         0x1c ,0xa6, 0xf4, 0xa7 , 0x7d, 0x0c , 0x78, 0xdc, 0x44, 0x3f, 0xd5, 0x69, 0xcb, 0x6d, 0x4e, 0x1c
       } }; // Bender's daydream
     std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
-    uint32_t const GENESIS_NONCE = 70;
+    uint32_t const GENESIS_NONCE = 71;
   }
 
   namespace stagenet
@@ -195,7 +195,7 @@ namespace config
         0x67 ,0xe3, 0x11, 0x1b , 0x1e, 0x14 , 0x77, 0xf7, 0x34, 0x33, 0xa0, 0x33, 0xcc, 0xc5, 0x33, 0x77
       } }; // Bender's daydream
     std::string const GENESIS_TX = "010a01ff0001ec85afd1b101029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121011e06b561bed255e2cd1c03e4f7727284f27d05c31094f03e6997e6ed927c31a1";
-    uint32_t const GENESIS_NONCE = 70;
+    uint32_t const GENESIS_NONCE = 72;
   }
 }
 

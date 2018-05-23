@@ -1412,8 +1412,10 @@ namespace cryptonote
 #endif
 
     if (m_offline)
-      return true;
-
+      return true; 
+    MCDEBUG("updates", "Skipping checking for a new " << software << " version - not configured for bittube Coin");
+    //CHANGE ME
+    return true;
     if (check_updates_level == UPDATES_DISABLED)
       return true;
 

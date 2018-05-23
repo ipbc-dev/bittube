@@ -962,7 +962,7 @@ namespace cryptonote
   }
   //---------------------------------------------------------------
   bool check_proof_of_work_v2(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
-  {
+  { 
 	  if (BLOCK_MAJOR_VERSION_2 != bl.major_version)
 		  return false;
 
