@@ -708,11 +708,10 @@ namespace cryptonote
   {
     switch (decimal_point)
     {
-      case 12:
-      case 9:
-      case 6:
-      case 3:
-      case 0:
+       case 8:
+       case 6:
+       case 3:
+       case 0:
         default_decimal_point = decimal_point;
         break;
       default:
@@ -938,17 +937,77 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
-    // block 202612 bug workaround
-    const std::string longhash_202612 = "84f64766475d51837ac9efbef1926486e58563c95a19fef4aec3254f03000000";
-    if (height == 202612)
-    {
-      string_tools::hex_to_pod(longhash_202612, res);
-      return true;
-    }
+
     blobdata bd = get_block_hashing_blob(b);
     const int cn_variant = b.major_version >= 7 ? b.major_version - 6 : 0;
     crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant);
     return true;
+  }
+  bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
+  {
+	  blobdata bd;
+	  if (!get_bytecoin_block_hashing_blob(b, bd))
+		  return false;
+	  crypto::cn_slow_hash(bd.data(), bd.size(), res);
+	  return true;
+  }
+  //---------------------------------------------------------------
+  bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
+  {
+	  if (BLOCK_MAJOR_VERSION_1 != bl.major_version)
+		  return false;
+
+	  proof_of_work = get_block_longhash(bl, 0);
+	  return check_hash(proof_of_work, current_diffic);
+  }
+  //---------------------------------------------------------------
+  bool check_proof_of_work_v2(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
+  {
+	  if (BLOCK_MAJOR_VERSION_2 != bl.major_version)
+		  return false;
+
+	  if (!get_bytecoin_block_longhash(bl, proof_of_work))
+		  return false;
+	  if (!check_hash(proof_of_work, current_diffic))
+		  return false;
+
+	  tx_extra_merge_mining_tag mm_tag;
+	  if (!get_mm_tag_from_extra(bl.parent_block.miner_tx.extra, mm_tag))
+	  {
+		  LOG_ERROR("merge mining tag wasn't found in extra of the parent block miner transaction");
+		  return false;
+	  }
+
+	  crypto::hash genesis_block_hash;
+	  if (!get_genesis_block_hash(genesis_block_hash))
+		  return false;
+
+	  if (8 * sizeof(genesis_block_hash) < bl.parent_block.blockchain_branch.size())
+		  return false;
+
+	  crypto::hash aux_block_header_hash;
+	  if (!get_block_header_hash(bl, aux_block_header_hash))
+		  return false;
+
+	  crypto::hash aux_blocks_merkle_root;
+	  crypto::tree_hash_from_branch(bl.parent_block.blockchain_branch.data(), bl.parent_block.blockchain_branch.size(),
+		  aux_block_header_hash, &genesis_block_hash, aux_blocks_merkle_root);
+	  CHECK_AND_NO_ASSERT_MES(aux_blocks_merkle_root == mm_tag.merkle_root, false, "Aux block hash wasn't found in merkle tree");
+
+	  return true;
+  }
+  //---------------------------------------------------------------
+  bool check_proof_of_work(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
+  {
+	  switch (bl.major_version)
+	  {
+	  case BLOCK_MAJOR_VERSION_1: return check_proof_of_work_v1(bl, current_diffic, proof_of_work);
+	  case BLOCK_MAJOR_VERSION_2: 
+	  case BLOCK_MAJOR_VERSION_3:
+		  return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
+	  }
+
+	  CHECK_AND_ASSERT_MES(false, false, "unknown block major version: " << bl.major_version << "." << bl.minor_version);
   }
   //---------------------------------------------------------------
   std::vector<uint64_t> relative_output_offsets_to_absolute(const std::vector<uint64_t>& off)
