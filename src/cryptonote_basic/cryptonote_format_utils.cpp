@@ -894,8 +894,9 @@ namespace cryptonote
   {
     return get_transaction_hash(t, res, &blob_size);
   }
-  //---------------------------------------------------------------
-   blobdata get_block_hashing_blob(const block& b)
+  
+ //---------------------------------------------------------------
+  blobdata get_block_hashing_blob(const block& b)
   {
 	  blobdata blob = t_serializable_object_to_blob(static_cast<block_header>(b));
 	  crypto::hash tree_root_hash = get_tx_tree_hash(b);

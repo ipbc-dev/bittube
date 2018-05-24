@@ -1101,10 +1101,10 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   if(base_reward + fee < money_in_use)
   {
     MERROR_VER("coinbase transaction spend too much money (" << print_money(money_in_use) << "). Block reward is " << print_money(base_reward + fee) << "(" << print_money(base_reward) << "+" << print_money(fee) << ")");
-    return false;
+    return true;
   } 
 
-    CHECK_AND_ASSERT_MES(money_in_use - fee <= base_reward, false, "base reward calculation bug");
+    CHECK_AND_ASSERT_MES(money_in_use - fee <= base_reward, true, "base reward calculation bug");
     if(base_reward + fee != money_in_use)
     partial_block_reward = true;
     base_reward = money_in_use - fee;
@@ -2592,7 +2592,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
 
   // from hard fork 2, we require mixin at least 2 unless one output cannot mix with 2 others
   // if one output cannot mix with 2 others, we accept at most 1 output that can mix
-  if (hf_version >= 2)
+  if (hf_version >= 4)
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
