@@ -151,8 +151,8 @@ namespace config
 {
   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder!  Change me!
   uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
-  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)100000); // 2 * pow(10, 9)
-  uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)10000); // pow(10, 8)
+  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000); // 2 * pow(10, 9)
+  uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)200); // pow(10, 8)
   std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 60;
@@ -166,7 +166,8 @@ namespace config
     } }; // Bender's nightmare
   std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
   uint32_t const GENESIS_NONCE = 70;
-
+  
+  std::string const GOVERNANCE_WALLET_ADDRESS = "BCBrDxKu8FKNq9JXD3jqgd98FFRrLqMWJUmQ14mq7aDPTzjPQ1aTNBo5CfBqTKsnArdDTi1sbd64kgX3rg6RCdGu5HnRLWS";
   namespace testnet
   {
     uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 63;
@@ -180,6 +181,8 @@ namespace config
       } }; // Bender's daydream
     std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
     uint32_t const GENESIS_NONCE = 71;
+	
+	std::string const GOVERNANCE_WALLET_ADDRESS = "Baty8CX5ync9rEhVSgsZT4RAQyPhjuRui3L9yMM7R3wscf6kwLNBHbD77DNDpX9mrZW1VrzrPEhNvaahJnq3Ne1Y13PqyQx";
   }
 
   namespace stagenet
@@ -195,6 +198,8 @@ namespace config
       } }; // Bender's daydream
     std::string const GENESIS_TX = "010a01ff0001ec85afd1b101029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121011e06b561bed255e2cd1c03e4f7727284f27d05c31094f03e6997e6ed927c31a1";
     uint32_t const GENESIS_NONCE = 72;
+	
+	std::string const GOVERNANCE_WALLET_ADDRESS = "C5XyPCwyQkudbX6WAcsUbthkNVniJALETGmy6ppizL12XJZ6A3jLZ5DScAX36pTVpcPvR8us1MYd8NEkLrx1HSBxMv2mSeg";
   }
 }
 

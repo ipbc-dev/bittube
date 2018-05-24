@@ -1098,17 +1098,49 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
     MERROR_VER("block size " << cumulative_block_size << " is bigger than allowed for this blockchain");
     return false;
   }
-  if(base_reward + fee < money_in_use)
+   if (already_generated_coins != 0)
+  {
+    uint64_t governance_reward = get_governance_reward(m_db->height(), base_reward);
+
+    if (b.miner_tx.vout.back().amount != governance_reward)
+    {
+      MERROR("Governance reward amount incorrect.  Should be: " << print_money(governance_reward) << ", is: " << print_money(b.miner_tx.vout.back().amount));
+      return false;
+    }
+
+    std::string governance_wallet_address_str;
+    switch (m_nettype)
+    {
+      case STAGENET:
+        governance_wallet_address_str = ::config::stagenet::GOVERNANCE_WALLET_ADDRESS;
+        break;
+      case TESTNET:
+        governance_wallet_address_str = ::config::testnet::GOVERNANCE_WALLET_ADDRESS;
+        break;
+      case MAINNET:
+        governance_wallet_address_str = ::config::GOVERNANCE_WALLET_ADDRESS;
+        break;
+      default:
+        return false;
+    }
+
+    if (!validate_governance_reward_key(m_db->height(), governance_wallet_address_str, b.miner_tx.vout.size() - 1, boost::get<txout_to_key>(b.miner_tx.vout.back().target).key, m_nettype))
+    {
+      MERROR("Governance reward public key incorrect.");
+      return false;
+    }
+  }
+  if(base_reward + fee < money_in_use && version >= 4)
   {
     MERROR_VER("coinbase transaction spend too much money (" << print_money(money_in_use) << "). Block reward is " << print_money(base_reward + fee) << "(" << print_money(base_reward) << "+" << print_money(fee) << ")");
-    return true;
+    return false;
   } 
-
-    CHECK_AND_ASSERT_MES(money_in_use - fee <= base_reward, true, "base reward calculation bug");
+   if (version >= 4){
+    CHECK_AND_ASSERT_MES(money_in_use - fee <= base_reward, false, "base reward calculation bug");
     if(base_reward + fee != money_in_use)
     partial_block_reward = true;
     base_reward = money_in_use - fee;
-
+	  }
   return true;
 }
 //------------------------------------------------------------------
@@ -1260,7 +1292,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob size
   uint8_t hf_version = m_hardfork->get_current_version();
   size_t max_outs = hf_version >= 4 ? 1 : 11;
-  bool r = construct_miner_tx(height, median_size, already_generated_coins, txs_size, fee, miner_address, b.miner_tx, ex_nonce, max_outs, hf_version);
+  bool r = construct_miner_tx(height, median_size, already_generated_coins, txs_size, fee, miner_address, b.miner_tx, ex_nonce, max_outs, hf_version, m_nettype);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
   size_t cumulative_size = txs_size + get_object_blobsize(b.miner_tx);
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
@@ -1269,7 +1301,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
 #endif
   for (size_t try_count = 0; try_count != 10; ++try_count)
   {
-    r = construct_miner_tx(height, median_size, already_generated_coins, cumulative_size, fee, miner_address, b.miner_tx, ex_nonce, max_outs, hf_version);
+    r = construct_miner_tx(height, median_size, already_generated_coins, cumulative_size, fee, miner_address, b.miner_tx, ex_nonce, max_outs, hf_version, m_nettype);
 
     CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, second chance");
     size_t coinbase_blob_size = get_object_blobsize(b.miner_tx);
@@ -1306,7 +1338,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
         }
         MDEBUG("Setting extra for block: " << b.miner_tx.extra.size() << ", try_count=" << try_count);
       }
-    }
+    } 
     CHECK_AND_ASSERT_MES(cumulative_size == txs_size + get_object_blobsize(b.miner_tx), false, "unexpected case: cumulative_size=" << cumulative_size << " is not equal txs_cumulative_size=" << txs_size << " + get_object_blobsize(b.miner_tx)=" << get_object_blobsize(b.miner_tx));
 #if defined(DEBUG_CREATE_BLOCK_TEMPLATE)
     MDEBUG("Creating block template: miner tx size " << coinbase_blob_size <<
