@@ -1098,7 +1098,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
     MERROR_VER("block size " << cumulative_block_size << " is bigger than allowed for this blockchain");
     return false;
   }
-   if (already_generated_coins != 0)
+   if (already_generated_coins != 0 && version >= 4)
   {
     uint64_t governance_reward = get_governance_reward(m_db->height(), base_reward);
 
