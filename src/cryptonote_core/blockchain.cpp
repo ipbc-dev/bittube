@@ -1078,8 +1078,8 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   if (version == 4) {
     for (auto &o: b.miner_tx.vout) {
       if (!is_valid_decomposed_amount(o.amount)) {
-        MERROR_VER("miner tx output " << print_money(o.amount) << " is not a valid decomposed amount");
-        return false;
+        //MERROR_VER("miner tx output " << print_money(o.amount) << " is not a valid decomposed amount");
+        //return false;
       }
     }
   }
