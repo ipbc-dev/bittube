@@ -371,7 +371,7 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-	  full_addrs.insert("94.130.207.37:23306");
+      full_addrs.insert("testnet.ipbc.io:24181");
     }
     else if (nettype == cryptonote::STAGENET)
     {
@@ -380,8 +380,8 @@ namespace nodetool
     }
     else
     {
-      full_addrs.insert("185.185.26.202:24181");
-      full_addrs.insert("185.185.26.198:24181");
+      full_addrs.insert("seed1.ipbc.io:24181");
+      full_addrs.insert("seed2.ipbc.io:24181");
     }
     return full_addrs;
   }
@@ -1689,10 +1689,12 @@ namespace nodetool
       });
     }
     
+    /* TODO: uncomment when current daemon supports getting support flags, currently fails handshake
     try_get_support_flags(context, [](p2p_connection_context& flags_context, const uint32_t& support_flags) 
     {
       flags_context.support_flags = support_flags;
     });
+    */
 
     //fill response
     m_peerlist.get_peerlist_head(rsp.local_peerlist_new);

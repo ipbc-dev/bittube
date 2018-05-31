@@ -157,11 +157,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::implode_scratchpad_hard()
 		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
 
-		if(VERSION > 0)
+		if (VERSION == 2)
 			xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	for (size_t i = 0; VERSION > 0 && i < MEMORY / sizeof(__m128i); i +=8)
+	for (size_t i = 0; VERSION == 2 && i < MEMORY / sizeof(__m128i); i +=8)
 	{
 		x0 = _mm_xor_si128(_mm_load_si128(lpad.as_xmm() + i + 0), x0);
 		x1 = _mm_xor_si128(_mm_load_si128(lpad.as_xmm() + i + 1), x1);
@@ -186,7 +186,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::implode_scratchpad_hard()
 		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	for (size_t i = 0; VERSION > 0 && i < 16; i++)
+	for (size_t i = 0; VERSION == 2 && i < 16; i++)
 	{
 		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
@@ -229,7 +229,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::explode_scratchpad_hard()
 	x6 = _mm_load_si128(spad.as_xmm() + 10);
 	x7 = _mm_load_si128(spad.as_xmm() + 11);
 
-	for (size_t i = 0; VERSION > 0 && i < 16; i++)
+	for (size_t i = 0; VERSION == 2 && i < 16; i++)
 	{
 		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
@@ -323,11 +323,32 @@ inline uint64_t xmm_extract_64(__m128i x)
 #endif
 }
 
+inline void cryptonight_monero_tweak(uint64_t* mem_out, __m128i tmp)
+{
+	mem_out[0] = _mm_cvtsi128_si64(tmp);
+
+	tmp = _mm_castps_si128(_mm_movehl_ps(_mm_castsi128_ps(tmp), _mm_castsi128_ps(tmp)));
+	uint64_t vh = _mm_cvtsi128_si64(tmp);
+
+	uint8_t x = static_cast<uint8_t>(vh >> 24);
+	static const uint16_t table = 0x7531;
+	const uint8_t index = (((x >> 3) & 6) | (x & 1)) << 1;
+	vh ^= ((table >> index) & 0x3) << 28;
+
+	mem_out[1] = vh;
+}
+
 template<size_t MEMORY, size_t ITER, size_t VERSION>
 void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len, void* out, bool prehashed)
 {
 	if (!prehashed)
 		keccak((const uint8_t *)in, len, spad.as_byte(), 200);
+
+  uint64_t monero_const;
+  if (VERSION == 1) {
+    monero_const = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(in) + 35);
+    monero_const ^= spad.as_uqword(24);
+  }
 
 	explode_scratchpad_hard();
 	
@@ -347,7 +368,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 
 		cx = _mm_aesenc_si128(cx, _mm_set_epi64x(ah0, al0));
 
+    if (VERSION == 1) {
+      cryptonight_monero_tweak(scratchpad_ptr(idx0).as_uqword(), _mm_xor_si128(bx0, cx));
+    } else {
 		_mm_store_si128(scratchpad_ptr(idx0).as_xmm(), _mm_xor_si128(bx0, cx));
+    }
 		idx0 = xmm_extract_64(cx);
 		bx0 = cx;
 
@@ -360,12 +385,16 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 		al0 += hi;
 		ah0 += lo;
 		scratchpad_ptr(idx0).as_uqword(0) = al0;
+    if (VERSION == 1) {
+      scratchpad_ptr(idx0).as_uqword(1) = ah0 ^ monero_const ^ al0;
+    } else {
 		scratchpad_ptr(idx0).as_uqword(1) = ah0;
+    }
 		ah0 ^= ch;
 		al0 ^= cl;
 		idx0 = al0;
 		
-		if(VERSION > 0)
+		if (VERSION == 2)
 		{
 			int64_t n  = scratchpad_ptr(idx0).as_qword(0);
 			int32_t d  = scratchpad_ptr(idx0).as_dword(2);
@@ -397,6 +426,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 }
 
 template class cn_slow_hash<2*1024*1024, 0x80000, 0>;
-template class cn_slow_hash<4*1024*1024, 0x40000, 1>;
+template class cn_slow_hash<1*1024*1024, 0x40000, 1>;
+template class cn_slow_hash<4*1024*1024, 0x40000, 2>;
 
 #endif

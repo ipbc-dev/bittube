@@ -196,11 +196,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::implode_scratchpad_hard()
 		aes_round10(x6, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
 		aes_round10(x7, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
 
-		if(VERSION > 0)
+		if (VERSION == 2)
 			xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	for (size_t i = 0; VERSION > 0 && i < MEMORY; i += 128)
+	for (size_t i = 0; VERSION == 2 && i < MEMORY; i += 128)
 	{
 		mem_load(lpad, i, x0, x1, x2, x3, x4, x5, x6, x7);
 
@@ -216,7 +216,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::implode_scratchpad_hard()
 		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	for (size_t i = 0; VERSION > 0 && i < 16; i++)
+	for (size_t i = 0; VERSION == 2 && i < 16; i++)
 	{
 		aes_round10(x0, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
 		aes_round10(x1, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
@@ -257,7 +257,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::explode_scratchpad_hard()
 	x6 = vld1q_u8(spad.as_byte() + 160);
 	x7 = vld1q_u8(spad.as_byte() + 176);
 
-	for (size_t i = 0; VERSION > 0 && i < 16; i++)
+	for (size_t i = 0; VERSION == 2 && i < 16; i++)
 	{
 		aes_round10(x0, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
 		aes_round10(x1, k0, k1, k2, k3, k4, k5, k6, k7, k8, k9);
@@ -354,7 +354,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 		al0 ^= cl;
 		idx0 = al0;
 		
-		if(VERSION > 0)
+		if(VERSION == 2)
 		{
 			int64_t n  = scratchpad_ptr(idx0).as_qword(0);
 			int32_t d  = scratchpad_ptr(idx0).as_dword(2);
@@ -386,6 +386,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 }
 
 template class cn_slow_hash<2*1024*1024, 0x80000, 0>;
-template class cn_slow_hash<4*1024*1024, 0x40000, 1>;
+template class cn_slow_hash<1*1024*1024, 0x40000, 1>;
+template class cn_slow_hash<4*1024*1024, 0x40000, 2>;
 
 #endif

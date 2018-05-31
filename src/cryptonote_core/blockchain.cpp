@@ -106,9 +106,11 @@ static const struct {
 } testnet_hard_forks[] = {
   // version 1 from the start of the blockchain
   { 1, 1, 0, 1341378000 },
-  { 4, 10, 0, 1445355000 }
+  { 2, 21, 0, 1521000000 },
+  { 3, 41, 0, 1521120000 },
+  { 4, 61, 0, 1521240000 }
 };
-static const uint64_t testnet_hard_fork_version_1_till = 9;
+static const uint64_t testnet_hard_fork_version_1_till = 20;
 
 static const struct {
   uint8_t version;
@@ -329,7 +331,7 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
     if (m_nettype ==  FAKECHAIN || m_nettype == STAGENET)
       m_hardfork = new HardFork(*db, 1, 0);
     else if (m_nettype == TESTNET)
-      m_hardfork = new HardFork(*db, 1, testnet_hard_fork_version_1_till);
+      m_hardfork = new HardFork(*db, 1, testnet_hard_fork_version_1_till, 0, 0, 1, 0);
     else
       m_hardfork = new HardFork(*db, 1, mainnet_hard_fork_version_1_till);
   }
@@ -785,6 +787,7 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
   auto height = m_db->height();
   uint8_t version = get_current_hard_fork_version();
   size_t difficulty_blocks_count = version < 2 ? DIFFICULTY_BLOCKS_COUNT : DIFFICULTY_BLOCKS_COUNT_V2;
+  if (version < BLOCK_MAJOR_VERSION_5) difficulty_blocks_count -= 1; // unfix to get difficulties to match with current daemon
   // ND: Speedup
   // 1. Keep a list of the last 735 (or less) blocks that is used to compute difficulty,
   //    then when the next block difficulty is queried, push the latest height data and
@@ -824,8 +827,11 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
     m_difficulties = difficulties;
   }
   size_t target = version < 2 ? DIFFICULTY_TARGET_V1 : DIFFICULTY_TARGET_V2;
+  /*
   size_t diffv3 = version < 4 ? next_difficulty_v2(timestamps, difficulties, target) : next_difficulty_v3(timestamps, difficulties, target);
   return version < 2 ? next_difficulty(timestamps, difficulties, target) : diffv3;
+  */
+  return version < 2 ? next_difficulty(timestamps, difficulties, target) : next_difficulty_v2_ipbc(timestamps, difficulties, target);
 }
 //------------------------------------------------------------------
 // This function removes blocks from the blockchain until it gets to the
@@ -976,6 +982,7 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   uint8_t version = get_ideal_hard_fork_version(bei.height);
   size_t difficulty_blocks_count;
   difficulty_blocks_count = version < 2 ? DIFFICULTY_BLOCKS_COUNT : DIFFICULTY_BLOCKS_COUNT_V2;
+  if (version < BLOCK_MAJOR_VERSION_5) difficulty_blocks_count -= 1; // unfix to get difficulties to match with current daemon
   // if the alt chain isn't long enough to calculate the difficulty target
   // based on its blocks alone, need to get more blocks from the main chain
   if(alt_chain.size()< difficulty_blocks_count)
@@ -1030,8 +1037,11 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   size_t target = get_ideal_hard_fork_version(bei.height) < 2 ? DIFFICULTY_TARGET_V1 : DIFFICULTY_TARGET_V2;
 
   // calculate the difficulty target for the block and return it
+  /*
   size_t diffv3 = get_ideal_hard_fork_version(bei.height) < 4 ? next_difficulty_v2(timestamps, cumulative_difficulties, target) : next_difficulty_v3(timestamps, cumulative_difficulties, target);
   return get_ideal_hard_fork_version(bei.height) < 2 ? next_difficulty(timestamps, cumulative_difficulties, target) : diffv3;
+  */
+  return get_ideal_hard_fork_version(bei.height) < 2 ? next_difficulty(timestamps, cumulative_difficulties, target) : next_difficulty_v2_ipbc(timestamps, cumulative_difficulties, target);
 }
 //------------------------------------------------------------------
 // This function does a sanity check on basic things that all miner
@@ -1093,7 +1103,7 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
   }
    if (already_generated_coins != 0 && version >= 4)
   {
-    uint64_t governance_reward = get_governance_reward(m_db->height(), base_reward);
+    uint64_t governance_reward = get_governance_reward(m_db->height(), base_reward + fee);
 
     if (b.miner_tx.vout.back().amount != governance_reward)
     {
@@ -2634,7 +2644,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
 
   // from hard fork 2, we require mixin at least 2 unless one output cannot mix with 2 others
   // if one output cannot mix with 2 others, we accept at most 1 output that can mix
-  if (hf_version >= 4)
+  if (hf_version >= 5)
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();

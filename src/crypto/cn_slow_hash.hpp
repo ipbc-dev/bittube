@@ -137,8 +137,9 @@ private:
 };
 
 template<size_t MEMORY, size_t ITER, size_t VERSION> class cn_slow_hash;
-using cn_pow_hash_v1 = cn_slow_hash<2*1024*1024, 0x80000, 0>;
-using cn_pow_hash_v2 = cn_slow_hash<4*1024*1024, 0x40000, 1>;
+using cn_pow_hash_v1 = cn_slow_hash<2*1024*1024, 0x80000, 0>; // standard
+using cn_pow_hash_v2 = cn_slow_hash<1*1024*1024, 0x40000, 1>; // ipbc lite
+using cn_pow_hash_v3 = cn_slow_hash<4*1024*1024, 0x40000, 2>; // sumo
 
 template<size_t MEMORY, size_t ITER, size_t VERSION>
 class cn_slow_hash
@@ -156,11 +157,13 @@ public:
 		other.spad.set(nullptr);
 	}
 
-	// Factory function enabling to temporaliy turn v2 object into v1
-	// It is caller's responsibility to ensure that v2 object is not hashing at the same time!!
-	static cn_pow_hash_v1 make_borrowed(cn_pow_hash_v2& t)
+	// Factory function enabling to temporarily turn one cn_slow_hash object into another
+	// It is caller's responsibility to ensure that only one object is hashing at the same time!!
+  template <size_t OM, size_t OI, size_t OV>
+	static cn_slow_hash make_borrowed(cn_slow_hash<OM, OI, OV> &o)
 	{
-		return cn_pow_hash_v1(t.lpad.as_void(), t.spad.as_void());
+    static_assert(MEMORY <= OM, "Borrowed scratch pad is smaller than required.");
+		return cn_slow_hash(o.lpad.as_void(), o.spad.as_void());
 	}
 
 	cn_slow_hash& operator= (cn_slow_hash&& other) noexcept
@@ -204,6 +207,7 @@ private:
 	static constexpr size_t MASK = ((MEMORY-1) >> 4) << 4;
 	friend cn_pow_hash_v1;
 	friend cn_pow_hash_v2;
+  friend cn_pow_hash_v3;
 
 	// Constructor enabling v1 hash to borrow v2's buffer
 	cn_slow_hash(void* lptr, void* sptr)

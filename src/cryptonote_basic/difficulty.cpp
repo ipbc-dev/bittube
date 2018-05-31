@@ -162,6 +162,60 @@ namespace cryptonote {
     }
     return (low + time_span - 1) / time_span;
   }
+  difficulty_type next_difficulty_v2_ipbc(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds) {
+    const int64_t T = static_cast<int64_t>(target_seconds);
+    size_t N = DIFFICULTY_WINDOW_V2;
+
+    if (timestamps.size() > N) {
+      timestamps.resize(N + 1);
+      cumulative_difficulties.resize(N + 1);
+    }
+    size_t n = timestamps.size();
+    assert(n == cumulative_difficulties.size());
+    assert(n <= DIFFICULTY_WINDOW_V2);
+    if (n <= 1) {
+      return 1;
+    }
+
+    uint64_t k = 0, w = 0;
+    int64_t t = 0, j = 0;
+
+    const double adjust = pow(0.9989, 500 / T);
+    k = adjust * ((n + 1) / 2) * T;
+
+    for (size_t i = 1; i < n; i++) {
+      int64_t solvetime;
+      solvetime = timestamps[i] - timestamps[i - 1];
+
+      if (solvetime > 10 * T) { solvetime = 10 * T; }
+      if (solvetime < -(5 * T)) { solvetime = -(5 * T); }
+
+      j = j + 1;
+      w += solvetime * j;
+      t += solvetime;
+    }
+
+    if (w < T * n / 2) {
+      w = T * n / 2;
+    }
+
+    difficulty_type total_work = cumulative_difficulties.back() - cumulative_difficulties.front();
+    assert(total_work > 0);
+    uint64_t low, high;
+    low = mul128(total_work, k, &high);
+    if (high != 0) {
+      return 0;
+    }
+
+    uint64_t next_difficulty = low / w;
+
+    if (next_difficulty <= 1) {
+      next_difficulty = 1;
+    }
+
+    return next_difficulty;
+  }
+
   difficulty_type next_difficulty_v2(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds) {
 
     // Taken from the fine folks at HavenProtocol 

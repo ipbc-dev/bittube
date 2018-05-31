@@ -158,7 +158,7 @@ namespace cryptonote
         return false;
 
     keypair gov_key = get_deterministic_keypair_from_height(height);
-    if (already_generated_coins != 0)
+    if (already_generated_coins != 0 && hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
       add_tx_pub_key_to_extra(tx, gov_key.pub);
     }
@@ -179,14 +179,13 @@ namespace cryptonote
 #endif
 
     //TODO: declining governance reward schedule
+    block_reward += fee;
     uint64_t governance_reward = 0;
-    if (already_generated_coins != 0)
+    if (already_generated_coins != 0 && hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
       governance_reward = get_governance_reward(height, block_reward);
       block_reward -= governance_reward;
     }
-
-    block_reward += fee;
 
     // from hard fork 2, we cut out the low significant digits. This makes the tx smaller, and
     // keeps the paid amount almost the same. The unpaid remainder gets pushed back to the
@@ -242,7 +241,7 @@ namespace cryptonote
       tx.vout.push_back(out);
     }
 
-    if (already_generated_coins != 0)
+    if (already_generated_coins != 0 && hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
       std::string governance_wallet_address_str;
 

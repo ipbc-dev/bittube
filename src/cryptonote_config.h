@@ -48,6 +48,7 @@
 #define BLOCK_MAJOR_VERSION_2                           2
 #define BLOCK_MAJOR_VERSION_3                           3
 #define BLOCK_MAJOR_VERSION_4                           4
+#define BLOCK_MAJOR_VERSION_5                           5
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              500
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2           60*10
 #define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10
@@ -110,7 +111,7 @@
 #define P2P_LOCAL_WHITE_PEERLIST_LIMIT                  1000
 #define P2P_LOCAL_GRAY_PEERLIST_LIMIT                   5000
 
-#define P2P_DEFAULT_CONNECTIONS_COUNT                   8
+#define P2P_DEFAULT_CONNECTIONS_COUNT                   32
 #define P2P_DEFAULT_HANDSHAKE_INTERVAL                  60           //secondes
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000     //50000000 bytes maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
@@ -140,10 +141,10 @@
 
 #define THREAD_STACK_SIZE                       5 * 1024 * 1024
 
-#define HF_VERSION_DYNAMIC_FEE                  4
-#define HF_VERSION_MIN_MIXIN_4                  4
-#define HF_VERSION_MIN_MIXIN_6                  4
-#define HF_VERSION_ENFORCE_RCT                  4
+#define HF_VERSION_DYNAMIC_FEE                  5
+#define HF_VERSION_MIN_MIXIN_4                  5
+#define HF_VERSION_MIN_MIXIN_6                  5
+#define HF_VERSION_ENFORCE_RCT                  5
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
@@ -160,9 +161,9 @@ namespace config
   uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)200); // pow(10, 8)
   std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
-  uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 60;
-  uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 61;
-  uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 62;
+  uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0xd1;
+  uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0xd2;
+  uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0xd3;
   uint16_t const P2P_DEFAULT_PORT = 24181;
   uint16_t const RPC_DEFAULT_PORT = 24182;
   uint16_t const ZMQ_RPC_DEFAULT_PORT = 24183;
@@ -172,22 +173,23 @@ namespace config
   std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
   uint32_t const GENESIS_NONCE = 70;
   
-  std::string const GOVERNANCE_WALLET_ADDRESS = "BCBrDxKu8FKNq9JXD3jqgd98FFRrLqMWJUmQ14mq7aDPTzjPQ1aTNBo5CfBqTKsnArdDTi1sbd64kgX3rg6RCdGu5HnRLWS";
+  std::string const GOVERNANCE_WALLET_ADDRESS = "bxctt5onmz5CYaf9NkuhV19Vo2Rjb56FeBWx2r6jvZxyc2xCF6Md9QY49agR5S5bPGZqGrLTnxVW65dCBAcYDisb1cTdfH8XS";
   namespace testnet
   {
-    uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 63;
-    uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 64;
-    uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 65;
-    uint16_t const P2P_DEFAULT_PORT = 23306;
-    uint16_t const RPC_DEFAULT_PORT = 23307;
-    uint16_t const ZMQ_RPC_DEFAULT_PORT = 23308;
+    uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0xd1;
+    uint64_t const CRYPTONOTE_PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 0xd2;
+    uint64_t const CRYPTONOTE_PUBLIC_SUBADDRESS_BASE58_PREFIX = 0xd3;
+    uint16_t const P2P_DEFAULT_PORT = 24181; // 23306;
+    uint16_t const RPC_DEFAULT_PORT = 24182; // 23307;
+    uint16_t const ZMQ_RPC_DEFAULT_PORT = 24183; // 23308;
     boost::uuids::uuid const NETWORK_ID = { {
-        0x2c ,0xa6, 0xf4, 0xa7 , 0x7d, 0x0c , 0x78, 0xdc, 0x44, 0x3f, 0xd5, 0x69, 0xcb, 0x6d, 0x4e, 0x1c
+        0x7c, 0x18, 0x3A, 0x89, 0x15, 0xA5, 0x92, 0xB4, 0x67, 0x12, 0x29, 0x49, 0x19, 0xA1, 0x41, 0x78
+        // 0x2c ,0xa6, 0xf4, 0xa7 , 0x7d, 0x0c , 0x78, 0xdc, 0x44, 0x3f, 0xd5, 0x69, 0xcb, 0x6d, 0x4e, 0x1c
       } }; // Bender's daydream
     std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
-    uint32_t const GENESIS_NONCE = 71;
+    uint32_t const GENESIS_NONCE = 74;
 	
-	std::string const GOVERNANCE_WALLET_ADDRESS = "Baty8CX5ync9rEhVSgsZT4RAQyPhjuRui3L9yMM7R3wscf6kwLNBHbD77DNDpX9mrZW1VrzrPEhNvaahJnq3Ne1Y13PqyQx";
+    std::string const GOVERNANCE_WALLET_ADDRESS = "bxctt5onmz5CYaf9NkuhV19Vo2Rjb56FeBWx2r6jvZxyc2xCF6Md9QY49agR5S5bPGZqGrLTnxVW65dCBAcYDisb1cTdfH8XS";
   }
 
   namespace stagenet

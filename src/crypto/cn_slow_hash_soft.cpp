@@ -307,12 +307,12 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::implode_scratchpad_soft()
 		aes_round8(k8, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k9, x0, x1, x2, x3, x4, x5, x6, x7);
 
-		if(VERSION > 0)
+		if (VERSION == 2)
 			xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	// Note, this loop is only executed if VERSION > 0
-	for (size_t i = 0; VERSION > 0 && i < MEMORY / sizeof(uint64_t); i += 16)
+	// Note, this loop is only executed if VERSION == 2
+	for (size_t i = 0; VERSION == 2 && i < MEMORY / sizeof(uint64_t); i += 16)
 	{
 		x0.xor_load(lpad.as_uqword() + i + 0);
 		x1.xor_load(lpad.as_uqword() + i + 2);
@@ -337,8 +337,8 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::implode_scratchpad_soft()
 		xor_shift(x0, x1, x2, x3, x4, x5, x6, x7);
 	}
 
-	// Note, this loop is only executed if VERSION > 0
-	for (size_t i = 0; VERSION > 0 && i < 16; i++)
+	// Note, this loop is only executed if VERSION == 2
+	for (size_t i = 0; VERSION == 2 && i < 16; i++)
 	{
 		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
@@ -381,8 +381,8 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::explode_scratchpad_soft()
 	x6.load(spad.as_uqword() + 20);
 	x7.load(spad.as_uqword() + 22);
 
-	// Note, this loop is only executed if VERSION > 0
-	for (size_t i = 0; VERSION > 0 && i < 16; i++)
+	// Note, this loop is only executed if VERSION == 2
+	for (size_t i = 0; VERSION == 2 && i < 16; i++)
 	{
 		aes_round8(k0, x0, x1, x2, x3, x4, x5, x6, x7);
 		aes_round8(k1, x0, x1, x2, x3, x4, x5, x6, x7);
@@ -464,11 +464,31 @@ extern "C" void groestl(const unsigned char*, unsigned long long, unsigned char*
 extern "C" size_t jh_hash(int, const unsigned char*, unsigned long long, unsigned char*);
 extern "C" size_t skein_hash(int, const unsigned char*, size_t, unsigned char*);
 
+inline void cryptonight_monero_tweak(uint64_t* mem_out, aesdata tmp)
+{
+	mem_out[0] = tmp.v64x0;
+
+	uint64_t vh = tmp.v64x1;
+
+	uint8_t x = static_cast<uint8_t>(vh >> 24);
+	static const uint16_t table = 0x7531;
+	const uint8_t index = (((x >> 3) & 6) | (x & 1)) << 1;
+	vh ^= ((table >> index) & 0x3) << 28;
+
+	mem_out[1] = vh;
+}
+
 template<size_t MEMORY, size_t ITER, size_t VERSION>
 void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len, void* out, bool prehashed)
 {
 	if (!prehashed)
 		keccak((const uint8_t *)in, len, spad.as_byte(), 200);
+
+  uint64_t monero_const;
+  if (VERSION == 1) {
+    monero_const = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(in) + 35);
+    monero_const ^= spad.as_uqword(24);
+  }
 
 	explode_scratchpad_soft();
 	
@@ -493,7 +513,12 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 		aes_round(cx, ax);
 
 		bx ^= cx;
+		
+    if (VERSION == 1) {
+      cryptonight_monero_tweak(idx.as_uqword(), bx);
+    } else {
 		bx.write(idx);
+    }
 		idx = scratchpad_ptr(cx.v64x0);
 		bx.load(idx);
 
@@ -501,11 +526,17 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 
 		ax.v64x0 += hi;
 		ax.v64x1 += lo;
+    if (VERSION == 1) {
+      ax.v64x1 ^= monero_const ^ ax.v64x0;
 		ax.write(idx);
+      ax.v64x1 ^= monero_const ^ ax.v64x0;
+    } else {
+      ax.write(idx);
+    }
 
 		ax ^= bx;
 		idx = scratchpad_ptr(ax.v64x0);
-		if(VERSION > 0)
+		if(VERSION == 2)
 		{
 			int64_t n  = idx.as_qword(0);
 			int32_t d  = idx.as_dword(2);
@@ -524,7 +555,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 		aes_round(bx, ax);
 
 		cx ^= bx;
+    if (VERSION == 1) {
+      cryptonight_monero_tweak(idx.as_uqword(), cx);
+    } else {
 		cx.write(idx);
+    }
 		idx = scratchpad_ptr(bx.v64x0);
 		cx.load(idx);
 
@@ -532,10 +567,17 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 
 		ax.v64x0 += hi;
 		ax.v64x1 += lo;
+    if (VERSION == 1) {
+      ax.v64x1 ^= monero_const ^ ax.v64x0;
+      ax.write(idx);
+      ax.v64x1 ^= monero_const ^ ax.v64x0;
+    } else {
 		ax.write(idx);
+    }
+
 		ax ^= cx;
 		idx = scratchpad_ptr(ax.v64x0);
-		if(VERSION > 0)
+		if(VERSION == 2)
 		{
 			int64_t n  = idx.as_qword(0); // read bytes 0 - 7
 			int32_t d  = idx.as_dword(2); // read bytes 8 - 11
@@ -572,4 +614,5 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 }
 
 template class cn_slow_hash<2*1024*1024, 0x80000, 0>;
-template class cn_slow_hash<4*1024*1024, 0x40000, 1>;
+template class cn_slow_hash<1*1024*1024, 0x40000, 1>;
+template class cn_slow_hash<4*1024*1024, 0x40000, 2>;

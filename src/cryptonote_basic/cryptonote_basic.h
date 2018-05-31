@@ -470,11 +470,13 @@ namespace cryptonote
 	//		return false;
 	//	}
       VARINT_FIELD(minor_version)
-      if (major_version == BLOCK_MAJOR_VERSION_1 || major_version >= BLOCK_MAJOR_VERSION_4)
+      if (major_version == BLOCK_MAJOR_VERSION_1) {
 		  VARINT_FIELD(timestamp)
       FIELD(prev_id)
-      if (major_version == BLOCK_MAJOR_VERSION_1 || major_version >= BLOCK_MAJOR_VERSION_4)
 		FIELD(nonce)
+      } else if (major_version >= BLOCK_MAJOR_VERSION_2) {
+        FIELD(prev_id)
+      }
     END_SERIALIZE()
   };
 
@@ -505,7 +507,7 @@ namespace cryptonote
         set_hash_valid(false);
 
       FIELDS(*static_cast<block_header *>(this))
-	  if (major_version == BLOCK_MAJOR_VERSION_2 || major_version == BLOCK_MAJOR_VERSION_3) {
+      if (major_version >= BLOCK_MAJOR_VERSION_2) {
 		  auto sbb = make_serializable_bytecoin_block(*this, false, false);
 		  FIELD_N("parent_block", sbb);
 	  }
