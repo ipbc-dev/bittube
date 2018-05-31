@@ -331,6 +331,8 @@ namespace tools
     {
       res.balance = m_wallet->balance(req.account_index);
       res.unlocked_balance = m_wallet->unlocked_balance(req.account_index);
+      res.locked_amount = res.balance - res.unlocked_balance;
+      res.available_balance = res.unlocked_balance;
       res.multisig_import_needed = m_wallet->multisig() && m_wallet->has_multisig_partial_key_images();
       std::map<uint32_t, uint64_t> balance_per_subaddress = m_wallet->balance_per_subaddress(req.account_index);
       std::map<uint32_t, uint64_t> unlocked_balance_per_subaddress = m_wallet->unlocked_balance_per_subaddress(req.account_index);
@@ -344,6 +346,8 @@ namespace tools
         info.address = m_wallet->get_subaddress_as_str(index);
         info.balance = i.second;
         info.unlocked_balance = unlocked_balance_per_subaddress[i.first];
+        info.locked_amount = info.balance - info.unlocked_balance;
+        info.available_balance = info.unlocked_balance;
         info.label = m_wallet->get_subaddress_label(index);
         info.num_unspent_outputs = std::count_if(transfers.begin(), transfers.end(), [&](const tools::wallet2::transfer_details& td) { return !td.m_spent && td.m_subaddr_index == index; });
         res.per_subaddress.push_back(info);
