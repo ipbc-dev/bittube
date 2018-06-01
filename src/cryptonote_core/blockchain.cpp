@@ -3802,18 +3802,19 @@ void Blockchain::block_longhash_worker(uint64_t height, const std::vector<block>
        break;
     crypto::hash id = get_block_hash(block);
     crypto::hash pow;
-	if (get_hard_fork_version(height + 1) == BLOCK_MAJOR_VERSION_1) {
-		get_block_longhash(block, height++);
-		map.emplace(id, pow);
-	}
-	else 
-	{
-		if (!get_bytecoin_block_longhash(block, pow)) {
-			MDEBUG("Block longhash worker: failed to get bytecoin block longhash");
-		}
-		else
-			map.emplace(id, pow);
-	}
+    if (get_hard_fork_version(height + 1) == BLOCK_MAJOR_VERSION_1) {
+      if (!get_block_longhash(block, pow, height++)) {
+        MERROR("Block longhash worker: failed to get block longhash");
+      } else {
+        map.emplace(id, pow);
+      }
+    } else {
+      if (!get_bytecoin_block_longhash(block, pow)) {
+        MERROR("Block longhash worker: failed to get bytecoin block longhash");
+      } else {
+        map.emplace(id, pow);
+      }
+    }
   }
 
   TIME_MEASURE_FINISH(t);
