@@ -4055,7 +4055,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::list<block_complete_e
   tools::threadpool& tpool = tools::threadpool::getInstance();
   uint64_t threads = tpool.get_max_concurrency();
 
-  if (blocks_entry.size() > 1 && threads > 1 && m_max_prepare_blocks_threads > 1)
+  if (false && blocks_entry.size() > 1 && threads > 1 && m_max_prepare_blocks_threads > 1)
   {
     // limit threads, default limit = 4
     if(threads > m_max_prepare_blocks_threads)
