@@ -3801,8 +3801,8 @@ void Blockchain::block_longhash_worker(uint64_t height, const std::vector<block>
        break;
     crypto::hash id = get_block_hash(block);
     crypto::hash pow;
-    if (get_hard_fork_version(height + 1) == BLOCK_MAJOR_VERSION_1) {
-      if (!get_block_longhash(block, pow, height++)) {
+    if (block.major_version == BLOCK_MAJOR_VERSION_1) {
+      if (!get_block_longhash(block, pow, 0)) {
         MERROR("Block longhash worker: failed to get block longhash");
       } else {
         map.emplace(id, pow);
@@ -4055,7 +4055,7 @@ bool Blockchain::prepare_handle_incoming_blocks(const std::list<block_complete_e
   tools::threadpool& tpool = tools::threadpool::getInstance();
   uint64_t threads = tpool.get_max_concurrency();
 
-  if (false && blocks_entry.size() > 1 && threads > 1 && m_max_prepare_blocks_threads > 1)
+  if (blocks_entry.size() > 1 && threads > 1 && m_max_prepare_blocks_threads > 1)
   {
     // limit threads, default limit = 4
     if(threads > m_max_prepare_blocks_threads)
