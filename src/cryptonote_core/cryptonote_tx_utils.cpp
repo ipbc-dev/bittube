@@ -282,7 +282,7 @@ namespace cryptonote
 
     CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward));
 
-    if (hard_fork_version >= 4)
+    if (hard_fork_version >= BLOCK_MAJOR_VERSION_5)
       tx.version = 2;
     else
       tx.version = 1;

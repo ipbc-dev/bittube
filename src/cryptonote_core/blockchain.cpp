@@ -1219,7 +1219,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   b.timestamp = time(NULL);
 
   uint8_t version = get_current_hard_fork_version();
-  uint64_t blockchain_timestamp_check_window = version < 4 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
+  uint64_t blockchain_timestamp_check_window = version < BLOCK_MAJOR_VERSION_5 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
 
   if(m_db->height() >= blockchain_timestamp_check_window) {
     std::vector<uint64_t> timestamps;
@@ -1311,7 +1311,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
    */
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob size
   uint8_t hf_version = m_hardfork->get_current_version();
-  size_t max_outs = hf_version >= 4 ? 1 : 11;
+  size_t max_outs = hf_version >= BLOCK_MAJOR_VERSION_5 ? 1 : 11;
   bool r = construct_miner_tx(height, median_size, already_generated_coins, txs_size, fee, miner_address, b.miner_tx, ex_nonce, max_outs, hf_version, m_nettype);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
   size_t cumulative_size = txs_size + get_object_blobsize(b.miner_tx);
@@ -1375,7 +1375,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
 bool Blockchain::complete_timestamps_vector(uint64_t start_top_height, std::vector<uint64_t>& timestamps)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
-  size_t tmpsize = get_current_hard_fork_version() < 4 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
+  size_t tmpsize = get_current_hard_fork_version() < BLOCK_MAJOR_VERSION_5 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
   if(timestamps.size() >= tmpsize)
     return true;
 
@@ -2644,7 +2644,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
 
   // from hard fork 2, we require mixin at least 2 unless one output cannot mix with 2 others
   // if one output cannot mix with 2 others, we accept at most 1 output that can mix
-  if (hf_version >= 5)
+  if (hf_version >= BLOCK_MAJOR_VERSION_5)
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
@@ -3220,7 +3220,7 @@ bool Blockchain::check_block_timestamp(std::vector<uint64_t>& timestamps, const 
 
   if(b.timestamp < median_ts)
   {
-	size_t shizetmp = get_current_hard_fork_version() < 4 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
+	size_t shizetmp = get_current_hard_fork_version() < BLOCK_MAJOR_VERSION_5 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
     MERROR_VER("Timestamp of block with id: " << get_block_hash(b) << ", " << b.timestamp << ", less than median of last " << shizetmp << " blocks, " << median_ts);
     return false;
   }
@@ -3238,7 +3238,7 @@ bool Blockchain::check_block_timestamp(std::vector<uint64_t>& timestamps, const 
 bool Blockchain::check_block_timestamp(const block& b) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
-  uint64_t cryptonote_block_future_time_limit = get_current_hard_fork_version() < 4 ? CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT : CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2;
+  uint64_t cryptonote_block_future_time_limit = get_current_hard_fork_version() < BLOCK_MAJOR_VERSION_5 ? CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT : CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2;
   if(b.timestamp > get_adjusted_time() + cryptonote_block_future_time_limit)
   {
     MERROR_VER("Timestamp of block with id: " << get_block_hash(b) << ", " << b.timestamp << ", bigger than adjusted time + 2 hours");
@@ -3246,7 +3246,7 @@ bool Blockchain::check_block_timestamp(const block& b) const
   }
 
   // if not enough blocks, no proper median yet, return true
-  size_t shumize = get_current_hard_fork_version() < 4 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
+  size_t shumize = get_current_hard_fork_version() < BLOCK_MAJOR_VERSION_5 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
   if(m_db->height() < shumize)
   {
     return true;
@@ -3256,7 +3256,7 @@ bool Blockchain::check_block_timestamp(const block& b) const
   auto h = m_db->height();
 
   // need most recent 60 blocks, get index of first of those
-  size_t offset = h - get_current_hard_fork_version() < 4 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
+  size_t offset = h - get_current_hard_fork_version() < BLOCK_MAJOR_VERSION_5 ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
   for(;offset < h; ++offset)
   {
     timestamps.push_back(m_db->get_block_timestamp(offset));
