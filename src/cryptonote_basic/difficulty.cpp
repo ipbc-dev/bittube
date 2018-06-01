@@ -166,9 +166,12 @@ namespace cryptonote {
     const int64_t T = static_cast<int64_t>(target_seconds);
     size_t N = DIFFICULTY_WINDOW_V2;
 
+    sort(timestamps.begin(), timestamps.end());
+    sort(cumulative_difficulties.begin(), cumulative_difficulties.end());
+
     if (timestamps.size() > N) {
-      timestamps.resize(N + 1);
-      cumulative_difficulties.resize(N + 1);
+      timestamps.resize(N);
+      cumulative_difficulties.resize(N);
     }
     size_t n = timestamps.size();
     assert(n == cumulative_difficulties.size());
