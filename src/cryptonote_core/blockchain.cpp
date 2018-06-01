@@ -787,7 +787,7 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
   auto height = m_db->height();
   uint8_t version = get_current_hard_fork_version();
   size_t difficulty_blocks_count = version < 2 ? DIFFICULTY_BLOCKS_COUNT : DIFFICULTY_BLOCKS_COUNT_V2;
-  if (version < BLOCK_MAJOR_VERSION_5) difficulty_blocks_count -= 1; // unfix to get difficulties to match with current daemon
+  if (version > BLOCK_MAJOR_VERSION_1 && version < BLOCK_MAJOR_VERSION_5) difficulty_blocks_count -= 1; // unfix to get difficulties to match with current daemon
   // ND: Speedup
   // 1. Keep a list of the last 735 (or less) blocks that is used to compute difficulty,
   //    then when the next block difficulty is queried, push the latest height data and
@@ -982,7 +982,7 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
   uint8_t version = get_ideal_hard_fork_version(bei.height);
   size_t difficulty_blocks_count;
   difficulty_blocks_count = version < 2 ? DIFFICULTY_BLOCKS_COUNT : DIFFICULTY_BLOCKS_COUNT_V2;
-  if (version < BLOCK_MAJOR_VERSION_5) difficulty_blocks_count -= 1; // unfix to get difficulties to match with current daemon
+  if (version > BLOCK_MAJOR_VERSION_1 && version < BLOCK_MAJOR_VERSION_5) difficulty_blocks_count -= 1; // unfix to get difficulties to match with current daemon
   // if the alt chain isn't long enough to calculate the difficulty target
   // based on its blocks alone, need to get more blocks from the main chain
   if(alt_chain.size()< difficulty_blocks_count)
