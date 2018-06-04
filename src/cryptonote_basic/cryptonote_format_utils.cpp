@@ -733,9 +733,8 @@ namespace cryptonote
     switch (decimal_point)
     {
        case 8:
-       case 6:
-       case 3:
-       case 0:
+       case 5:
+       case 2:
         default_decimal_point = decimal_point;
         break;
       default:
@@ -754,16 +753,12 @@ namespace cryptonote
       decimal_point = default_decimal_point;
     switch (std::atomic_load(&default_decimal_point))
     {
-      case 12:
-        return "monero";
-      case 9:
-        return "millinero";
-      case 6:
-        return "micronero";
-      case 3:
-        return "nanonero";
-      case 0:
-        return "piconero";
+      case CRYPTONOTE_DISPLAY_DECIMAL_POINT:
+        return "bittube";
+      case CRYPTONOTE_DISPLAY_DECIMAL_POINT - 3:
+        return "millitube";
+      case CRYPTONOTE_DISPLAY_DECIMAL_POINT - 6:
+        return "microtube";
       default:
         ASSERT_MES_AND_THROW("Invalid decimal point specification: " << default_decimal_point);
     }
