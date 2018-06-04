@@ -59,7 +59,7 @@
 // MONEY_SUPPLY - total number coins to be generated
 #define MONEY_SUPPLY                                    ((uint64_t)(100000000000000000))
 #define EMISSION_SPEED_FACTOR_PER_MINUTE                (21)
-#define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)30000000) // 3 * pow(10, 11)
+#define FINAL_SUBSIDY_PER_MINUTE                        ((uint64_t)30000000) // 3 * pow(10, 7)
 
 #define CRYPTONOTE_REWARD_BLOCKS_WINDOW                 100
 #define CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2    1000000 //size of block (bytes) after which reward for block calculated using block size
@@ -68,12 +68,12 @@
 #define CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE          600
 #define CRYPTONOTE_DISPLAY_DECIMAL_POINT                8
 // COIN - number of smallest units in one coin
-#define COIN                                            ((uint64_t)100000000) // pow(10, 12)
+#define COIN                                            ((uint64_t)100000000) // pow(10, 8)
 
 #define LEGACY_MINIMUM_FEE								((uint64_t)100000)
-#define FEE_PER_KB_OLD                                  ((uint64_t)100000) // pow(10, 10)
-#define FEE_PER_KB                                      ((uint64_t)100000) // 2 * pow(10, 9)
-#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)200000) // 2 * pow(10,9)
+#define FEE_PER_KB_OLD                                  ((uint64_t)100000) // pow(10, 5)
+#define FEE_PER_KB                                      ((uint64_t)100000) // pow(10, 5)
+#define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)200000) // 2 * pow(10, 5)
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)10000000000000) // 10 * pow(10,12)
 #define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)200000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
 
@@ -157,8 +157,8 @@ namespace config
 {
   uint64_t const DEFAULT_FEE_ATOMIC_XMR_PER_KB = 500; // Just a placeholder!  Change me!
   uint8_t const FEE_CALCULATION_MAX_RETRIES = 10;
-  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000); // 2 * pow(10, 9)
-  uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)200); // pow(10, 8)
+  uint64_t const DEFAULT_DUST_THRESHOLD = ((uint64_t)10000); // pow(10, 5)
+  uint64_t const BASE_REWARD_CLAMP_THRESHOLD = ((uint64_t)200);
   std::string const P2P_REMOTE_DEBUG_TRUSTED_PUB_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
   uint64_t const CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX = 0xd1;
