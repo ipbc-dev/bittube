@@ -248,7 +248,7 @@ namespace cryptonote
   {
     std::vector<std::string> records;
 
-    // All four BittubePulse domains have DNSSEC on and valid
+    // All four BitTubePulse domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = { 
 	
     };

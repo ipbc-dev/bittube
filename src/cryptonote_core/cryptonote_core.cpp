@@ -139,7 +139,7 @@ namespace cryptonote
   };
   static const command_line::arg_descriptor<std::string> arg_check_updates = {
     "check-updates"
-  , "Check for new versions of Bittube: [disabled|notify|download|update]"
+  , "Check for new versions of BitTube: [disabled|notify|download|update]"
   , "notify"
   };
   static const command_line::arg_descriptor<bool> arg_fluffy_blocks  = {
@@ -407,8 +407,8 @@ namespace cryptonote
       if (boost::filesystem::exists(old_files / "blockchain.bin"))
       {
         MWARNING("Found old-style blockchain.bin in " << old_files.string());
-        MWARNING("Bittube now uses a new format. You can either remove blockchain.bin to start syncing");
-        MWARNING("the blockchain anew, or use Bittube-blockchain-export and Bittube-blockchain-import to");
+        MWARNING("BitTube now uses a new format. You can either remove blockchain.bin to start syncing");
+        MWARNING("the blockchain anew, or use bittube-blockchain-export and bittube-blockchain-import to");
         MWARNING("convert your existing blockchain.bin to the new format. See README.md for instructions.");
         return false;
       }
@@ -1339,7 +1339,7 @@ namespace cryptonote
     {
       std::string main_message;
       if (m_offline)
-        main_message = "The daemon is running offline and will not attempt to sync to the Bittube network.";
+        main_message = "The daemon is running offline and will not attempt to sync to the BitTube network.";
       else
         main_message = "The daemon will start synchronizing with the network. This may take a long time to complete.";
       MGINFO_YELLOW(ENDL << "**********************************************************************" << ENDL
@@ -1402,7 +1402,7 @@ namespace cryptonote
   //-----------------------------------------------------------------------------------------------
   bool core::check_updates()
   {
-    static const char software[] = "Bittube";
+    static const char software[] = "BitTube";
 #ifdef BUILD_TAG
     static const char buildtag[] = BOOST_PP_STRINGIZE(BUILD_TAG);
     static const char subdir[] = "cli"; // because it can never be simple
@@ -1413,7 +1413,7 @@ namespace cryptonote
 
     if (m_offline)
       return true; 
-    MCDEBUG("updates", "Skipping checking for a new " << software << " version - not configured for bittube Coin");
+    MCDEBUG("updates", "Skipping checking for a new " << software << " version - not configured for BitTube");
     //CHANGE ME
     return true;
     if (check_updates_level == UPDATES_DISABLED)
