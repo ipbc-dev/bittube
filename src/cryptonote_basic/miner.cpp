@@ -476,7 +476,11 @@ namespace cryptonote
 
       b.nonce = nonce;
       crypto::hash h;
-      get_block_longhash(b, h, height);
+      if (b.major_version == BLOCK_MAJOR_VERSION_1) {
+        get_block_longhash(b, h, height);
+      } else {
+        get_bytecoin_block_longhash(b, h);
+      }
 
       if(check_hash(h, local_diff))
       {
