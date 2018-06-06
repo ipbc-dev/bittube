@@ -173,7 +173,7 @@ namespace cryptonote
     in.height = height;
 
     uint64_t block_reward;
-    if(!get_block_reward(median_size, current_block_size, already_generated_coins, block_reward, hard_fork_version))
+    if(!get_block_reward(median_size, current_block_size, already_generated_coins, fee, block_reward, hard_fork_version))
     {
       LOG_PRINT_L0("Block is too big");
       return false;
@@ -185,7 +185,6 @@ namespace cryptonote
 #endif
 
     //TODO: declining governance reward schedule
-    block_reward += fee;
     uint64_t governance_reward = 0;
     if (already_generated_coins != 0 && hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
@@ -199,9 +198,11 @@ namespace cryptonote
     // from hard fork 4, we use a single "dusty" output. This makes the tx even smaller,
     // and avoids the quantization. These outputs will be added as rct outputs with identity
     // masks, to they can be used as rct inputs.
+    /*
     if (hard_fork_version >= 2 && hard_fork_version < 4) {
       block_reward = block_reward - block_reward % ::config::BASE_REWARD_CLAMP_THRESHOLD;
     }
+    */
 
     std::vector<uint64_t> out_amounts;
     decompose_amount_into_digits(block_reward, hard_fork_version >= 2 ? 0 : ::config::DEFAULT_DUST_THRESHOLD,
