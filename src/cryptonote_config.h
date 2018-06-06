@@ -48,7 +48,7 @@
 #define BLOCK_MAJOR_VERSION_2                           2
 #define BLOCK_MAJOR_VERSION_3                           3
 #define BLOCK_MAJOR_VERSION_4                           4
-#define BLOCK_MAJOR_VERSION_5                           5
+#define BLOCK_MAJOR_VERSION_FUTURE                      (uint8_t)(-1)
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              500
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2           60*10
 #define CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE             10
@@ -141,7 +141,7 @@
 
 #define THREAD_STACK_SIZE                       5 * 1024 * 1024
 
-#define HF_VERSION_DYNAMIC_FEE                  5
+#define HF_VERSION_DYNAMIC_FEE                  4
 #define HF_VERSION_MIN_MIXIN_4                  5
 #define HF_VERSION_MIN_MIXIN_6                  5
 #define HF_VERSION_ENFORCE_RCT                  5

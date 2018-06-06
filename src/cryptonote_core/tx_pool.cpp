@@ -1083,9 +1083,9 @@ namespace cryptonote
     get_block_reward(median_size, total_size, already_generated_coins, fee, best_coinbase, version);
 
 
-    size_t max_total_size_pre_v5 = (130 * median_size) / 100 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
-    size_t max_total_size_v5 = 2 * median_size - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
-    size_t max_total_size = version >= 5 ? max_total_size_v5 : max_total_size_pre_v5;
+    size_t max_total_size_pre_v4 = (130 * median_size) / 100 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
+    size_t max_total_size_v4 = 2 * median_size - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;
+    size_t max_total_size = version >= BLOCK_MAJOR_VERSION_4 ? max_total_size_v4 : max_total_size_pre_v4;
     std::unordered_set<crypto::key_image> k_images;
 
     LOG_PRINT_L2("Filling block template, median size " << median_size << ", " << m_txs_by_fee_and_receive_time.size() << " txes in the pool");
@@ -1111,8 +1111,8 @@ namespace cryptonote
         continue;
       }
 
-      // start using the optimal filling algorithm from v5
-      if (version >= 5)
+      // start using the optimal filling algorithm from v4
+      if (version >= BLOCK_MAJOR_VERSION_4)
       {
         // If we're getting lower coinbase tx,
         // stop including more tx

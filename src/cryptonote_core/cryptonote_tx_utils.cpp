@@ -164,7 +164,7 @@ namespace cryptonote
         return false;
 
     keypair gov_key = get_deterministic_keypair_from_height(height);
-    if (already_generated_coins != 0 && hard_fork_version >= BLOCK_MAJOR_VERSION_4)
+    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
       add_tx_pub_key_to_extra(tx, gov_key.pub);
     }
@@ -186,7 +186,7 @@ namespace cryptonote
 
     //TODO: declining governance reward schedule
     uint64_t governance_reward = 0;
-    if (already_generated_coins != 0 && hard_fork_version >= BLOCK_MAJOR_VERSION_4)
+    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
       governance_reward = get_governance_reward(height, block_reward);
       block_reward -= governance_reward;
@@ -198,19 +198,17 @@ namespace cryptonote
     // from hard fork 4, we use a single "dusty" output. This makes the tx even smaller,
     // and avoids the quantization. These outputs will be added as rct outputs with identity
     // masks, to they can be used as rct inputs.
-    /*
-    if (hard_fork_version >= 2 && hard_fork_version < 4) {
+    if (hard_fork_version >= BLOCK_MAJOR_VERSION_2 && hard_fork_version < BLOCK_MAJOR_VERSION_4) {
       block_reward = block_reward - block_reward % ::config::BASE_REWARD_CLAMP_THRESHOLD;
     }
-    */
 
     std::vector<uint64_t> out_amounts;
-    decompose_amount_into_digits(block_reward, hard_fork_version >= 2 ? 0 : ::config::DEFAULT_DUST_THRESHOLD,
+    decompose_amount_into_digits(block_reward, hard_fork_version >= BLOCK_MAJOR_VERSION_2 ? 0 : ::config::DEFAULT_DUST_THRESHOLD,
       [&out_amounts](uint64_t a_chunk) { out_amounts.push_back(a_chunk); },
       [&out_amounts](uint64_t a_dust) { out_amounts.push_back(a_dust); });
 
     CHECK_AND_ASSERT_MES(1 <= max_outs, false, "max_out must be non-zero");
-    if (height == 0 || hard_fork_version >= 4)
+    if (height == 0 || hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
       // the genesis block was not decomposed, for unknown reasons
       while (max_outs < out_amounts.size())
@@ -248,7 +246,7 @@ namespace cryptonote
       tx.vout.push_back(out);
     }
 
-    if (already_generated_coins != 0 && hard_fork_version >= BLOCK_MAJOR_VERSION_4)
+    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
       cryptonote::address_parse_info governance_wallet_address;
       get_governance_wallet_address(nettype, governance_wallet_address);
@@ -272,7 +270,7 @@ namespace cryptonote
 
     CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward));
 
-    if (hard_fork_version >= BLOCK_MAJOR_VERSION_5)
+    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
       tx.version = 2;
     else
       tx.version = 1;
