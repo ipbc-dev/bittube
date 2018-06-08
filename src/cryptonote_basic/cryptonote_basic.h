@@ -465,17 +465,17 @@ namespace cryptonote
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(major_version)
-	//  if (major_version > BLOCK_MAJOR_VERSION_4) {
-	//		MERROR("Block version is too high " << (unsigned)major_version);
-	//		return false;
-	//	}
+	    if (major_version > BLOCK_MAJOR_VERSION_4) {
+			  MERROR("Block version is too high " << (unsigned)major_version);
+			  return false;
+		  }
       VARINT_FIELD(minor_version)
       if (major_version == BLOCK_MAJOR_VERSION_1) {
-		  VARINT_FIELD(timestamp)
+		    VARINT_FIELD(timestamp)
+      }
       FIELD(prev_id)
-		FIELD(nonce)
-      } else if (major_version >= BLOCK_MAJOR_VERSION_2) {
-        FIELD(prev_id)
+      if (major_version == BLOCK_MAJOR_VERSION_1) {
+        FIELD(nonce)
       }
     END_SERIALIZE()
   };
@@ -508,9 +508,9 @@ namespace cryptonote
 
       FIELDS(*static_cast<block_header *>(this))
       if (major_version >= BLOCK_MAJOR_VERSION_2) {
-		  auto sbb = make_serializable_bytecoin_block(*this, false, false);
-		  FIELD_N("parent_block", sbb);
-	  }
+        auto sbb = make_serializable_bytecoin_block(*this, false, false);
+        FIELD_N("parent_block", sbb);
+      }
       FIELD(miner_tx)
       FIELD(tx_hashes)
     END_SERIALIZE()
