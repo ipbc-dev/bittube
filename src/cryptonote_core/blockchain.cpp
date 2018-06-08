@@ -1204,6 +1204,8 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
 		  MERROR("Failed to append merge mining tag to extra of the parent block miner transaction");
 		  return false;
 	  }
+  } else if (b.major_version == BLOCK_MAJOR_VERSION_1)
+    b.minor_version = 0;
   } else {
     b.minor_version = m_hardfork->get_ideal_version();
   }
