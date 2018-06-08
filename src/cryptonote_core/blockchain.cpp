@@ -1193,10 +1193,10 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   height = m_db->height();
 
   b.major_version = m_hardfork->get_current_version();
-  if (b.major_version == BLOCK_MAJOR_VERSION_3) { // TODO: check for miner compat, probably needs to have parent block minor version as 1
+  if (b.major_version >= BLOCK_MAJOR_VERSION_2) {
 	  b.minor_version = 0;
 	  b.parent_block.major_version = BLOCK_MAJOR_VERSION_1;
-	  b.parent_block.minor_version = 0;
+	  b.parent_block.minor_version = b.major_version >= BLOCK_MAJOR_VERSION_3 ? 1 : 0;
 	  b.parent_block.number_of_transactions = 1;
 	  //create MM tag
 	  tx_extra_merge_mining_tag mm_tag = boost::value_initialized<decltype(mm_tag)>();
@@ -1204,9 +1204,9 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
 		  MERROR("Failed to append merge mining tag to extra of the parent block miner transaction");
 		  return false;
 	  }
+  } else {
+    b.minor_version = m_hardfork->get_ideal_version();
   }
-  else
-	b.minor_version = m_hardfork->get_ideal_version();
   b.prev_id = get_tail_id();
   b.timestamp = time(NULL);
 
