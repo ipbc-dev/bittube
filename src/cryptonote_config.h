@@ -142,9 +142,10 @@
 #define THREAD_STACK_SIZE                       5 * 1024 * 1024
 
 #define HF_VERSION_DYNAMIC_FEE                  4
-#define HF_VERSION_MIN_MIXIN_4                  5
-#define HF_VERSION_MIN_MIXIN_6                  5
-#define HF_VERSION_ENFORCE_RCT                  5
+#define HF_VERSION_MIN_MIXIN_4                  BLOCK_MAJOR_VERSION_FUTURE
+#define HF_VERSION_MIN_MIXIN_6                  BLOCK_MAJOR_VERSION_FUTURE
+#define HF_VERSION_ENFORCE_RCT                  BLOCK_MAJOR_VERSION_FUTURE
+#define HF_VERSION_BULLETPROOF                  BLOCK_MAJOR_VERSION_FUTURE
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 

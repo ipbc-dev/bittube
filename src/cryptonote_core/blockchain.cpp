@@ -2524,7 +2524,7 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
   }
 
   // from vX, allow bulletproofs
-  if (hf_version < BLOCK_MAJOR_VERSION_FUTURE) {
+  if (hf_version < HF_VERSION_BULLETPROOF) {
     const bool bulletproof = tx.rct_signatures.type == rct::RCTTypeFullBulletproof || tx.rct_signatures.type == rct::RCTTypeSimpleBulletproof;
     if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
     {

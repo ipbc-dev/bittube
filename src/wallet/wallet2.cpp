@@ -574,11 +574,6 @@ size_t estimate_tx_size(bool use_rct, int n_inputs, int mixin, int n_outputs, si
     return n_inputs * (mixin+1) * APPROXIMATE_INPUT_BYTES + extra_size;
 }
 
-uint8_t get_bulletproof_fork()
-{
-  return 8;
-}
-
 crypto::hash8 get_short_payment_id(const tools::wallet2::pending_tx &ptx, hw::device &hwdev)
 {
   crypto::hash8 payment_id8 = null_hash8;
@@ -7370,7 +7365,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   uint64_t needed_fee, available_for_fee = 0;
   uint64_t upper_transaction_size_limit = get_upper_transaction_size_limit();
   const bool use_rct = use_fork_rules(HF_VERSION_ENFORCE_RCT, 0);
-  const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
+  const bool bulletproof = use_fork_rules(HF_VERSION_BULLETPROOF, 0);
 
   const uint64_t fee_per_kb  = get_per_kb_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
@@ -7924,7 +7919,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_from(const crypton
   std::vector<std::vector<get_outs_entry>> outs;
 
   const bool use_rct = fake_outs_count > 0 && use_fork_rules(HF_VERSION_ENFORCE_RCT, 0);
-  const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
+  const bool bulletproof = use_fork_rules(HF_VERSION_BULLETPROOF, 0);
   const uint64_t fee_per_kb  = get_per_kb_fee();
   const uint64_t fee_multiplier = get_fee_multiplier(priority, get_fee_algorithm());
 
