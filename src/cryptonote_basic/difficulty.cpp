@@ -166,13 +166,15 @@ namespace cryptonote {
     const int64_t T = static_cast<int64_t>(target_seconds);
     size_t N = DIFFICULTY_WINDOW_V2;
 
+    if (timestamps.size() > N) {
+      const size_t extra = timestamps.size() - N;
+      timestamps.erase(timestamps.begin(), timestamps.begin() + extra);
+      cumulative_difficulties.erase(cumulative_difficulties.begin(), cumulative_difficulties.begin() + extra);
+    }
+
     sort(timestamps.begin(), timestamps.end());
     sort(cumulative_difficulties.begin(), cumulative_difficulties.end());
 
-    if (timestamps.size() > N) {
-      timestamps.resize(N);
-      cumulative_difficulties.resize(N);
-    }
     size_t n = timestamps.size();
     assert(n == cumulative_difficulties.size());
     assert(n <= DIFFICULTY_WINDOW_V2);
