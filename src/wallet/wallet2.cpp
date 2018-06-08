@@ -5332,7 +5332,7 @@ uint64_t wallet2::adjust_mixin(uint64_t mixin) const
     mixin = 4;
   }
   else if (mixin < 2 && use_fork_rules(BLOCK_MAJOR_VERSION_4, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 2, using 3");
+    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 4, using 3");
     mixin = 2;
   }
   return mixin;
