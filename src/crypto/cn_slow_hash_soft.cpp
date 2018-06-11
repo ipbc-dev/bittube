@@ -485,7 +485,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 		keccak((const uint8_t *)in, len, spad.as_byte(), 200);
 
   uint64_t monero_const;
-  if (VERSION == 1) {
+  if (VERSION >= 1) {
     monero_const = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(in) + 35);
     monero_const ^= spad.as_uqword(24);
   }
@@ -514,7 +514,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 
 		bx ^= cx;
 		
-    if (VERSION == 1) {
+    if (VERSION >= 1) {
       cryptonight_monero_tweak(idx.as_uqword(), bx);
     } else {
 		bx.write(idx);
@@ -526,7 +526,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 
 		ax.v64x0 += hi;
 		ax.v64x1 += lo;
-    if (VERSION == 1) {
+    if (VERSION >= 1) {
       ax.v64x1 ^= monero_const ^ ax.v64x0;
 		ax.write(idx);
       ax.v64x1 ^= monero_const ^ ax.v64x0;
@@ -555,7 +555,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 		aes_round(bx, ax);
 
 		cx ^= bx;
-    if (VERSION == 1) {
+    if (VERSION >= 1) {
       cryptonight_monero_tweak(idx.as_uqword(), cx);
     } else {
 		cx.write(idx);
@@ -567,7 +567,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 
 		ax.v64x0 += hi;
 		ax.v64x1 += lo;
-    if (VERSION == 1) {
+    if (VERSION >= 1) {
       ax.v64x1 ^= monero_const ^ ax.v64x0;
       ax.write(idx);
       ax.v64x1 ^= monero_const ^ ax.v64x0;

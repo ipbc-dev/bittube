@@ -139,7 +139,7 @@ private:
 template<size_t MEMORY, size_t ITER, size_t VERSION> class cn_slow_hash;
 using cn_pow_hash_v1 = cn_slow_hash<2*1024*1024, 0x80000, 0>; // standard
 using cn_pow_hash_v2 = cn_slow_hash<1*1024*1024, 0x40000, 1>; // ipbc lite
-using cn_pow_hash_v3 = cn_slow_hash<4*1024*1024, 0x40000, 2>; // sumo
+using cn_pow_hash_v3 = cn_slow_hash<4*1024*1024, 0x40000, 2>; // sumo + ipbc
 
 template<size_t MEMORY, size_t ITER, size_t VERSION>
 class cn_slow_hash

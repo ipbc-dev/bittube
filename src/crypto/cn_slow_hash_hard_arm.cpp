@@ -331,7 +331,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 		keccak((const uint8_t *)in, len, spad.as_byte(), 200);
 
   uint64_t monero_const;
-  if (VERSION == 1) {
+  if (VERSION >= 1) {
     monero_const = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(in) + 35);
     monero_const ^= spad.as_uqword(24);
   }
@@ -355,7 +355,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 
 		cx = vaesmcq_u8(vaeseq_u8(cx, zero)) ^ _mm_set_epi64x(ah0, al0);
 
-    if (VERSION == 1) {
+    if (VERSION >= 1) {
       cryptonight_monero_tweak(scratchpad_ptr(idx0).as_uqword(), vreinterpretq_u64_u8(bx0 ^ cx));
     } else {
     vst1q_u8(scratchpad_ptr(idx0).as_byte(), bx0 ^ cx);
@@ -373,7 +373,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 		al0 += hi;
 		ah0 += lo;
 		scratchpad_ptr(idx0).as_uqword(0) = al0;
-    if (VERSION == 1) {
+    if (VERSION >= 1) {
       scratchpad_ptr(idx0).as_uqword(1) = ah0 ^ monero_const ^ al0;
     } else {
     scratchpad_ptr(idx0).as_uqword(1) = ah0;
