@@ -142,6 +142,7 @@
 #define THREAD_STACK_SIZE                       5 * 1024 * 1024
 
 #define HF_VERSION_DYNAMIC_FEE                  4
+#define HF_VERSION_MIN_MIXIN_2                  BLOCK_MAJOR_VERSION_FUTURE
 #define HF_VERSION_MIN_MIXIN_4                  BLOCK_MAJOR_VERSION_FUTURE
 #define HF_VERSION_MIN_MIXIN_6                  BLOCK_MAJOR_VERSION_FUTURE
 #define HF_VERSION_ENFORCE_RCT                  BLOCK_MAJOR_VERSION_FUTURE

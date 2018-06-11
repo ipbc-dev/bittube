@@ -2636,13 +2636,13 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
 
   const uint8_t hf_version = m_hardfork->get_current_version();
 
-  // from hard fork 4, we require mixin at least 2 unless one output cannot mix with 2 others
+  // from hard fork X, we require mixin at least 2 unless one output cannot mix with 2 others
   // if one output cannot mix with 2 others, we accept at most 1 output that can mix
-  if (hf_version >= BLOCK_MAJOR_VERSION_4)
+  if (hf_version >= HF_VERSION_MIN_MIXIN_2)
   {
     size_t n_unmixable = 0, n_mixable = 0;
     size_t mixin = std::numeric_limits<size_t>::max();
-    const size_t min_mixin = hf_version >= HF_VERSION_MIN_MIXIN_6 ? 6 : hf_version >= HF_VERSION_MIN_MIXIN_4 ? 4 : hf_version >= BLOCK_MAJOR_VERSION_4 ? 2 : 1;
+    const size_t min_mixin = hf_version >= HF_VERSION_MIN_MIXIN_6 ? 6 : hf_version >= HF_VERSION_MIN_MIXIN_4 ? 4 : hf_version >= HF_VERSION_MIN_MIXIN_2 ? 2 : 1;
     for (const auto& txin : tx.vin)
     {
       // non txin_to_key inputs will be rejected below
