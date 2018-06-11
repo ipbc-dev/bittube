@@ -164,7 +164,7 @@ namespace cryptonote
         return false;
 
     keypair gov_key = get_deterministic_keypair_from_height(height);
-    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
+    if (hard_fork_version >= HF_VERSION_GOVERNANCE)
     {
       add_tx_pub_key_to_extra(tx, gov_key.pub);
     }
@@ -186,7 +186,7 @@ namespace cryptonote
 
     //TODO: declining governance reward schedule
     uint64_t governance_reward = 0;
-    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
+    if (hard_fork_version >= HF_VERSION_GOVERNANCE)
     {
       governance_reward = get_governance_reward(height, block_reward);
       block_reward -= governance_reward;
@@ -246,7 +246,7 @@ namespace cryptonote
       tx.vout.push_back(out);
     }
 
-    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
+    if (hard_fork_version >= HF_VERSION_GOVERNANCE)
     {
       cryptonote::address_parse_info governance_wallet_address;
       get_governance_wallet_address(nettype, governance_wallet_address);
