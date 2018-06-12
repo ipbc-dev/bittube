@@ -96,14 +96,43 @@ namespace cryptonote
     return k;
   }
 
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward)
+  std::vector<block_reward_share> get_block_reward_shares(uint64_t block_reward, uint8_t version, const cryptonote::network_type nettype)
   {
-    return base_reward * 30 / 100;
+    std::vector<block_reward_share> shares;
+    if (version < BLOCK_MAJOR_VERSION_4) return shares;
+
+    cryptonote::address_parse_info info;
+    if (version >= HF_VERSION_DEV_REWARD) {
+      get_development_wallet_address(nettype, info);
+      shares.emplace_back(block_reward_share{"development", get_development_reward(block_reward), info.address});
+      get_marketing_wallet_address(nettype, info);
+      shares.emplace_back(block_reward_share{"marketing", get_marketing_reward(block_reward), info.address});
+    }
+
+    if (version >= HF_VERSION_AIRTIME_REWARD) {
+      get_airtime_wallet_address(nettype, info);
+      shares.emplace_back(block_reward_share{"airtime", get_airtime_reward(block_reward), info.address});
+    }
+    return shares;
+  }
+
+  uint64_t get_development_reward(uint64_t block_reward)
+  {
+    return block_reward * 15 / 1000; // 1.5%
+  }
+
+  uint64_t get_marketing_reward(uint64_t block_reward)
+  {
+    return block_reward * 15 / 1000; // 1.5%
+  }
+
+  uint64_t get_airtime_reward(uint64_t block_reward)
+  {
+    return block_reward * 27 / 100; // 27%
   }
 
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
   {
-
     crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);
     bool r = crypto::generate_key_derivation(address.m_view_public_key, tx_key.sec, derivation);
     CHECK_AND_ASSERT_MES(r, false, "failed to generate_key_derivation(" << address.m_view_public_key << ", " << tx_key.sec << ")");
@@ -114,18 +143,19 @@ namespace cryptonote
     return true;
   }
 
-  bool get_governance_wallet_address(const cryptonote::network_type nettype, cryptonote::address_parse_info &address)
+  // TODO: refactor these to single function?
+  bool get_development_wallet_address(const cryptonote::network_type nettype, cryptonote::address_parse_info &address)
   {
     switch (nettype)
     {
       case STAGENET:
-        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::GOVERNANCE_WALLET_ADDRESS);
+        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::DEVELOPMENT_WALLET_ADDRESS);
         break;
       case TESTNET:
-        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::GOVERNANCE_WALLET_ADDRESS);
+        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::DEVELOPMENT_WALLET_ADDRESS);
         break;
       case MAINNET:
-        cryptonote::get_account_address_from_str(address, nettype, ::config::GOVERNANCE_WALLET_ADDRESS);
+        cryptonote::get_account_address_from_str(address, nettype, ::config::DEVELOPMENT_WALLET_ADDRESS);
         break;
       default:
         return false;
@@ -133,18 +163,50 @@ namespace cryptonote
     return true;
   }
 
-  bool validate_governance_reward_key(uint64_t height, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype)
+  bool get_marketing_wallet_address(const cryptonote::network_type nettype, cryptonote::address_parse_info &address)
   {
-    keypair gov_key = get_deterministic_keypair_from_height(height);
-
-    cryptonote::address_parse_info governance_wallet_address;
-    get_governance_wallet_address(nettype, governance_wallet_address);
-
-    crypto::public_key correct_key;
-
-    if (!get_deterministic_output_key(governance_wallet_address.address, gov_key, output_index, correct_key))
+    switch (nettype)
     {
-      MERROR("Failed to generate deterministic output key for governance wallet output validation");
+      case STAGENET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::MARKETING_WALLET_ADDRESS);
+        break;
+      case TESTNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::MARKETING_WALLET_ADDRESS);
+        break;
+      case MAINNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::MARKETING_WALLET_ADDRESS);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  bool get_airtime_wallet_address(const cryptonote::network_type nettype, cryptonote::address_parse_info &address)
+  {
+    switch (nettype)
+    {
+      case STAGENET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::AIRTIME_WALLET_ADDRESS);
+        break;
+      case TESTNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::AIRTIME_WALLET_ADDRESS);
+        break;
+      case MAINNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::AIRTIME_WALLET_ADDRESS);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  bool validate_shared_reward_key(const keypair &share_key, size_t output_index, const account_public_address& address, const crypto::public_key &output_key)
+  {
+    crypto::public_key correct_key;
+    if (!get_deterministic_output_key(address, share_key, output_index, correct_key))
+    {
+      MERROR("Failed to generate deterministic output key for shared reward output validation");
       return false;
     }
 
@@ -163,10 +225,10 @@ namespace cryptonote
       if(!add_extra_nonce_to_tx_extra(tx.extra, extra_nonce))
         return false;
 
-    keypair gov_key = get_deterministic_keypair_from_height(height);
-    if (hard_fork_version >= HF_VERSION_GOVERNANCE)
+    keypair share_key = get_deterministic_keypair_from_height(height);
+    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
     {
-      add_tx_pub_key_to_extra(tx, gov_key.pub);
+      add_tx_pub_key_to_extra(tx, share_key.pub);
     }
 
     txin_gen in;
@@ -184,13 +246,10 @@ namespace cryptonote
       ", fee " << fee);
 #endif
 
-    //TODO: declining governance reward schedule
-    uint64_t governance_reward = 0;
-    if (hard_fork_version >= HF_VERSION_GOVERNANCE)
-    {
-      governance_reward = get_governance_reward(height, block_reward);
-      block_reward -= governance_reward;
-    }
+    auto shares = get_block_reward_shares(block_reward, hard_fork_version, nettype);
+    uint64_t shared_reward = 0;
+    for (auto share : shares) shared_reward += share.amount;
+    block_reward -= shared_reward;
 
     // from hard fork 2, we cut out the low significant digits. This makes the tx smaller, and
     // keeps the paid amount almost the same. The unpaid remainder gets pushed back to the
@@ -246,16 +305,11 @@ namespace cryptonote
       tx.vout.push_back(out);
     }
 
-    if (hard_fork_version >= HF_VERSION_GOVERNANCE)
-    {
-      cryptonote::address_parse_info governance_wallet_address;
-      get_governance_wallet_address(nettype, governance_wallet_address);
-
+    for (auto share : shares) {
       crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-
-      if (!get_deterministic_output_key(governance_wallet_address.address, gov_key, out_amounts.size(), out_eph_public_key))
+      if (!get_deterministic_output_key(share.address, share_key, out_amounts.size(), out_eph_public_key))
       {
-        MERROR("Failed to generate deterministic output key for governance wallet output creation");
+        MERROR("Failed to generate deterministic output key for " << share.type << " wallet output creation");
         return false;
       }
 
@@ -263,12 +317,12 @@ namespace cryptonote
       tk.key = out_eph_public_key;
 
       tx_out out;
-      summary_amounts += out.amount = governance_reward;
+      summary_amounts += out.amount = share.amount;
       out.target = tk;
       tx.vout.push_back(out);
     }
 
-    CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + governance_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + governance_reward));
+    CHECK_AND_ASSERT_MES(summary_amounts == (block_reward + shared_reward), false, "Failed to construct miner tx, summary_amounts = " << summary_amounts << " not equal total block_reward = " << (block_reward + shared_reward));
 
     if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
       tx.version = 2;

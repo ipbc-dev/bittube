@@ -41,12 +41,24 @@ namespace cryptonote
 
   keypair get_deterministic_keypair_from_height(uint64_t height);
 
-  uint64_t get_governance_reward(uint64_t height, uint64_t base_reward);
+  struct block_reward_share {
+    const char *type;
+    const uint64_t amount;
+    const account_public_address address;
+  };
+  std::vector<block_reward_share> get_block_reward_shares(uint64_t block_reward, uint8_t version, const network_type nettype);
+
+  uint64_t get_development_reward(uint64_t block_reward);
+  uint64_t get_marketing_reward(uint64_t block_reward);
+  uint64_t get_airtime_reward(uint64_t block_reward);
 
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key);
 
-  bool get_governance_wallet_address(const network_type nettype, address_parse_info &address);
-  bool validate_governance_reward_key(uint64_t height, size_t output_index, const crypto::public_key& output_key, const cryptonote::network_type nettype);
+  bool get_development_wallet_address(const network_type nettype, address_parse_info &address);
+  bool get_marketing_wallet_address(const network_type nettype, address_parse_info &address);
+  bool get_airtime_wallet_address(const network_type nettype, address_parse_info &address);
+
+  bool validate_shared_reward_key(const keypair &share_key, size_t output_index, const account_public_address &address, const crypto::public_key& output_key);
 
   struct tx_source_entry
   {

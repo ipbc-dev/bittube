@@ -1099,22 +1099,26 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
     MERROR_VER("block size " << cumulative_block_size << " is bigger than allowed for this blockchain");
     return false;
   }
-  if (version >= HF_VERSION_GOVERNANCE)
-  {
-    uint64_t governance_reward = get_governance_reward(m_db->height(), base_reward);
 
-    if (b.miner_tx.vout.back().amount != governance_reward)
-    {
-      MERROR_VER("governance reward amount incorrect.  Should be: " << print_money(governance_reward) << ", is: " << print_money(b.miner_tx.vout.back().amount));
-      return false;
-    }
-
-    if (!validate_governance_reward_key(m_db->height(), b.miner_tx.vout.size() - 1, boost::get<txout_to_key>(b.miner_tx.vout.back().target).key, m_nettype))
-    {
-      MERROR_VER("governance reward public key incorrect.");
-      return false;
+  if (version >= BLOCK_MAJOR_VERSION_4) {
+    auto share_key = get_deterministic_keypair_from_height(m_db->height());
+    auto shares = get_block_reward_shares(base_reward, version, m_nettype);
+    size_t idx = b.miner_tx.vout.size() - shares.size();
+    for (auto share : shares) {
+      auto out = b.miner_tx.vout[idx];
+      if (out.amount != share.amount) {
+        MERROR_VER(share.type << " reward amount incorrect. Should be: " << print_money(share.amount) << ", is: " << print_money(out.amount));
+        return false;
+      }
+      if (!validate_shared_reward_key(share_key, idx, share.address, boost::get<txout_to_key>(out.target).key))
+      {
+        MERROR_VER(share.type << " reward public key incorrect.");
+        return false;
+      }
+      idx++;
     }
   }
+
   if(base_reward < money_in_use)
   {
     MERROR_VER("coinbase transaction spend too much money (" << print_money(money_in_use) << "). Block reward is " << print_money(base_reward) << "(" << print_money(base_reward - fee) << "+" << print_money(fee) << ")");

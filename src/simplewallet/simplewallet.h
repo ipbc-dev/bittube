@@ -51,7 +51,7 @@
 #undef MONERO_DEFAULT_LOG_CATEGORY
 #define MONERO_DEFAULT_LOG_CATEGORY "wallet.simplewallet"
 // Hardcode BitTube's donation address (see #1447)
-constexpr const char MONERO_DONATION_ADDR[] = "bxctt5onmz5CYaf9NkuhV19Vo2Rjb56FeBWx2r6jvZxyc2xCF6Md9QY49agR5S5bPGZqGrLTnxVW65dCBAcYDisb1cTdfH8XS";
+constexpr const char MONERO_DONATION_ADDR[] = "bxdaNPkW77u6KYJuYNDSJpfocTXjVpZ7mMAsoNELySdnbAr8U6aMvnULosC456Kk7NRCAS2Xe7o14NF7bbPKyVta39KPYFia3";
 
 /*!
  * \namespace cryptonote
