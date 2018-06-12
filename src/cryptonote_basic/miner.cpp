@@ -379,7 +379,11 @@ namespace cryptonote
     for(; bl.nonce != std::numeric_limits<uint32_t>::max(); bl.nonce++)
     {
       crypto::hash h;
-      get_block_longhash(bl, h, height);
+      if (bl.major_version == BLOCK_MAJOR_VERSION_1) {
+        get_block_longhash(bl, h, height);
+      } else {
+        get_bytecoin_block_longhash(bl, h);
+      }
 
       if(check_hash(h, diffic))
       {
