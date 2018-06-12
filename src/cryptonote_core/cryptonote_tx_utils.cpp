@@ -257,9 +257,11 @@ namespace cryptonote
     // from hard fork 4, we use a single "dusty" output. This makes the tx even smaller,
     // and avoids the quantization. These outputs will be added as rct outputs with identity
     // masks, to they can be used as rct inputs.
+    /*
     if (hard_fork_version >= BLOCK_MAJOR_VERSION_2 && hard_fork_version < BLOCK_MAJOR_VERSION_4) {
       block_reward = block_reward - block_reward % ::config::BASE_REWARD_CLAMP_THRESHOLD;
     }
+    */
 
     std::vector<uint64_t> out_amounts;
     decompose_amount_into_digits(block_reward, hard_fork_version >= BLOCK_MAJOR_VERSION_2 ? 0 : ::config::DEFAULT_DUST_THRESHOLD,
