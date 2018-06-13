@@ -288,7 +288,8 @@ namespace cryptonote
     }
 
     uint64_t summary_amounts = 0;
-    for (size_t no = 0; no < out_amounts.size(); no++)
+    size_t no = 0;
+    for (; no < out_amounts.size(); no++)
     {
       crypto::key_derivation derivation = AUTO_VAL_INIT(derivation);;
       crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
@@ -309,7 +310,7 @@ namespace cryptonote
 
     for (auto share : shares) {
       crypto::public_key out_eph_public_key = AUTO_VAL_INIT(out_eph_public_key);
-      if (!get_deterministic_output_key(share.address, share_key, out_amounts.size(), out_eph_public_key))
+      if (!get_deterministic_output_key(share.address, share_key, no++, out_eph_public_key))
       {
         MERROR("Failed to generate deterministic output key for " << share.type << " wallet output creation");
         return false;
