@@ -826,10 +826,6 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
     m_difficulties = difficulties;
   }
   size_t target = version < BLOCK_MAJOR_VERSION_2 ? DIFFICULTY_TARGET_V1 : DIFFICULTY_TARGET_V2;
-  /*
-  size_t diffv3 = version < 4 ? next_difficulty_v2(timestamps, difficulties, target) : next_difficulty_v3(timestamps, difficulties, target);
-  return version < 2 ? next_difficulty(timestamps, difficulties, target) : diffv3;
-  */
   return version < BLOCK_MAJOR_VERSION_2 ? next_difficulty(timestamps, difficulties, target) : next_difficulty_v2_ipbc(timestamps, difficulties, target);
 }
 //------------------------------------------------------------------
@@ -1033,12 +1029,6 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
 
   // FIXME: This will fail if fork activation heights are subject to voting
   size_t target = get_ideal_hard_fork_version(bei.height) < BLOCK_MAJOR_VERSION_2 ? DIFFICULTY_TARGET_V1 : DIFFICULTY_TARGET_V2;
-
-  // calculate the difficulty target for the block and return it
-  /*
-  size_t diffv3 = get_ideal_hard_fork_version(bei.height) < 4 ? next_difficulty_v2(timestamps, cumulative_difficulties, target) : next_difficulty_v3(timestamps, cumulative_difficulties, target);
-  return get_ideal_hard_fork_version(bei.height) < 2 ? next_difficulty(timestamps, cumulative_difficulties, target) : diffv3;
-  */
   return get_ideal_hard_fork_version(bei.height) < BLOCK_MAJOR_VERSION_2 ? next_difficulty(timestamps, cumulative_difficulties, target) : next_difficulty_v2_ipbc(timestamps, cumulative_difficulties, target);
 }
 //------------------------------------------------------------------
