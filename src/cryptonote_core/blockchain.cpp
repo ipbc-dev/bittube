@@ -86,15 +86,20 @@ static const struct {
   uint64_t height;
   uint8_t threshold;
   time_t time;
+  difficulty_type diff_reset_value;
 } mainnet_hard_forks[] = {
   // version 1 from the start of the blockchain
-  { 1, 1, 0, 1517405674 },
+  { 1, 1, 0, 1517405674, 0 },
 
   // version 2 starts from block 23001.
   
- { 2, 23001 , 0, 1520036614 },
+ { 2, 23001 , 0, 1520036614, 0 },
   // version 3 starts from block 54901. 
- { 3, 54901, 0, 1523885225 },
+ { 3, 54901, 0, 1523885225, 0 },
+  // version 4 starts from block 95775.
+// { 4, 95775, 0, 1527817979, 100 },
+  // version 5 starts from block 95790.
+// { 5, 95790, 0, 1527817999, 100 },
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 23000;
 
@@ -103,31 +108,34 @@ static const struct {
   uint64_t height;
   uint8_t threshold;
   time_t time;
+  difficulty_type diff_reset_value;
 } testnet_hard_forks[] = {
   // version 1 from the start of the blockchain
-  { 1, 1, 0, 1341378000 },
-  { 2, 11, 0, 1521000000 },
-  { 3, 21, 0, 1521120000 },
-  { 4, 31, 0, 1521240000 }
+  { 1, 1, 0, 1517405674, 0 },
+  //{ 2, 5, 0, 1520036614, 100 }, // Skipped because of conflicts on mainet
+  //{ 3, 10, 0, 1523885225, 100 }, // Skipped because of conflicts on mainet
+  { 4, 5, 0, 1527817979, 100 },
+  { 5, 10, 0, 1527817999, 100 },
 };
-static const uint64_t testnet_hard_fork_version_1_till = 10;
+static const uint64_t testnet_hard_fork_version_1_till = 4;
 
 static const struct {
   uint8_t version;
   uint64_t height;
   uint8_t threshold;
   time_t time;
+  difficulty_type diff_reset_value;
 } stagenet_hard_forks[] = {
   // version 1 from the start of the blockchain
-  { 1, 1, 0, 1341378000 },
+  { 1, 1, 0, 1341378000, 0 },
 
   // versions 2-7 in rapid succession from March 13th, 2018
-  { 2, 32000, 0, 1521000000 },
-  { 3, 33000, 0, 1521120000 },
-  { 4, 34000, 0, 1521240000 },
-  { 5, 35000, 0, 1521360000 },
-  { 6, 36000, 0, 1521480000 },
-  { 7, 37000, 0, 1521600000 },
+  { 2, 32000, 0, 1521000000, 0 },
+  { 3, 33000, 0, 1521120000, 0 },
+  { 4, 34000, 0, 1521240000, 0 },
+  { 5, 35000, 0, 1521360000, 0 },
+  { 6, 36000, 0, 1521480000, 0 },
+  { 7, 37000, 0, 1521600000, 0 },
 };
 
 //------------------------------------------------------------------
@@ -343,17 +351,17 @@ bool Blockchain::init(BlockchainDB* db, const network_type nettype, bool offline
   else if (m_nettype == TESTNET)
   {
     for (size_t n = 0; n < sizeof(testnet_hard_forks) / sizeof(testnet_hard_forks[0]); ++n)
-      m_hardfork->add_fork(testnet_hard_forks[n].version, testnet_hard_forks[n].height, testnet_hard_forks[n].threshold, testnet_hard_forks[n].time);
+      m_hardfork->add_fork(testnet_hard_forks[n].version, testnet_hard_forks[n].height, testnet_hard_forks[n].threshold, testnet_hard_forks[n].time, testnet_hard_forks[n].diff_reset_value);
   }
   else if (m_nettype == STAGENET)
   {
     for (size_t n = 0; n < sizeof(stagenet_hard_forks) / sizeof(stagenet_hard_forks[0]); ++n)
-      m_hardfork->add_fork(stagenet_hard_forks[n].version, stagenet_hard_forks[n].height, stagenet_hard_forks[n].threshold, stagenet_hard_forks[n].time);
+      m_hardfork->add_fork(stagenet_hard_forks[n].version, stagenet_hard_forks[n].height, stagenet_hard_forks[n].threshold, stagenet_hard_forks[n].time, stagenet_hard_forks[n].diff_reset_value);
   }
   else
   {
     for (size_t n = 0; n < sizeof(mainnet_hard_forks) / sizeof(mainnet_hard_forks[0]); ++n)
-      m_hardfork->add_fork(mainnet_hard_forks[n].version, mainnet_hard_forks[n].height, mainnet_hard_forks[n].threshold, mainnet_hard_forks[n].time);
+      m_hardfork->add_fork(mainnet_hard_forks[n].version, mainnet_hard_forks[n].height, mainnet_hard_forks[n].threshold, mainnet_hard_forks[n].time, mainnet_hard_forks[n].diff_reset_value);
   }
   m_hardfork->init();
 
@@ -826,7 +834,9 @@ difficulty_type Blockchain::get_difficulty_for_next_block()
     m_difficulties = difficulties;
   }
   size_t target = version < BLOCK_MAJOR_VERSION_2 ? DIFFICULTY_TARGET_V1 : DIFFICULTY_TARGET_V2;
-  return version < BLOCK_MAJOR_VERSION_2 ? next_difficulty(timestamps, difficulties, target) : next_difficulty_v2_ipbc(timestamps, difficulties, target);
+  uint64_t last_diff_reset_height = m_hardfork->get_last_diff_reset_height(height);
+  difficulty_type last_diff_reset_value = m_hardfork->get_last_diff_reset_value(height);
+  return version < BLOCK_MAJOR_VERSION_2 ? next_difficulty(timestamps, difficulties, target, height, last_diff_reset_height, last_diff_reset_value) : next_difficulty_v2_ipbc(timestamps, difficulties, target, height, last_diff_reset_height, last_diff_reset_value);
 }
 //------------------------------------------------------------------
 // This function removes blocks from the blockchain until it gets to the
@@ -1029,7 +1039,9 @@ difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std:
 
   // FIXME: This will fail if fork activation heights are subject to voting
   size_t target = get_ideal_hard_fork_version(bei.height) < BLOCK_MAJOR_VERSION_2 ? DIFFICULTY_TARGET_V1 : DIFFICULTY_TARGET_V2;
-  return get_ideal_hard_fork_version(bei.height) < BLOCK_MAJOR_VERSION_2 ? next_difficulty(timestamps, cumulative_difficulties, target) : next_difficulty_v2_ipbc(timestamps, cumulative_difficulties, target);
+  uint64_t last_diff_reset_height = m_hardfork->get_last_diff_reset_height(bei.height);
+  difficulty_type last_diff_reset_value = m_hardfork->get_last_diff_reset_value(bei.height);
+  return get_ideal_hard_fork_version(bei.height) < BLOCK_MAJOR_VERSION_2 ? next_difficulty(timestamps, cumulative_difficulties, target, bei.height, last_diff_reset_height, last_diff_reset_value) : next_difficulty_v2_ipbc(timestamps, cumulative_difficulties, target, bei.height, last_diff_reset_height, last_diff_reset_value);
 }
 //------------------------------------------------------------------
 // This function does a sanity check on basic things that all miner
