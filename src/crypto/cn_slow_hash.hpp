@@ -264,4 +264,5 @@ private:
 };
 
 extern template class cn_slow_hash<2*1024*1024, 0x80000, 0>;
-extern template class cn_slow_hash<4*1024*1024, 0x40000, 1>;
+extern template class cn_slow_hash<1*1024*1024, 0x40000, 1>;
+extern template class cn_slow_hash<4*1024*1024, 0x40000, 2>;
