@@ -146,8 +146,6 @@
 #define HF_VERSION_AIRTIME_REWARD               5
 #define HF_VERSION_POW_VARIANT1                 3
 #define HF_VERSION_POW_VARIANT2                 BLOCK_MAJOR_VERSION_FUTURE
-#define HF_VERSION_MIN_MIXIN_2                  4
-#define HF_VERSION_MIN_MIXIN_4                  4
 #define HF_VERSION_MIN_MIXIN_6                  4
 #define HF_VERSION_ENFORCE_RCT                  4
 #define HF_VERSION_BULLETPROOF                  BLOCK_MAJOR_VERSION_FUTURE
