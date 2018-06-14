@@ -5319,11 +5319,11 @@ int wallet2::get_fee_algorithm() const
 uint64_t wallet2::adjust_mixin(uint64_t mixin) const
 {
   if (mixin < 6 && use_fork_rules(HF_VERSION_MIN_MIXIN_6, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 7, using 7");
+    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 4, using 7");
     mixin = 6;
   }
   else if (mixin < 4 && use_fork_rules(HF_VERSION_MIN_MIXIN_4, 10)) {
-    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 6, using 5");
+    MWARNING("Requested ring size " << (mixin + 1) << " too low for hard fork 4, using 5");
     mixin = 4;
   }
   else if (mixin < 2 && use_fork_rules(HF_VERSION_MIN_MIXIN_2, 10)) {
