@@ -939,7 +939,7 @@ namespace cryptonote
 	if (!get_block_hashing_blob(b, blob))
 		return false;
 
-    if (b.major_version >= BLOCK_MAJOR_VERSION_2)
+	if (b.major_version == BLOCK_MAJOR_VERSION_2 || b.major_version == BLOCK_MAJOR_VERSION_3)
 	{
 		blobdata parent_blob;
 		auto sbb = make_serializable_bytecoin_block(b, true, false);
@@ -1001,7 +1001,12 @@ namespace cryptonote
 bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
     blobdata bd = get_block_hashing_blob(b);
-    crypto::cn_slow_hash(bd.data(), bd.size(), res);
+    if (b.major_version >= BLOCK_MAJOR_VERSION_4){
+      const int cn_variant = b.major_version >= BLOCK_MAJOR_VERSION_FUTURE ? 2 : 1;
+      crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant);
+    }else{
+      crypto::cn_slow_hash(bd.data(), bd.size(), res);
+    }
     return true;
   }
  bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
@@ -1019,7 +1024,7 @@ bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
   {
     MDEBUG("Checking POW V1 - diff " << current_diffic);
-	  if (BLOCK_MAJOR_VERSION_1 != bl.major_version)
+    if (bl.major_version != BLOCK_MAJOR_VERSION_1 && bl.major_version < BLOCK_MAJOR_VERSION_4)
 		  return false;
 
 	  if (!get_block_longhash(bl, proof_of_work, 0)) {
@@ -1080,11 +1085,11 @@ bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
 	  switch (bl.major_version)
 	  {
-	  case BLOCK_MAJOR_VERSION_1: 
-		  return check_proof_of_work_v1(bl, current_diffic, proof_of_work);
+	  case BLOCK_MAJOR_VERSION_1:
+    case BLOCK_MAJOR_VERSION_4:
+	    return check_proof_of_work_v1(bl, current_diffic, proof_of_work);
 	  case BLOCK_MAJOR_VERSION_2:
 	  case BLOCK_MAJOR_VERSION_3:
-	  case BLOCK_MAJOR_VERSION_4:
 		  return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
 	  }
 

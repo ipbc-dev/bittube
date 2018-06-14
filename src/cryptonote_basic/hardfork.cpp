@@ -47,7 +47,7 @@ static uint8_t get_block_vote(const cryptonote::block &b)
   // fix compatibility with block versions 2 and 3 from bytecoin legacy,
 	// which still use minor version 1
 	if (b.major_version >= BLOCK_MAJOR_VERSION_1 &&
-		b.major_version <= BLOCK_MAJOR_VERSION_4)
+		b.major_version < BLOCK_MAJOR_VERSION_4)
 		return b.major_version;
   if (b.minor_version == 0)
     return 1;

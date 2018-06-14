@@ -379,7 +379,7 @@ namespace cryptonote
     for(; bl.nonce != std::numeric_limits<uint32_t>::max(); bl.nonce++)
     {
       crypto::hash h;
-      if (bl.major_version == BLOCK_MAJOR_VERSION_1) {
+      if (bl.major_version == BLOCK_MAJOR_VERSION_1 || bl.major_version >= BLOCK_MAJOR_VERSION_4) {
         get_block_longhash(bl, h, height);
       } else {
         get_bytecoin_block_longhash(bl, h);
@@ -480,7 +480,7 @@ namespace cryptonote
 
       b.nonce = nonce;
       crypto::hash h;
-      if (b.major_version == BLOCK_MAJOR_VERSION_1) {
+      if (b.major_version == BLOCK_MAJOR_VERSION_1 || b.major_version >= BLOCK_MAJOR_VERSION_4) {
         get_block_longhash(b, h, height);
       } else {
         get_bytecoin_block_longhash(b, h);
