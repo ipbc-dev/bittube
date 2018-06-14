@@ -1002,7 +1002,7 @@ bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
     blobdata bd = get_block_hashing_blob(b);
     if (b.major_version >= BLOCK_MAJOR_VERSION_4){
-      const int cn_variant = b.major_version >= BLOCK_MAJOR_VERSION_FUTURE ? 2 : 1;
+      const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT2 ? 2 : 1;
       crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant);
     }else{
       crypto::cn_slow_hash(bd.data(), bd.size(), res);
@@ -1016,7 +1016,7 @@ bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
 		  return false;
 
     // v1-2 = standard, v3 = lite + monerov7 + ipbc, vX = sumo + monerov7 + ipbc
-    const int cn_variant = b.major_version >= BLOCK_MAJOR_VERSION_FUTURE ? 2 : (b.major_version >= BLOCK_MAJOR_VERSION_3 ? 1 : 0);
+    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT1 ? 1 : 0;
 	  crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant);
 	  return true;
   }
