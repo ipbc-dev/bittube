@@ -3065,7 +3065,7 @@ bool Blockchain::check_fee(size_t blob_size, uint64_t fee) const
     uint64_t median = m_current_block_cumul_sz_limit / 2;
     uint64_t already_generated_coins = m_db->height() ? m_db->get_block_already_generated_coins(m_db->height() - 1) : 0;
     uint64_t base_reward;
-    if (!get_block_reward(median, 1, already_generated_coins, fee, base_reward, version))
+    if (!get_block_reward(median, 1, already_generated_coins, 0, base_reward, version))
       return false;
     fee_per_kb = get_dynamic_per_kb_fee(base_reward, median, version);
   }
