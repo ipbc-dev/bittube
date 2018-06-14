@@ -32,8 +32,8 @@
 using namespace epee;
 
 #include <atomic>
-#include <mutex>
 #include <boost/algorithm/string.hpp>
+#include <boost/thread/mutex.hpp>
 #include "wipeable_string.h"
 #include "string_tools.h"
 #include "serialization/string.h"
@@ -963,8 +963,8 @@ namespace cryptonote
 	  static crypto::hash genesis_block_hash;
 	  if (!cached)
 	  {
-		  static std::mutex m;
-		  std::unique_lock<std::mutex> lock(m);
+		  static boost::mutex m;
+		  boost::unique_lock<boost::mutex> lock(m);
 		  if (!cached)
 		  {
 			  block genesis_block;
