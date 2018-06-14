@@ -48,6 +48,7 @@
 #define BLOCK_MAJOR_VERSION_2                           2
 #define BLOCK_MAJOR_VERSION_3                           3
 #define BLOCK_MAJOR_VERSION_4                           4
+#define BLOCK_MAJOR_VERSION_5                           5
 #define BLOCK_MAJOR_VERSION_FUTURE                      (uint8_t)(-1)
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT              500
 #define CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2           60*10
