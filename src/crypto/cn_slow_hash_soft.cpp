@@ -265,15 +265,18 @@ inline void aes_round_tweak_div(aesdata& val, const aesdata& key)
   val = ~val;
   uint32_t x0, x1, x2, x3;
   val.get_quad(x0, x1, x2, x3);
-  k0 ^= saes_table[0][x0 & 0xff] ^ saes_table[1][(x1 >> 8) & 0xff] ^ saes_table[2][(x2 >> 16) & 0xff] ^ saes_table[3][x3 >> 24];
+  #define BYTE(p, i) ((unsigned char*)&p)[i]
+  k0 ^= saes_table[0][BYTE(x0, 0)] ^ saes_table[1][BYTE(x1, 1)] ^ saes_table[2][BYTE(x2, 2)] ^ saes_table[3][BYTE(x3, 3)];
   x0 ^= k0;
-  k1 ^= saes_table[0][x1 & 0xff] ^ saes_table[1][(x2 >> 8) & 0xff] ^ saes_table[2][(x3 >> 16) & 0xff] ^ saes_table[3][x0 >> 24];
+  k1 ^= saes_table[0][BYTE(x1, 0)] ^ saes_table[1][BYTE(x2, 1)] ^ saes_table[2][BYTE(x3, 2)] ^ saes_table[3][BYTE(x0, 3)];
   x1 ^= k1;
-  k2 ^= saes_table[0][x2 & 0xff] ^ saes_table[1][(x3 >> 8) & 0xff] ^ saes_table[2][(x0 >> 16) & 0xff] ^ saes_table[3][x1 >> 24];
+  k2 ^= saes_table[0][BYTE(x2, 0)] ^ saes_table[1][BYTE(x3, 1)] ^ saes_table[2][BYTE(x0, 2)] ^ saes_table[3][BYTE(x1, 3)];
   x2 ^= k2;
-  k3 ^= saes_table[0][x3 & 0xff] ^ saes_table[1][(x0 >> 8) & 0xff] ^ saes_table[2][(x1 >> 16) & 0xff] ^ saes_table[3][x2 >> 24];
+  k3 ^= saes_table[0][BYTE(x3, 0)] ^ saes_table[1][BYTE(x0, 1)] ^ saes_table[2][BYTE(x1, 2)] ^ saes_table[3][BYTE(x2, 3)];
+  #undef BYTE
   val.set_quad(k0, k1, k2, k3);
   val.v128x0 ^= (val.v128x0 / val.v64x0) ^ (val.v128x0 % val.v64x1);
+  val.v64x1 ^= (val.v128x0 % val.v64x0) ^ (val.v128x0 % val.v64x1);
 }
 
 
