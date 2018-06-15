@@ -102,6 +102,9 @@ inline bool hw_check_aes()
 }
 #endif
 
+alignas(16) extern const uint32_t saes_table[4][256];
+alignas(16) extern const uint8_t  saes_sbox[256];
+
 // This cruft avoids casting-galore and allows us not to worry about sizeof(void*)
 class cn_sptr
 {

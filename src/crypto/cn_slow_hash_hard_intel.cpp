@@ -93,6 +93,28 @@ inline void aes_genkey(const __m128i* memory, __m128i& k0, __m128i& k1, __m128i&
 	k9 = xout2;
 }
 
+inline __m128i aes_round_tweak_div(__m128i& val, const __m128i& key)
+{
+  union alignas(16) {
+    uint32_t k[4];
+    uint64_t v64[2];
+    __uint128_t v128;
+  };
+  alignas(16) uint32_t x[4];
+  _mm_store_si128((__m128i*)k, key);
+  val = ~val;
+  _mm_store_si128((__m128i*)x, val);
+  k[0] ^= saes_table[0][x[0] & 0xff] ^ saes_table[1][(x[1] >> 8) & 0xff] ^ saes_table[2][(x[2] >> 16) & 0xff] ^ saes_table[3][x[3] >> 24];
+  x[0] ^= k[0];
+  k[1] ^= saes_table[0][x[1] & 0xff] ^ saes_table[1][(x[2] >> 8) & 0xff] ^ saes_table[2][(x[3] >> 16) & 0xff] ^ saes_table[3][x[0] >> 24];
+  x[1] ^= k[1];
+  k[2] ^= saes_table[0][x[2] & 0xff] ^ saes_table[1][(x[3] >> 8) & 0xff] ^ saes_table[2][(x[0] >> 16) & 0xff] ^ saes_table[3][x[1] >> 24];
+  x[2] ^= k[2];
+  k[3] ^= saes_table[0][x[3] & 0xff] ^ saes_table[1][(x[0] >> 8) & 0xff] ^ saes_table[2][(x[1] >> 16) & 0xff] ^ saes_table[3][x[2] >> 24];
+  v128 ^= (v128 / v64[0]) ^ (v128 % v64[1]);
+  return _mm_load_si128((__m128i*)k);
+}
+
 inline void aes_round8(const __m128i& key, __m128i& x0, __m128i& x1, __m128i& x2, __m128i& x3, __m128i& x4, __m128i& x5, __m128i& x6, __m128i& x7)
 {
 	x0 = _mm_aesenc_si128(x0, key);
@@ -366,7 +388,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 		__m128i cx;
 		cx = _mm_load_si128(scratchpad_ptr(idx0).as_xmm());
 
+    if (VERSION >= 2) {
+      cx = aes_round_tweak_div(cx, _mm_set_epi64x(ah0, al0));
+    } else {
 		cx = _mm_aesenc_si128(cx, _mm_set_epi64x(ah0, al0));
+    }
 
     if (VERSION >= 1) {
       cryptonight_monero_tweak(scratchpad_ptr(idx0).as_uqword(), _mm_xor_si128(bx0, cx));

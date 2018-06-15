@@ -105,13 +105,20 @@ and fitness for purpose.
 #define saes_u2(p)   saes_b2w(         p, saes_f3(p), saes_f2(p),          p)
 #define saes_u3(p)   saes_b2w(         p,          p, saes_f3(p), saes_f2(p))
 
-alignas(16) const uint32_t saes_table[4][256] = { saes_data(saes_u0), saes_data(saes_u1), saes_data(saes_u2), saes_data(saes_u3) };
+alignas(16) extern const uint32_t saes_table[4][256] = { saes_data(saes_u0), saes_data(saes_u1), saes_data(saes_u2), saes_data(saes_u3) };
 alignas(16) extern const uint8_t  saes_sbox[256] = saes_data(saes_h0);
 
 struct aesdata
 {
+  union {
+    struct {
 	uint64_t v64x0;
 	uint64_t v64x1;
+    };
+    struct {
+      __uint128_t v128x0;
+    };
+  };
 
 	inline void load(const cn_sptr mem)
 	{
@@ -153,7 +160,15 @@ struct aesdata
 		return *this;
 	}
 	
-	inline void get_quad(uint32_t& x0, uint32_t& x1, uint32_t& x2, uint32_t& x3)
+  inline aesdata operator~() noexcept
+  {
+    aesdata inv;
+    inv.v64x0 = ~v64x0;
+    inv.v64x1 = ~v64x1;
+    return inv;
+  }
+	
+	inline void get_quad(uint32_t& x0, uint32_t& x1, uint32_t& x2, uint32_t& x3) const
 	{
 		x0 = v64x0;
 		x1 = v64x0 >> 32;
@@ -242,6 +257,25 @@ inline void aes_round(aesdata& val, const aesdata& key)
 		saes_table[0][x3 & 0xff] ^ saes_table[1][(x0 >> 8) & 0xff] ^ saes_table[2][(x1 >> 16) & 0xff] ^ saes_table[3][x2 >> 24]);
 	val ^= key;
 }
+
+inline void aes_round_tweak_div(aesdata& val, const aesdata& key)
+{
+  uint32_t k0, k1, k2, k3;
+  key.get_quad(k0, k1, k2, k3);
+  val = ~val;
+  uint32_t x0, x1, x2, x3;
+  val.get_quad(x0, x1, x2, x3);
+  k0 ^= saes_table[0][x0 & 0xff] ^ saes_table[1][(x1 >> 8) & 0xff] ^ saes_table[2][(x2 >> 16) & 0xff] ^ saes_table[3][x3 >> 24];
+  x0 ^= k0;
+  k1 ^= saes_table[0][x1 & 0xff] ^ saes_table[1][(x2 >> 8) & 0xff] ^ saes_table[2][(x3 >> 16) & 0xff] ^ saes_table[3][x0 >> 24];
+  x1 ^= k1;
+  k2 ^= saes_table[0][x2 & 0xff] ^ saes_table[1][(x3 >> 8) & 0xff] ^ saes_table[2][(x0 >> 16) & 0xff] ^ saes_table[3][x1 >> 24];
+  x2 ^= k2;
+  k3 ^= saes_table[0][x3 & 0xff] ^ saes_table[1][(x0 >> 8) & 0xff] ^ saes_table[2][(x1 >> 16) & 0xff] ^ saes_table[3][x2 >> 24];
+  val.set_quad(k0, k1, k2, k3);
+  val.v128x0 ^= (val.v128x0 / val.v64x0) ^ (val.v128x0 % val.v64x1);
+}
+
 
 inline void aes_round8(const aesdata& key, aesdata& x0, aesdata& x1, aesdata& x2, aesdata& x3, aesdata& x4, aesdata& x5, aesdata& x6, aesdata& x7)
 {
@@ -510,7 +544,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 		uint64_t hi, lo;
 		cx.load(idx);
 
+    if (VERSION >= 2) {
+      aes_round_tweak_div(cx, ax);
+    } else {
 		aes_round(cx, ax);
+    }
 
 		bx ^= cx;
 		
@@ -552,7 +590,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 
 		bx.load(idx);
 
+    if (VERSION >= 2) {
+      aes_round_tweak_div(bx, ax);
+    } else {
 		aes_round(bx, ax);
+    }
 
 		cx ^= bx;
     if (VERSION >= 1) {
