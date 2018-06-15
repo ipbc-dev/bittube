@@ -5309,10 +5309,12 @@ uint64_t wallet2::get_per_kb_fee() const
 int wallet2::get_fee_algorithm() const
 {
   // changes at v4 and vX
-  if (use_fork_rules(BLOCK_MAJOR_VERSION_FUTURE, 0))
+  if (use_fork_rules(BLOCK_MAJOR_VERSION_4, 0))
     return 2;
+  /*
   if (use_fork_rules(BLOCK_MAJOR_VERSION_4, -720 * 14))
-   return 1;
+    return 1;
+  */
   return 0;
 }
 //------------------------------------------------------------------------------------------------------------------------------
