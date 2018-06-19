@@ -98,7 +98,7 @@ inline __m128i aes_round_tweak_div(__m128i& val, const __m128i& key)
   union alignas(16) {
     uint32_t k[4];
     uint64_t v64[2];
-    __uint128_t v128;
+    // __uint128_t v128;
   };
   alignas(16) uint32_t x[4];
   _mm_store_si128((__m128i*)k, key);
@@ -113,9 +113,12 @@ inline __m128i aes_round_tweak_div(__m128i& val, const __m128i& key)
   x[2] ^= k[2];
   k[3] ^= saes_table[0][BYTE(x[3], 0)] ^ saes_table[1][BYTE(x[0], 1)] ^ saes_table[2][BYTE(x[1], 2)] ^ saes_table[3][BYTE(x[2], 3)];
   #undef BYTE
+  return _mm_load_si128((__m128i*)k);
+  /*
   v128 ^= (v128 / v64[0]) ^ (v128 % v64[1]);
   v64[1] ^= (v128 % v64[0]) ^ (v128 % v64[1]);
   return _mm_load_si128((__m128i*)k);
+  */
 }
 
 inline void aes_round8(const __m128i& key, __m128i& x0, __m128i& x1, __m128i& x2, __m128i& x3, __m128i& x4, __m128i& x5, __m128i& x6, __m128i& x7)
