@@ -559,7 +559,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
 
 		bx ^= cx;
 		
-    if (VERSION >= 1) {
+    if (VERSION >= 1) { // by design, use both tweaked aes and monero tweak for >= v2
       cryptonight_monero_tweak(idx.as_uqword(), bx);
     } else {
 		bx.write(idx);
@@ -604,7 +604,7 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::software_hash(const void* in, size_t len
     }
 
 		cx ^= bx;
-    if (VERSION >= 1) {
+    if (VERSION >= 1) { // by design, use both tweaked aes and monero tweak for >= v2
       cryptonight_monero_tweak(idx.as_uqword(), cx);
     } else {
 		cx.write(idx);
