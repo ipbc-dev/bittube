@@ -371,7 +371,7 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-      full_addrs.insert("testnet-mining.bit.tube:34181");
+      full_addrs.insert("testnet-seed.bit.tube:34181");
     }
     else if (nettype == cryptonote::STAGENET)
     {
