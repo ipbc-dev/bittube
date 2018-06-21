@@ -115,7 +115,7 @@ static const struct {
   //{ 2, 5, 0, 1520036614, 100 }, // Skipped because of conflicts on mainet
   //{ 3, 10, 0, 1523885225, 100 }, // Skipped because of conflicts on mainet
   { 4, 5, 0, 1527817979, 100 },
-  { 5, 10, 0, 1527817999, 100 },
+  { 5, 20000, 0, 1527817999, 100 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 4;
 
