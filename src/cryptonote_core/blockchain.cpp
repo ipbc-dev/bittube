@@ -127,15 +127,13 @@ static const struct {
   difficulty_type diff_reset_value;
 } stagenet_hard_forks[] = {
   // version 1 from the start of the blockchain
-  { 1, 1, 0, 1341378000, 0 },
+  { 1, 1, 0, 1517405674, 0 },
 
-  // versions 2-7 in rapid succession from March 13th, 2018
-  { 2, 32000, 0, 1521000000, 0 },
-  { 3, 33000, 0, 1521120000, 0 },
-  { 4, 34000, 0, 1521240000, 0 },
-  { 5, 35000, 0, 1521360000, 0 },
-  { 6, 36000, 0, 1521480000, 0 },
-  { 7, 37000, 0, 1521600000, 0 },
+  // version 2 starts from block 23001.
+  
+ { 2, 23001 , 0, 1520036614, 0 },
+  // version 3 starts from block 54901. 
+ { 3, 54901, 0, 1523885225, 0 }
 };
 
 //------------------------------------------------------------------
