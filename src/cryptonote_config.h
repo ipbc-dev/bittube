@@ -209,12 +209,12 @@ namespace config
     uint16_t const P2P_DEFAULT_PORT = 44181;
     uint16_t const RPC_DEFAULT_PORT = 44182;
     uint16_t const ZMQ_RPC_DEFAULT_PORT = 44183;
-    boost::uuids::uuid const NETWORK_ID = { {            
-        0x67 ,0xe3, 0x11, 0x1b , 0x1e, 0x14 , 0x77, 0xf7, 0x34, 0x33, 0xa0, 0x33, 0xcc, 0xc5, 0x33, 0x77
-      } }; // Bender's daydream
-    std::string const GENESIS_TX = "010a01ff0001ec85afd1b101029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121011e06b561bed255e2cd1c03e4f7727284f27d05c31094f03e6997e6ed927c31a1";
-    uint32_t const GENESIS_NONCE = 72;
-	
+  boost::uuids::uuid const NETWORK_ID = { {
+      0x78, 0x18, 0x3A, 0x89, 0x15, 0xA5, 0x92, 0xB4, 0x67, 0x12, 0x29, 0x49, 0x19, 0xA1, 0x41, 0x78
+    } }; // Bender's nightmare
+  std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
+  uint32_t const GENESIS_NONCE = 70;
+  
     std::string const DEVELOPMENT_WALLET_ADDRESS = "bxcGifhyYCZH9SyAkEizkmUTRD6zjAJsWiua5zsXeyGyB1i2dyzGu4hZhUixhetA8jXzqSffetDEBahXX98jB2jb2DvBvPfDS"; //Mnemonic: megabyte digit were reruns slug wetsuit ignore narrate budget adrenalin chlorine wiggle wield veteran himself sample yanks muzzle jogger owls peaches easy fancy geek narrate
     std::string const MARKETING_WALLET_ADDRESS = "bxd76ATsNNy6Jt2dQ9kaz14P7wrjFL5h54HGzEY55VvHLoA5Qpuw23S2TY3gkw4atqbHjUJd7r95cHUWchiBqHGG2DQsuAHbJ"; //Mnemonic: karate jury torch jewels coal inline inwardly seventh kitchens viking afloat liquid oozed utility duties ozone drinks syllabus weird lunar yodel liquid wetsuit afar coal
     std::string const AIRTIME_WALLET_ADDRESS = "bxdEqBAAgJcSBj7fSRvsEQUsVgC2eBz87FyFDxDrBSPxY7UQYdfgvQJ72hwC56k6p76chVZuoEQ2RXN85wpjTbJE2gffyT3wz"; //Mnemonic: artistic waist eden prying roles lamb already unnoticed twofold vaults aptitude school gels eagle lobster pledge symptoms solved tarnished laptop vaults afield zesty affair afield

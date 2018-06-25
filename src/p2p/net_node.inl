@@ -375,8 +375,7 @@ namespace nodetool
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      full_addrs.insert("185.185.26.202:44181");
-      full_addrs.insert("185.185.26.198:44181");
+      full_addrs.insert("stagenet-seed.bit.tube:44181");
     }
     else
     {
