@@ -88,7 +88,7 @@ typedef cryptonote::simple_wallet sw;
 
 #define DEFAULT_MIX 6
 
-#define MIN_RING_SIZE 7 // Used to inform user about min ring size -- does not track actual protocol
+#define MIN_RING_SIZE 3 // Used to inform user about min ring size -- does not track actual protocol
 
 #define OUTPUT_EXPORT_FILE_MAGIC "BitTube output export\003"
 
