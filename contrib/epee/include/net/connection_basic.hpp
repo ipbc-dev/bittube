@@ -9,6 +9,7 @@
 // ! Working on above premise, IF this is valid in your juristdictions, then consider this code as released as:
 
 // Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2018, The BitTube Project
 // 
 // All rights reserved.
 // 

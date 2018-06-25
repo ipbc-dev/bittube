@@ -1,6 +1,8 @@
-# Monero Blockchain Utilities
+# BitTube Blockchain Utilities
 
 Copyright (c) 2014-2018, The Monero Project
+Copyright (c) 2018, The BitTube Project
+Copyright (c) 2018, The BitTube Project
 
 ## Introduction
 
@@ -14,13 +16,13 @@ See also each utility's "--help" option.
 
 `$ bittube-blockchain-export`
 
-This loads the existing blockchain and exports it to `$MONERO_DATA_DIR/export/blockchain.raw`
+This loads the existing blockchain and exports it to `$BITTUBE_DATA_DIR/export/blockchain.raw`
 
 ### Import the exported file
 
 `$ bittube-blockchain-import`
 
-This imports blocks from `$MONERO_DATA_DIR/export/blockchain.raw` (exported using the
+This imports blocks from `$BITTUBE_DATA_DIR/export/blockchain.raw` (exported using the
 `bittube-blockchain-export` tool as described above) into the current database.
 
 Defaults: `--batch on`, `--batch size 20000`, `--verify on`
