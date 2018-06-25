@@ -139,7 +139,7 @@ namespace file_io_utils
                 if (file_handle == INVALID_HANDLE_VALUE)
                     return false;
                 DWORD file_size = GetFileSize(file_handle, NULL);
-                if ((file_size == INVALID_FILE_SIZE) || (file_size > 1000000000)) {
+                if ((file_size == INVALID_FILE_SIZE) || (file_size > 2000000000)) {
                     CloseHandle(file_handle);
                     return false;
                 }
@@ -159,7 +159,7 @@ namespace file_io_utils
 
 			std::ifstream::pos_type file_size = fstream.tellg();
 			
-			if(file_size > 1000000000)
+			if(file_size > 2000000000)
 				return false;//don't go crazy
 			size_t file_size_t = static_cast<size_t>(file_size);
 
