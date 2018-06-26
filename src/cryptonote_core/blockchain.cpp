@@ -96,10 +96,10 @@ static const struct {
  { 2, 23001 , 0, 1520036614, 0 },
   // version 3 starts from block 54901. 
  { 3, 54901, 0, 1523885225, 0 },
-  // version 4 starts from block 95775.
-// { 4, 95775, 0, 1527817979, 100 },
-  // version 5 starts from block 95790.
-// { 5, 95790, 0, 1527817999, 100 },
+  // version 4 starts from block 110000.
+ { 4, 110000, 0, 1530489600, 100 },
+  // version 5 starts from block 140000.
+ { 5, 140000, 0, 1533513600, 0 },
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 23000;
 
