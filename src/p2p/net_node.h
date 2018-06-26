@@ -127,15 +127,10 @@ namespace nodetool
     virtual std::map<std::string, time_t> get_blocked_hosts() { CRITICAL_REGION_LOCAL(m_blocked_hosts_lock); return m_blocked_hosts; }
   private:
     const std::vector<std::string> m_seed_nodes_list =
-    { "seed1.ipbc.io",
-  "seed2.ipbc.io",
-  "seed3.ipbc.io",
-  "seed4.ipbc.io",
-  "seed5.ipbc.io",
-  "seed6.ipbc.io",
-  "seed7.ipbc.io",
-  "seed8.ipbc.io",
-  "seed9.ipbc.io"
+    {
+      "seed1.bit.tube",
+      "seed2.bit.tube",
+      "seed3.bit.tube",
     };
 
     bool islimitup=false;

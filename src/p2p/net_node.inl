@@ -379,8 +379,9 @@ namespace nodetool
     }
     else
     {
-      full_addrs.insert("seed1.ipbc.io:24181");
-      full_addrs.insert("seed2.ipbc.io:24181");
+      full_addrs.insert("seed1.bit.tube:24181");
+      full_addrs.insert("seed2.bit.tube:24181");
+      full_addrs.insert("seed3.bit.tube:24181");
     }
     return full_addrs;
   }
