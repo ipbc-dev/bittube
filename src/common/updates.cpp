@@ -44,9 +44,8 @@ namespace tools
 
     MDEBUG("Checking updates for " << buildtag << " " << software);
 
-    // All four BitTubePulse domains have DNSSEC on and valid
     static const std::vector<std::string> dns_urls = {
-      // TODO
+      "updates.bit.tube"
     };
 
     if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))
@@ -96,19 +95,9 @@ namespace tools
 
   std::string get_update_url(const std::string &software, const std::string &subdir, const std::string &buildtag, const std::string &version, bool user)
   {
-    const char *base = user ? "https://downloads.getmonero.org/" : "https://updates.getmonero.org/";
-#ifdef _WIN32
-    static const char *extension = strncmp(buildtag.c_str(), "install-", 8) ? ".zip" : ".exe";
-#else
-    static const char extension[] = ".tar.bz2";
-#endif
-
-    std::string url;
-
-    url =  base;
-    if (!subdir.empty())
-      url += subdir + "/";
-    url = url + software + "-" + buildtag + "-v" + version + extension;
+    // std::string url = std::string("https://cdn.bit.tube/downloads/") + software + "-" + buildtag + "-v" + version + ".zip";
+    std::string url = std::string("https://github.com/ipbc-dev/") + software + "/releases/download/" + version + "/" + software + "-" + buildtag + "-v" + version + ".zip";
+    MDEBUG("Update for " << buildtag << " " << software << " v" << version << " @ " << url);
     return url;
   }
 }

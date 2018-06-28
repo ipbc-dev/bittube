@@ -1413,9 +1413,7 @@ namespace cryptonote
 
     if (m_offline)
       return true; 
-    MCDEBUG("updates", "Skipping checking for a new " << software << " version - not configured for BitTube");
-    //CHANGE ME
-    return true;
+
     if (check_updates_level == UPDATES_DISABLED)
       return true;
 
