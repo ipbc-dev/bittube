@@ -4612,6 +4612,7 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
           if (!print_ring_members(ptx_vector, prompt))
             return true;
         }
+        /*
         bool default_ring_size = true;
         for (const auto &ptx: ptx_vector)
         {
@@ -4625,7 +4626,6 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
             }
           }
         }
-        /*
         if (m_wallet->confirm_non_default_ring_size() && !default_ring_size)
         {
           prompt << tr("WARNING: this is a non default ring size, which may harm your privacy. Default is recommended.");
