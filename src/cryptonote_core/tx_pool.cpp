@@ -159,9 +159,9 @@ namespace cryptonote
         tvc.m_overspend = true;
         return false;
       }
-      else if(outputs_amount == inputs_amount)
+      else if(outputs_amount == inputs_amount && tx.version >= 2)
       {
-        LOG_PRINT_L1("transaction fee is zero: outputs_amount == inputs_amount, rejecting.");
+        LOG_PRINT_L1("transaction fee is zero: outputs_amount == inputs_amount, rejecting tx v " << tx.version << " .");
         tvc.m_verifivation_failed = true;
         tvc.m_fee_too_low = true;
         return false;
