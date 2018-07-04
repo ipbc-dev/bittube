@@ -969,8 +969,17 @@ namespace cryptonote
 		  if (!cached)
 		  {
 			  block genesis_block;
-			if (!generate_genesis_block(genesis_block, config::GENESIS_TX, config::GENESIS_NONCE))
-				  return false;
+        blobdata tx_bl;
+        bool r = string_tools::parse_hexstr_to_binbuff(config::GENESIS_TX, tx_bl);
+        CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
+        r = parse_and_validate_tx_from_blob(tx_bl, genesis_block.miner_tx);
+        CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
+        genesis_block.major_version = CURRENT_BLOCK_MAJOR_VERSION;
+        genesis_block.minor_version = CURRENT_BLOCK_MINOR_VERSION;
+        genesis_block.timestamp = 0;
+        genesis_block.nonce = config::GENESIS_NONCE;
+        miner::find_nonce_for_given_block(genesis_block, 1, 0);
+        genesis_block.invalidate_hashes();
 
 			  if (!get_block_hash(genesis_block, genesis_block_hash))
 				  return false;
