@@ -75,6 +75,7 @@ namespace {
       << "depth: " << boost::lexical_cast<std::string>(header.depth) << std::endl
       << "hash: " << header.hash << std::endl
       << "difficulty: " << boost::lexical_cast<std::string>(header.difficulty) << std::endl
+      << "POW hash: " << header.pow_hash << std::endl
       << "reward: " << boost::lexical_cast<std::string>(header.reward);
   }
 
@@ -655,6 +656,7 @@ bool t_rpc_command_executor::print_block_by_hash(crypto::hash block_hash) {
   epee::json_rpc::error error_resp;
 
   req.hash = epee::string_tools::pod_to_hex(block_hash);
+  req.fill_pow_hash = true;
 
   std::string fail_message = "Unsuccessful";
 
@@ -686,6 +688,7 @@ bool t_rpc_command_executor::print_block_by_height(uint64_t height) {
   epee::json_rpc::error error_resp;
 
   req.height = height;
+  req.fill_pow_hash = true;
 
   std::string fail_message = "Unsuccessful";
 
@@ -974,7 +977,7 @@ bool t_rpc_command_executor::print_transaction_pool_stats() {
   }
   else
   {
-    memset(&res.pool_stats, 0, sizeof(res.pool_stats));
+    res.pool_stats = {};
     if (!m_rpc_server->on_get_transaction_pool_stats(req, res, false) || res.status != CORE_RPC_STATUS_OK)
     {
       tools::fail_msg_writer() << make_error(fail_message, res.status);
@@ -1893,7 +1896,7 @@ bool t_rpc_command_executor::sync_info()
       for (const auto &s: res.spans)
         if (s.rate > 0.0f && s.connection_id == p.info.connection_id)
           nblocks += s.nblocks, size += s.size;
-      tools::success_msg_writer() << address << "  " << epee::string_tools::pad_string(p.info.peer_id, 16, '0', true) << "  " << p.info.height << "  "  << p.info.current_download << " kB/s, " << nblocks << " blocks / " << size/1e6 << " MB queued";
+      tools::success_msg_writer() << address << "  " << epee::string_tools::pad_string(p.info.peer_id, 16, '0', true) << "  " << epee::string_tools::pad_string(p.info.state, 16) << "  " << p.info.height << "  "  << p.info.current_download << " kB/s, " << nblocks << " blocks / " << size/1e6 << " MB queued";
     }
 
     uint64_t total_size = 0;

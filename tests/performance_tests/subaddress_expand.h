@@ -57,7 +57,7 @@ public:
 
   bool test()
   {
-    wallet.expand_subaddresses({0, 0});
+    wallet.expand_subaddresses({1, 0});
     return true;
   }
 
