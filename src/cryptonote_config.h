@@ -149,7 +149,7 @@
 #define HF_VERSION_POW_VARIANT2                 4
 #define HF_VERSION_MIN_MIXIN_2                  4
 #define HF_VERSION_ENFORCE_RCT                  4
-#define HF_VERSION_BULLETPROOF                  BLOCK_MAJOR_VERSION_FUTURE
+#define HF_VERSION_BULLETPROOF                  5
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
