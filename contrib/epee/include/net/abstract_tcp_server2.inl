@@ -584,6 +584,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
   template<class t_protocol_handler>
   boost::posix_time::milliseconds connection<t_protocol_handler>::get_default_timeout()
   {
+    if (m_local) return boost::posix_time::milliseconds(120000);
     unsigned count;
     try { count = host_count(m_host); } catch (...) { count = 0; }
     const unsigned shift = std::min(std::max(count, 1u) - 1, 8u);
