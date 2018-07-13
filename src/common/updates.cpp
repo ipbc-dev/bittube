@@ -49,8 +49,10 @@ namespace tools
       "updates.bit.tube"
     };
 
-    if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls))
+    if (!tools::dns_utils::load_txt_records_from_dns(records, dns_urls)) {
+      MDEBUG("Failed loading updates.bit.tube TXT records");
       return false;
+    }
 
     for (const auto& record : records)
     {
