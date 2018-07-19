@@ -3043,9 +3043,16 @@ bool wallet2::load_keys(const std::string& keys_file_name, const epee::wipeable_
  * can be used prior to rewriting wallet keys file, to ensure user has entered the correct password
  *
  */
-bool wallet2::verify_password(const epee::wipeable_string& password) const
+bool wallet2::verify_password(const epee::wipeable_string& password)
 {
-  return verify_password(m_keys_file, password, m_watch_only || m_multisig, m_account.get_device());
+  // TODO: needed to remove constness to reset lock, can we work around this without releasing the lock?
+  bool r = false;
+  m_keys_file_locker.reset(); // Must reset lock on keys file to be able to verify password on windows
+  try {
+    r = verify_password(m_keys_file, password, m_watch_only || m_multisig, m_account.get_device());
+  } catch (...) { } // catch possible errors in verify_password so we can relock the keys
+  m_keys_file_locker.reset(new tools::file_locker(m_keys_file));
+  return r;
 }
 
 /*!

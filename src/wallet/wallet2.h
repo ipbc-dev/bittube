@@ -610,7 +610,7 @@ namespace tools
     /*!
      * \brief verifies given password is correct for default wallet keys file
      */
-    bool verify_password(const epee::wipeable_string& password) const;
+    bool verify_password(const epee::wipeable_string& password);
     cryptonote::account_base& get_account(){return m_account;}
     const cryptonote::account_base& get_account()const{return m_account;}
 
