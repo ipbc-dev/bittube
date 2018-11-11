@@ -2734,8 +2734,6 @@ class Storage : base::NoCopy, public base::threading::ThreadSafe {
     return it->second;
   }
 
-  static el::base::type::StoragePointer &getELPP();
-
  private:
   base::RegisteredHitCounters* m_registeredHitCounters;
   base::RegisteredLoggers* m_registeredLoggers;
@@ -2770,7 +2768,7 @@ class Storage : base::NoCopy, public base::threading::ThreadSafe {
   }
 };
 extern ELPP_EXPORT base::type::StoragePointer elStorage;
-#define ELPP el::base::Storage::getELPP()
+#define ELPP el::base::elStorage
 class DefaultLogDispatchCallback : public LogDispatchCallback {
  protected:
   void handle(const LogDispatchData* data);
