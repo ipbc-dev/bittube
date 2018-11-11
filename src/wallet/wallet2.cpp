@@ -857,6 +857,24 @@ void wallet_device_callback::on_passphrase_request(bool on_device, epee::wipeabl
     wallet->on_passphrase_request(on_device, passphrase);
 }
 
+void wallet_device_callback::on_button_request()
+{
+  if (wallet)
+    wallet->on_button_request();
+}
+
+void wallet_device_callback::on_pin_request(epee::wipeable_string & pin)
+{
+  if (wallet)
+    wallet->on_pin_request(pin);
+}
+
+void wallet_device_callback::on_passphrase_request(bool on_device, epee::wipeable_string & passphrase)
+{
+  if (wallet)
+    wallet->on_passphrase_request(on_device, passphrase);
+}
+
 wallet2::wallet2(network_type nettype, uint64_t kdf_rounds, bool unattended):
   m_multisig_rescan_info(NULL),
   m_multisig_rescan_k(NULL),
@@ -1121,7 +1139,6 @@ bool wallet2::reconnect_device()
   hw::device &hwdev = lookup_device(m_device_name);
   hwdev.set_name(m_device_name);
   hwdev.set_network_type(m_nettype);
-  hwdev.set_derivation_path(m_device_derivation_path);
   hwdev.set_callback(get_device_callback());
   r = hwdev.init();
   if (!r){
@@ -3602,7 +3619,6 @@ bool wallet2::load_keys(const std::string& keys_file_name, const epee::wipeable_
     hw::device &hwdev = lookup_device(m_device_name);
     THROW_WALLET_EXCEPTION_IF(!hwdev.set_name(m_device_name), error::wallet_internal_error, "Could not set device name " + m_device_name);
     hwdev.set_network_type(m_nettype);
-    hwdev.set_derivation_path(m_device_derivation_path);
     hwdev.set_callback(get_device_callback());
     THROW_WALLET_EXCEPTION_IF(!hwdev.init(), error::wallet_internal_error, "Could not initialize the device " + m_device_name);
     THROW_WALLET_EXCEPTION_IF(!hwdev.connect(), error::wallet_internal_error, "Could not connect to the device " + m_device_name);
@@ -4117,7 +4133,6 @@ void wallet2::restore(const std::string& wallet_, const epee::wipeable_string& p
   auto &hwdev = lookup_device(device_name);
   hwdev.set_name(device_name);
   hwdev.set_network_type(m_nettype);
-  hwdev.set_derivation_path(m_device_derivation_path);
   hwdev.set_callback(get_device_callback());
 
   m_account.create_from_device(hwdev);
@@ -12181,29 +12196,6 @@ uint64_t wallet2::get_segregation_fork_height() const
 //----------------------------------------------------------------------------------------------------
 void wallet2::generate_genesis(cryptonote::block& b) const {
   cryptonote::generate_genesis_block(b, get_config(m_nettype).GENESIS_TX, get_config(m_nettype).GENESIS_NONCE);
-}
-//----------------------------------------------------------------------------------------------------
-mms::multisig_wallet_state wallet2::get_multisig_wallet_state() const
-{
-  mms::multisig_wallet_state state;
-  state.nettype = m_nettype;
-  state.multisig = multisig(&state.multisig_is_ready);
-  state.has_multisig_partial_key_images = has_multisig_partial_key_images();
-  state.multisig_rounds_passed = m_multisig_rounds_passed;
-  state.num_transfer_details = m_transfers.size();
-  if (state.multisig)
-  {
-    THROW_WALLET_EXCEPTION_IF(!m_original_keys_available, error::wallet_internal_error, "MMS use not possible because own original Monero address not available");
-    state.address = m_original_address;
-    state.view_secret_key = m_original_view_secret_key;
-  }
-  else
-  {
-    state.address = m_account.get_keys().m_account_address;
-    state.view_secret_key = m_account.get_keys().m_view_secret_key;
-  }
-  state.mms_file=m_mms_file;
-  return state;
 }
 //----------------------------------------------------------------------------------------------------
 wallet_device_callback * wallet2::get_device_callback()
