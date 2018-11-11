@@ -1139,6 +1139,7 @@ bool wallet2::reconnect_device()
   hw::device &hwdev = lookup_device(m_device_name);
   hwdev.set_name(m_device_name);
   hwdev.set_network_type(m_nettype);
+  hwdev.set_derivation_path(m_device_derivation_path);
   hwdev.set_callback(get_device_callback());
   r = hwdev.init();
   if (!r){
@@ -3270,18 +3271,6 @@ bool wallet2::store_keys(const std::string& keys_file_name, const epee::wipeable
   value.SetString(m_device_derivation_path.c_str(), m_device_derivation_path.size());
   json.AddMember("device_derivation_path", value, json.GetAllocator());
 
-  std::string original_address;
-  std::string original_view_secret_key;
-  if (m_original_keys_available)
-  {  
-    original_address = get_account_address_as_str(m_nettype, false, m_original_address);
-    value.SetString(original_address.c_str(), original_address.length());
-    json.AddMember("original_address", value, json.GetAllocator());
-    original_view_secret_key = epee::string_tools::pod_to_hex(m_original_view_secret_key);
-    value.SetString(original_view_secret_key.c_str(), original_view_secret_key.length());
-    json.AddMember("original_view_secret_key", value, json.GetAllocator());
-  }
-  
   // Serialize the JSON object
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -3576,35 +3565,6 @@ bool wallet2::load_keys(const std::string& keys_file_name, const epee::wipeable_
 
     GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, device_derivation_path, std::string, String, false, std::string());
     m_device_derivation_path = field_device_derivation_path;
-    
-    if (json.HasMember("original_keys_available"))
-    {
-      GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, original_keys_available, int, Int, false, false);
-      m_original_keys_available = field_original_keys_available;
-      if (m_original_keys_available)
-      {
-        GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, original_address, std::string, String, true, std::string());
-        address_parse_info info;
-        bool ok = get_account_address_from_str(info, m_nettype, field_original_address);
-        if (!ok)
-        {
-          LOG_ERROR("Failed to parse original_address from JSON");
-          return false;
-        }
-        m_original_address = info.address;
-        GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, original_view_secret_key, std::string, String, true, std::string());
-        ok = epee::string_tools::hex_to_pod(field_original_view_secret_key, m_original_view_secret_key);
-        if (!ok)
-        {
-          LOG_ERROR("Failed to parse original_view_secret_key from JSON");
-          return false;
-        }
-      }
-    }
-    else
-    {
-      m_original_keys_available = false;
-    }
   }
   else
   {
@@ -3619,6 +3579,7 @@ bool wallet2::load_keys(const std::string& keys_file_name, const epee::wipeable_
     hw::device &hwdev = lookup_device(m_device_name);
     THROW_WALLET_EXCEPTION_IF(!hwdev.set_name(m_device_name), error::wallet_internal_error, "Could not set device name " + m_device_name);
     hwdev.set_network_type(m_nettype);
+    hwdev.set_derivation_path(m_device_derivation_path);
     hwdev.set_callback(get_device_callback());
     THROW_WALLET_EXCEPTION_IF(!hwdev.init(), error::wallet_internal_error, "Could not initialize the device " + m_device_name);
     THROW_WALLET_EXCEPTION_IF(!hwdev.connect(), error::wallet_internal_error, "Could not connect to the device " + m_device_name);
@@ -4133,6 +4094,7 @@ void wallet2::restore(const std::string& wallet_, const epee::wipeable_string& p
   auto &hwdev = lookup_device(device_name);
   hwdev.set_name(device_name);
   hwdev.set_network_type(m_nettype);
+  hwdev.set_derivation_path(m_device_derivation_path);
   hwdev.set_callback(get_device_callback());
 
   m_account.create_from_device(hwdev);
