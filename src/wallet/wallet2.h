@@ -1408,6 +1408,7 @@ namespace tools
     size_t m_subaddress_lookahead_major, m_subaddress_lookahead_minor;
     std::string m_device_name;
     std::string m_device_derivation_path;
+    uint64_t m_device_last_key_image_sync;
 
     // Aux transaction data from device
     std::unordered_map<crypto::hash, std::string> m_tx_device;
@@ -1450,7 +1451,7 @@ namespace tools
   };
 }
 BOOST_CLASS_VERSION(tools::wallet2, 27)
-BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 11)
+BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 10)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info, 1)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info::LR, 0)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_tx_set, 1)
