@@ -117,6 +117,8 @@ typedef cryptonote::simple_wallet sw;
 
 #define SCOPED_WALLET_UNLOCK() SCOPED_WALLET_UNLOCK_ON_BAD_PASSWORD(return true;)
 
+#define PRINT_USAGE(usage_help) fail_msg_writer() << boost::format(tr("usage: %s")) % usage_help;
+
 enum TransferType {
   Transfer,
   TransferLocked,
@@ -150,7 +152,7 @@ namespace
   const char* USAGE_START_MINING("start_mining [<number_of_threads>] [bg_mining] [ignore_battery]");
   const char* USAGE_SET_DAEMON("set_daemon <host>[:<port>] [trusted|untrusted]");
   const char* USAGE_SHOW_BALANCE("balance [detail]");
-  const char* USAGE_INCOMING_TRANSFERS("incoming_transfers [available|unavailable] [verbose] [uses] [index=<N1>[,<N2>[,...]]]");
+  const char* USAGE_INCOMING_TRANSFERS("incoming_transfers [available|unavailable] [verbose] [index=<N1>[,<N2>[,...]]]");
   const char* USAGE_PAYMENTS("payments <PID_1> [<PID_2> ... <PID_N>]");
   const char* USAGE_PAYMENT_ID("payment_id");
   const char* USAGE_TRANSFER("transfer [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] (<URI> | <address> <amount>) [<payment_id>]");
@@ -1007,7 +1009,7 @@ bool simple_wallet::make_multisig_main(const std::vector<std::string> &args, boo
 
   if (args.size() < 2)
   {
-    fail_msg_writer() << tr("usage: make_multisig <threshold> <multisiginfo1> [<multisiginfo2>...]");
+    PRINT_USAGE(USAGE_MAKE_MULTISIG);
     return false;
   }
 
@@ -1148,7 +1150,7 @@ bool simple_wallet::exchange_multisig_keys_main(const std::vector<std::string> &
 
     if (args.size() < 2)
     {
-      fail_msg_writer() << tr("usage: exchange_multisig_keys <multisiginfo1> [<multisiginfo2>...]");
+      PRINT_USAGE(USAGE_EXCHANGE_MULTISIG_KEYS);
       return false;
     }
 
@@ -1206,7 +1208,7 @@ bool simple_wallet::export_multisig_main(const std::vector<std::string> &args, b
   }
   if (args.size() != 1)
   {
-    fail_msg_writer() << tr("usage: export_multisig_info <filename>");
+    PRINT_USAGE(USAGE_EXPORT_MULTISIG_INFO);
     return false;
   }
 
@@ -1272,7 +1274,7 @@ bool simple_wallet::import_multisig_main(const std::vector<std::string> &args, b
   }
   if (args.size() < threshold - 1)
   {
-    fail_msg_writer() << tr("usage: import_multisig_info <filename1> [<filename2>...] - one for each other participant");
+    PRINT_USAGE(USAGE_IMPORT_MULTISIG_INFO);
     return false;
   }
 
@@ -1366,7 +1368,7 @@ bool simple_wallet::sign_multisig_main(const std::vector<std::string> &args, boo
   }
   if (args.size() != 1)
   {
-    fail_msg_writer() << tr("usage: sign_multisig <filename>");
+    PRINT_USAGE(USAGE_SIGN_MULTISIG);
     return false;
   }
 
@@ -1482,7 +1484,7 @@ bool simple_wallet::submit_multisig_main(const std::vector<std::string> &args, b
   }
   if (args.size() != 1)
   {
-    fail_msg_writer() << tr("usage: submit_multisig <filename>");
+    PRINT_USAGE(USAGE_SUBMIT_MULTISIG);
     return false;
   }
 
@@ -2886,7 +2888,7 @@ simple_wallet::simple_wallet()
                            tr("Export a signed multisig transaction to a file"));
   m_cmd_binder.set_handler("mms",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms [<subcommand> [<subcommand_parameters>]]"),
+                           tr(USAGE_MMS),
                            tr("Interface with the MMS (Multisig Messaging System)\n"
                               "<subcommand> is one of:\n"
                               "  init, info, signer, list, next, sync, transfer, delete, send, receive, export, note, show, set, help\n"
@@ -2894,78 +2896,78 @@ simple_wallet::simple_wallet()
                               "Get help about a subcommand with: help mms <subcommand>, or mms help <subcommand>"));
   m_cmd_binder.set_handler("mms init",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms init <required_signers>/<authorized_signers> <own_label> <own_transport_address>"),
+                           tr(USAGE_MMS_INIT),
                            tr("Initialize and configure the MMS for M/N = number of required signers/number of authorized signers multisig"));
   m_cmd_binder.set_handler("mms info",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms info"),
+                           tr(USAGE_MMS_INFO),
                            tr("Display current MMS configuration"));
   m_cmd_binder.set_handler("mms signer",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms signer [<number> <label> [<transport_address> [<monero_address>]]]"),
+                           tr(USAGE_MMS_SIGNER),
                            tr("Set or modify authorized signer info (single-word label, transport address, Bittube address), or list all signers"));
   m_cmd_binder.set_handler("mms list",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms list"),
+                           tr(USAGE_MMS_LIST),
                            tr("List all messages"));
   m_cmd_binder.set_handler("mms next",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms next [sync]"),
+                           tr(USAGE_MMS_NEXT),
                            tr("Evaluate the next possible multisig-related action(s) according to wallet state, and execute or offer for choice\n"
                               "By using 'sync' processing of waiting messages with multisig sync info can be forced regardless of wallet state"));
   m_cmd_binder.set_handler("mms sync",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms sync"),
+                           tr(USAGE_MMS_SYNC),
                            tr("Force generation of multisig sync info regardless of wallet state, to recover from special situations like \"stale data\" errors"));
   m_cmd_binder.set_handler("mms transfer",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms transfer <transfer_command_arguments>"),
+                           tr(USAGE_MMS_TRANSFER),
                            tr("Initiate transfer with MMS support; arguments identical to normal 'transfer' command arguments, for info see there"));
   m_cmd_binder.set_handler("mms delete",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms delete (<message_id> | all)"),
+                           tr(USAGE_MMS_DELETE),
                            tr("Delete a single message by giving its id, or delete all messages by using 'all'"));
   m_cmd_binder.set_handler("mms send",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms send [<message_id>]"),
+                           tr(USAGE_MMS_SEND),
                            tr("Send a single message by giving its id, or send all waiting messages"));
   m_cmd_binder.set_handler("mms receive",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms receive"),
+                           tr(USAGE_MMS_RECEIVE),
                            tr("Check right away for new messages to receive"));
   m_cmd_binder.set_handler("mms export",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms export <message_id"),
+                           tr(USAGE_MMS_EXPORT),
                            tr("Write the content of a message to a file \"mms_message_content\""));
   m_cmd_binder.set_handler("mms note",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms note [<label> <text>]"),
+                           tr(USAGE_MMS_NOTE),
                            tr("Send a one-line message to an authorized signer, identified by its label, or show any waiting unread notes"));
   m_cmd_binder.set_handler("mms show",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms show <message_id>"),
+                           tr(USAGE_MMS_SHOW),
                            tr("Show detailed info about a single message"));
   m_cmd_binder.set_handler("mms set",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms set <option_name> [<option_value>]"),
+                           tr(USAGE_MMS_SET),
                            tr("Available options:\n "
                                   "auto-send <1|0>\n "
                                   "  Whether to automatically send newly generated messages right away.\n "));
   m_cmd_binder.set_handler("mms send_message_config",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms send_signer_config"),
+                           tr(USAGE_MMS_SEND_SIGNER_CONFIG),
                            tr("Send completed signer config to all other authorized signers"));
   m_cmd_binder.set_handler("mms start_auto_config",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms start_auto_config [<label> <label> ...]"),
+                           tr(USAGE_MMS_START_AUTO_CONFIG),
                            tr("Start auto-config at the auto-config manager's wallet by issuing auto-config tokens and optionally set others' labels"));
   m_cmd_binder.set_handler("mms stop_auto_config",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms stop_auto_config"),
+                           tr(USAGE_MMS_STOP_AUTO_CONFIG),
                            tr("Delete any auto-config tokens and abort a auto-config process"));
   m_cmd_binder.set_handler("mms auto_config",
                            boost::bind(&simple_wallet::mms, this, _1),
-                           tr("mms auto_config <auto_config_token>"),
+                           tr(USAGE_MMS_AUTO_CONFIG),
                            tr("Start auto-config by using the token received from the auto-config manager"));
   m_cmd_binder.set_handler("print_ring",
                            boost::bind(&simple_wallet::print_ring, this, _1),
@@ -9998,6 +10000,7 @@ bool simple_wallet::mms(const std::vector<std::string> &args)
   catch (const std::exception &e)
   {
     fail_msg_writer() << tr("Error in MMS command: ") << e.what();
+    PRINT_USAGE(USAGE_MMS);
     return true;
   }
   return true;
