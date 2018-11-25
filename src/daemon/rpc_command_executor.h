@@ -153,6 +153,8 @@ public:
   bool relay_tx(const std::string &txid);
 
   bool sync_info();
+
+  bool pop_blocks(uint64_t num_blocks);
 };
 
 } // namespace daemonize
