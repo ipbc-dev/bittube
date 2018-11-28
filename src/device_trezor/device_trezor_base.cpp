@@ -416,6 +416,7 @@ namespace trezor {
       MDEBUG("on_passhprase_state_request");
       CHECK_AND_ASSERT_THROW_MES(msg, "Empty message");
 
+      m_device_state = msg->state();
       messages::common::PassphraseStateAck m;
       resp = call_raw(&m);
     }
