@@ -1842,24 +1842,10 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
     if (!pool && m_track_uses)
     {
       PERF_TIMER(track_uses);
-      const uint64_t amount = in_to_key.amount;
       std::vector<uint64_t> offsets = cryptonote::relative_output_offsets_to_absolute(in_to_key.key_offsets);
-      if (output_tracker_cache)
+      for (transfer_details &td: m_transfers)
       {
-        for (uint64_t offset: offsets)
-        {
-          const std::map<std::pair<uint64_t, uint64_t>, size_t>::const_iterator i = output_tracker_cache->find(std::make_pair(amount, offset));
-          if (i != output_tracker_cache->end())
-          {
-            size_t idx = i->second;
-            THROW_WALLET_EXCEPTION_IF(idx >= m_transfers.size(), error::wallet_internal_error, "Output tracker cache index out of range");
-            m_transfers[idx].m_uses.push_back(std::make_pair(height, txid));
-          }
-        }
-      }
-      else for (transfer_details &td: m_transfers)
-      {
-        if (amount != in_to_key.amount)
+        if ((td.is_rct() ? 0 : td.amount()) != in_to_key.amount)
           continue;
         for (uint64_t offset: offsets)
           if (offset == td.m_global_output_index)
