@@ -86,29 +86,6 @@ using namespace epee;
 #undef MONERO_DEFAULT_LOG_CATEGORY
 #define MONERO_DEFAULT_LOG_CATEGORY "util"
 
-namespace
-{
-
-#ifndef _WIN32
-static int flock_exnb(int fd)
-{
-  struct flock fl;
-  int ret;
-
-  memset(&fl, 0, sizeof(fl));
-  fl.l_type = F_WRLCK;
-  fl.l_whence = SEEK_SET;
-  fl.l_start = 0;
-  fl.l_len = 0;
-  ret = fcntl(fd, F_SETLK, &fl);
-  if (ret < 0)
-    MERROR("Error locking fd " << fd << ": " << errno << " (" << strerror(errno) << ")");
-  return ret;
-}
-#endif
-
-}
-
 namespace tools
 {
   std::function<void(int)> signal_handler::m_handler;
