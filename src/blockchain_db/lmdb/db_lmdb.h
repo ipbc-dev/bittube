@@ -360,7 +360,7 @@ private:
   virtual void check_hard_fork_info();
   virtual void drop_hard_fork_info();
 
-  inline void check_open() const;
+  void check_open() const;
 
   virtual bool is_read_only() const;
 
