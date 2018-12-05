@@ -374,6 +374,10 @@ struct WalletListener
  */
 struct Wallet
 {
+    enum Device {
+        Device_Software = 0,
+        Device_Ledger = 1
+    };
 
     enum Status {
         Status_Ok,
@@ -641,6 +645,17 @@ struct Wallet
     virtual void refreshAsync() = 0;
 
     /**
+     * @brief rescanBlockchain - rescans the wallet, updating transactions from daemon
+     * @return - true if refreshed successfully;
+     */
+    virtual bool rescanBlockchain() = 0;
+
+    /**
+     * @brief rescanBlockchainAsync - rescans wallet asynchronously, starting from genesys
+     */
+    virtual void rescanBlockchainAsync() = 0;
+
+    /**
      * @brief setAutoRefreshInterval - setup interval for automatic refresh.
      * @param seconds - interval in millis. if zero or less than zero - automatic refresh disabled;
      */
@@ -704,6 +719,12 @@ struct Wallet
      */
     virtual std::string makeMultisig(const std::vector<std::string>& info, uint32_t threshold) = 0;
     /**
+     * @brief exchange_multisig_keys - provides additional key exchange round for arbitrary multisig schemes (like N-1/N, M/N)
+     * @param info - base58 encoded key derivations returned by makeMultisig or exchangeMultisigKeys function call
+     * @return new info string if more rounds required or an empty string if wallet creation is done
+     */
+    virtual std::string exchangeMultisigKeys(const std::vector<std::string> &info) = 0;
+    /**
      * @brief finalizeMultisig - finalizes N - 1 / N multisig wallets creation
      * @param extraMultisigInfo - wallet participants' extra multisig info obtained with makeMultisig call
      * @return true if success
@@ -721,6 +742,11 @@ struct Wallet
      * @return number of imported images
      */
     virtual size_t importMultisigImages(const std::vector<std::string>& images) = 0;
+    /**
+     * @brief hasMultisigPartialKeyImages - checks if wallet needs to import multisig key images from other participants
+     * @return true if there are partial key images
+     */
+    virtual bool hasMultisigPartialKeyImages() const = 0;
 
     /**
      * @brief restoreMultisigTransaction creates PendingTransaction from signData
@@ -873,10 +899,13 @@ struct Wallet
     virtual bool rescanSpent() = 0;
     
     //! blackballs a set of outputs
-    virtual bool blackballOutputs(const std::vector<std::string> &pubkeys, bool add) = 0;
+    virtual bool blackballOutputs(const std::vector<std::string> &outputs, bool add) = 0;
+
+    //! blackballs an output
+    virtual bool blackballOutput(const std::string &amount, const std::string &offset) = 0;
 
     //! unblackballs an output
-    virtual bool unblackballOutput(const std::string &pubkey) = 0;
+    virtual bool unblackballOutput(const std::string &amount, const std::string &offset) = 0;
 
     //! gets the ring used for a key image, if any
     virtual bool getRing(const std::string &key_image, std::vector<uint64_t> &ring) const = 0;
@@ -901,6 +930,18 @@ struct Wallet
     
     //! Initiates a light wallet import wallet request
     virtual bool lightWalletImportWalletRequest(std::string &payment_id, uint64_t &fee, bool &new_request, bool &request_fulfilled, std::string &payment_address, std::string &status) = 0;
+
+    //! locks/unlocks the keys file; returns true on success
+    virtual bool lockKeysFile() = 0;
+    virtual bool unlockKeysFile() = 0;
+    //! returns true if the keys file is locked
+    virtual bool isKeysFileLocked() = 0;
+
+    /*!
+     * \brief Queries backing device for wallet keys
+     * \return Device they are on
+     */
+    virtual Device getDeviceType() const = 0;
 };
 
 /**
@@ -915,9 +956,10 @@ struct WalletManager
      * \param  password       Password of wallet file
      * \param  language       Language to be used to generate electrum seed mnemonic
      * \param  nettype        Network type
+     * \param  kdf_rounds     Number of rounds for key derivation function
      * \return                Wallet instance (Wallet::status() needs to be called to check if created successfully)
      */
-    virtual Wallet * createWallet(const std::string &path, const std::string &password, const std::string &language, NetworkType nettype) = 0;
+    virtual Wallet * createWallet(const std::string &path, const std::string &password, const std::string &language, NetworkType nettype, uint64_t kdf_rounds = 1) = 0;
     Wallet * createWallet(const std::string &path, const std::string &password, const std::string &language, bool testnet = false)      // deprecated
     {
         return createWallet(path, password, language, testnet ? TESTNET : MAINNET);
@@ -928,9 +970,10 @@ struct WalletManager
      * \param  path           Name of wallet file
      * \param  password       Password of wallet file
      * \param  nettype        Network type
+     * \param  kdf_rounds     Number of rounds for key derivation function
      * \return                Wallet instance (Wallet::status() needs to be called to check if opened successfully)
      */
-    virtual Wallet * openWallet(const std::string &path, const std::string &password, NetworkType nettype) = 0;
+    virtual Wallet * openWallet(const std::string &path, const std::string &password, NetworkType nettype, uint64_t kdf_rounds = 1) = 0;
     Wallet * openWallet(const std::string &path, const std::string &password, bool testnet = false)     // deprecated
     {
         return openWallet(path, password, testnet ? TESTNET : MAINNET);
@@ -943,10 +986,11 @@ struct WalletManager
      * \param  mnemonic       mnemonic (25 words electrum seed)
      * \param  nettype        Network type
      * \param  restoreHeight  restore from start height
+     * \param  kdf_rounds     Number of rounds for key derivation function
      * \return                Wallet instance (Wallet::status() needs to be called to check if recovered successfully)
      */
     virtual Wallet * recoveryWallet(const std::string &path, const std::string &password, const std::string &mnemonic,
-                                    NetworkType nettype = MAINNET, uint64_t restoreHeight = 0) = 0;
+                                    NetworkType nettype = MAINNET, uint64_t restoreHeight = 0, uint64_t kdf_rounds = 1) = 0;
     Wallet * recoveryWallet(const std::string &path, const std::string &password, const std::string &mnemonic,
                                     bool testnet = false, uint64_t restoreHeight = 0)           // deprecated
     {
@@ -978,6 +1022,7 @@ struct WalletManager
      * \param  addressString  public address
      * \param  viewKeyString  view key
      * \param  spendKeyString spend key (optional)
+     * \param  kdf_rounds     Number of rounds for key derivation function
      * \return                Wallet instance (Wallet::status() needs to be called to check if recovered successfully)
      */
     virtual Wallet * createWalletFromKeys(const std::string &path,
@@ -987,7 +1032,8 @@ struct WalletManager
                                                     uint64_t restoreHeight,
                                                     const std::string &addressString,
                                                     const std::string &viewKeyString,
-                                                    const std::string &spendKeyString = "") = 0;
+                                                    const std::string &spendKeyString = "",
+                                                    uint64_t kdf_rounds = 1) = 0;
     Wallet * createWalletFromKeys(const std::string &path,
                                   const std::string &password,
                                   const std::string &language,
@@ -1038,6 +1084,7 @@ struct WalletManager
      * \param  deviceName           Device name
      * \param  restoreHeight        restore from start height (0 sets to current height)
      * \param  subaddressLookahead  Size of subaddress lookahead (empty sets to some default low value)
+     * \param  kdf_rounds           Number of rounds for key derivation function
      * \return                      Wallet instance (Wallet::status() needs to be called to check if recovered successfully)
      */
     virtual Wallet * createWalletFromDevice(const std::string &path,
@@ -1045,7 +1092,8 @@ struct WalletManager
                                             NetworkType nettype,
                                             const std::string &deviceName,
                                             uint64_t restoreHeight = 0,
-                                            const std::string &subaddressLookahead = "") = 0;
+                                            const std::string &subaddressLookahead = "",
+                                            uint64_t kdf_rounds = 1) = 0;
 
     /*!
      * \brief Closes wallet. In case operation succeeded, wallet object deleted. in case operation failed, wallet object not deleted
@@ -1070,9 +1118,26 @@ struct WalletManager
      * @param keys_file_name - location of keys file
      * @param password - password to verify
      * @param no_spend_key - verify only view keys?
+     * @param kdf_rounds - number of rounds for key derivation function
      * @return - true if password is correct
+     *
+     * @note
+     * This function will fail when the wallet keys file is opened because the wallet program locks the keys file.
+     * In this case, Wallet::unlockKeysFile() and Wallet::lockKeysFile() need to be called before and after the call to this function, respectively.
      */
-    virtual bool verifyWalletPassword(const std::string &keys_file_name, const std::string &password, bool no_spend_key) const = 0;
+    virtual bool verifyWalletPassword(const std::string &keys_file_name, const std::string &password, bool no_spend_key, uint64_t kdf_rounds = 1) const = 0;
+
+    /*!
+     * \brief determine the key storage for the specified wallet file
+     * \param device_type     (OUT) wallet backend as enumerated in Wallet::Device
+     * \param keys_file_name  Keys file to verify password for
+     * \param password        Password to verify
+     * \return                true if password correct, else false
+     *
+     * for verification only - determines key storage hardware
+     *
+     */
+    virtual bool queryWalletDevice(Wallet::Device& device_type, const std::string &keys_file_name, const std::string &password, uint64_t kdf_rounds = 1) const = 0;
 
     /*!
      * \brief findWallets - searches for the wallet files by given path name recursively

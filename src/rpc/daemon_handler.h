@@ -67,8 +67,6 @@ class DaemonHandler : public RpcHandler
 
     void handle(const GetTxGlobalOutputIndices::Request& req, GetTxGlobalOutputIndices::Response& res);
 
-    void handle(const GetRandomOutputsForAmounts::Request& req, GetRandomOutputsForAmounts::Response& res);
-
     void handle(const SendRawTx::Request& req, SendRawTx::Response& res);
 
     void handle(const StartMining::Request& req, StartMining::Response& res);
@@ -129,7 +127,9 @@ class DaemonHandler : public RpcHandler
 
     void handle(const GetRPCVersion::Request& req, GetRPCVersion::Response& res);
 
-    void handle(const GetPerKBFeeEstimate::Request& req, GetPerKBFeeEstimate::Response& res);
+    void handle(const GetFeeEstimate::Request& req, GetFeeEstimate::Response& res);
+
+    void handle(const GetOutputDistribution::Request& req, GetOutputDistribution::Response& res);
 
     std::string handle(const std::string& request);
 

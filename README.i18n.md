@@ -7,7 +7,7 @@ In order to use the same translation workflow as the [BitTube GUI Wallet](https:
 
 ### Tools for translators
 
-In order to create, update or build translations files, you need to have Qt tools installed. For translating, you need either the **Qt Linguist GUI** ([part of QT Creator](https://www.qt.io/download-open-source/#allDownloadsDiv-9) or a [3rd-party standalone version](https://github.com/lelegard/qtlinguist-installers/releases)), or another tool that supports Qt ts files, such as Transifex.  The files are XML, so they can be edited in any plain text editor if needed.
+In order to create, update or build translations files, you need to have Qt tools installed. For translating, you need either the **Qt Linguist GUI** ([part of Qt Creator](https://www.qt.io/download) or a [3rd-party standalone version](https://github.com/lelegard/qtlinguist-installers/releases)), or another tool that supports Qt ts files, such as Transifex.  The files are XML, so they can be edited in any plain text editor if needed.
 
 ### Creating / modifying translations
 
@@ -19,11 +19,11 @@ To update ts files after changing source code:
 
 To add a new language, eg Spanish (ISO code es):
 
-    cp translations/monero.ts translations/monero_es.ts
+    cp translations/bittube.ts translations/bittube_es.ts
 
 To edit translations for Spanish:
 
-    linguist translations/monero_es.ts
+    linguist translations/bittube_es.ts
 
 To build translations after modifying them:
 

@@ -1,5 +1,4 @@
 // Copyright (c) 2014-2018, The Monero Project
-// Copyright (c) 2018, The BitTube Project
 // 
 // All rights reserved.
 // 
@@ -672,8 +671,7 @@ TEST(Serialization, serializes_ringct_types)
 TEST(Serialization, portability_wallet)
 {
   const cryptonote::network_type nettype = cryptonote::TESTNET;
-  const bool restricted = false;
-  tools::wallet2 w(nettype, restricted);
+  tools::wallet2 w(nettype);
   const boost::filesystem::path wallet_file = unit_test::data_dir / "wallet_9svHk1";
   string password = "test";
   bool r = false;
@@ -794,7 +792,7 @@ TEST(Serialization, portability_wallet)
   }
 }
 
-#define OUTPUT_EXPORT_FILE_MAGIC "BitTube output export\003"
+#define OUTPUT_EXPORT_FILE_MAGIC "Monero output export\003"
 TEST(Serialization, portability_outputs)
 {
   // read file
@@ -811,7 +809,7 @@ TEST(Serialization, portability_outputs)
     if(ciphertext.size() < prefix_size)
       return {};
     crypto::chacha_key key;
-    crypto::generate_chacha_key(&skey, sizeof(skey), key);
+    crypto::generate_chacha_key(&skey, sizeof(skey), key, 1);
     const crypto::chacha_iv &iv = *(const crypto::chacha_iv*)&ciphertext[0];
     std::string plaintext;
     plaintext.resize(ciphertext.size() - prefix_size);
@@ -826,7 +824,7 @@ TEST(Serialization, portability_outputs)
         return {};
     }
     crypto::chacha8(ciphertext.data() + sizeof(iv), ciphertext.size() - prefix_size, key, iv, &plaintext[0]);
-    return std::move(plaintext);
+    return plaintext;
   };
   crypto::secret_key view_secret_key;
   epee::string_tools::hex_to_pod("339673bb1187e2f73ba7841ab6841c5553f96e9f13f8fe6612e69318db4e9d0a", view_secret_key);
@@ -910,17 +908,28 @@ TEST(Serialization, portability_outputs)
   ASSERT_TRUE(td2.m_pk_index == 0);
 }
 
-#define UNSIGNED_TX_PREFIX "BitTube unsigned tx set\003"
+struct unsigned_tx_set
+{
+  std::vector<tools::wallet2::tx_construction_data> txes;
+  tools::wallet2::transfer_container transfers;
+};
+template <class Archive>
+inline void serialize(Archive &a, unsigned_tx_set &x, const boost::serialization::version_type ver)
+{
+  a & x.txes;
+  a & x.transfers;
+}
+#define UNSIGNED_TX_PREFIX "Monero unsigned tx set\003"
 TEST(Serialization, portability_unsigned_tx)
 {
-  const boost::filesystem::path filename = unit_test::data_dir / "unsigned_bittube_tx";
+  const boost::filesystem::path filename = unit_test::data_dir / "unsigned_monero_tx";
   std::string s;
   const cryptonote::network_type nettype = cryptonote::TESTNET;
   bool r = epee::file_io_utils::load_file_to_string(filename.string(), s);
   ASSERT_TRUE(r);
   const size_t magiclen = strlen(UNSIGNED_TX_PREFIX);
   ASSERT_FALSE(strncmp(s.c_str(), UNSIGNED_TX_PREFIX, magiclen));
-  tools::wallet2::unsigned_tx_set exported_txs;
+  unsigned_tx_set exported_txs;
   s = s.substr(magiclen);
   r = false;
   try
@@ -1058,10 +1067,10 @@ TEST(Serialization, portability_unsigned_tx)
   ASSERT_TRUE(td2.m_pk_index == 0);
 }
 
-#define SIGNED_TX_PREFIX "BitTube signed tx set\003"
+#define SIGNED_TX_PREFIX "Monero signed tx set\003"
 TEST(Serialization, portability_signed_tx)
 {
-  const boost::filesystem::path filename = unit_test::data_dir / "signed_bittube_tx";
+  const boost::filesystem::path filename = unit_test::data_dir / "signed_monero_tx";
   const cryptonote::network_type nettype = cryptonote::TESTNET;
   std::string s;
   bool r = epee::file_io_utils::load_file_to_string(filename.string(), s);

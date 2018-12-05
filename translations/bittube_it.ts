@@ -1364,8 +1364,11 @@ Questa transazione verrà sbloccata al blocco %llu, in approssimativamente %s gi
     </message>
     <message>
         <location filename="../src/simplewallet/simplewallet.cpp" line="1586"/>
-        <source>Show the incoming transfers, all or filtered by availability and address index.</source>
-        <translation>Mostra i trasferimenti in entrata, tutti o filtrati per disponibilità ed indice di indirizzo.</translation>
+        <source>Show the incoming transfers, all or filtered by availability and address index.
+
+Output format:
+Amount, Spent(&quot;T&quot;|&quot;F&quot;), &quot;locked&quot;|&quot;unlocked&quot;, RingCT, Global Index, Transaction Hash, Address Index, [Public Key, Key Image]</source>
+        <translation type="unfinished">Mostra i trasferimenti in entrata, tutti o filtrati per disponibilità ed indice di indirizzo.</translation>
     </message>
     <message>
         <location filename="../src/simplewallet/simplewallet.cpp" line="1589"/>
@@ -1702,7 +1705,16 @@ Otherwise, you prove the reserve of the smallest possible amount above &lt;amoun
     </message>
     <message>
         <location filename="../src/simplewallet/simplewallet.cpp" line="1758"/>
-        <source>Show the incoming/outgoing transfers within an optional height range.</source>
+        <source>Show the incoming/outgoing transfers within an optional height range.
+
+Output format:
+In or Coinbase:    Block Number, &quot;block&quot;|&quot;in&quot;,              Time, Amount,  Transaction Hash, Payment ID, Subaddress Index,                     &quot;-&quot;, Note\
+Out:               Block Number, &quot;out&quot;,                     Time, Amount*, Transaction Hash, Payment ID, Fee, Destinations, Input addresses**, &quot;-&quot;, Note
+Pool:                            &quot;pool&quot;, &quot;in&quot;,              Time, Amount,  Transaction Hash, Payment Id, Subaddress Index,                     &quot;-&quot;, Note, Double Spend Note\
+Pending or Failed:               &quot;failed&quot;|&quot;pending&quot;, &quot;out&quot;, Time, Amount*, Transaction Hash, Payment ID, Fee, Input addresses**,               &quot;-&quot;, Note
+
+* Excluding change and fee.
+** Set of address indices used as inputs in this transfer.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2182,7 +2194,7 @@ your wallet again (your wallet keys are NOT at risk in any case).
     <message>
         <location filename="../src/simplewallet/simplewallet.cpp" line="3339"/>
         <location filename="../src/simplewallet/simplewallet.cpp" line="3381"/>
-        <source>usage: incoming_transfers [available|unavailable] [verbose] [index=&lt;N&gt;]</source>
+        <source>usage: incoming_transfers [available|unavailable] [verbose] [index=&lt;N1&gt;[,&lt;N2&gt;[,...]]]</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

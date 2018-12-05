@@ -53,7 +53,7 @@ struct Wallet2CallbackImpl;
 class WalletImpl : public Wallet
 {
 public:
-    WalletImpl(NetworkType nettype = MAINNET);
+    WalletImpl(NetworkType nettype = MAINNET, uint64_t kdf_rounds = 1);
     ~WalletImpl();
     bool create(const std::string &path, const std::string &password,
                 const std::string &language);
@@ -80,6 +80,7 @@ public:
     bool recoverFromDevice(const std::string &path,
                            const std::string &password,
                            const std::string &device_name);
+    Device getDeviceType() const override;
     bool close(bool store = true);
     std::string seed() const override;
     std::string getSeedLanguage() const override;
@@ -114,6 +115,8 @@ public:
     bool synchronized() const override;
     bool refresh() override;
     void refreshAsync() override;
+    bool rescanBlockchain() override;
+    void rescanBlockchainAsync() override;    
     void setAutoRefreshInterval(int millis) override;
     int autoRefreshInterval() const override;
     void setRefreshFromBlockHeight(uint64_t refresh_from_block_height) override;
@@ -137,9 +140,11 @@ public:
     MultisigState multisig() const override;
     std::string getMultisigInfo() const override;
     std::string makeMultisig(const std::vector<std::string>& info, uint32_t threshold) override;
+    std::string exchangeMultisigKeys(const std::vector<std::string> &info) override;
     bool finalizeMultisig(const std::vector<std::string>& extraMultisigInfo) override;
     bool exportMultisigImages(std::string& images) override;
     size_t importMultisigImages(const std::vector<std::string>& images) override;
+    bool hasMultisigPartialKeyImages() const override;
     PendingTransaction*  restoreMultisigTransaction(const std::string& signData) override;
 
     PendingTransaction * createTransaction(const std::string &dst_addr, const std::string &payment_id,
@@ -181,14 +186,18 @@ public:
     virtual std::string getDefaultDataDir() const override;
     virtual bool lightWalletLogin(bool &isNewWallet) const override;
     virtual bool lightWalletImportWalletRequest(std::string &payment_id, uint64_t &fee, bool &new_request, bool &request_fulfilled, std::string &payment_address, std::string &status) override;
-    virtual bool blackballOutputs(const std::vector<std::string> &pubkeys, bool add) override;
-    virtual bool unblackballOutput(const std::string &pubkey) override;
+    virtual bool blackballOutputs(const std::vector<std::string> &outputs, bool add) override;
+    virtual bool blackballOutput(const std::string &amount, const std::string &offset) override;
+    virtual bool unblackballOutput(const std::string &amount, const std::string &offset) override;
     virtual bool getRing(const std::string &key_image, std::vector<uint64_t> &ring) const override;
     virtual bool getRings(const std::string &txid, std::vector<std::pair<std::string, std::vector<uint64_t>>> &rings) const override;
     virtual bool setRing(const std::string &key_image, const std::vector<uint64_t> &ring, bool relative) override;
     virtual void segregatePreForkOutputs(bool segregate) override;
     virtual void segregationHeight(uint64_t height) override;
     virtual void keyReuseMitigation2(bool mitigation) override;
+    virtual bool lockKeysFile() override;
+    virtual bool unlockKeysFile() override;
+    virtual bool isKeysFileLocked() override;
 
 private:
     void clearStatus() const;
@@ -211,22 +220,22 @@ private:
     friend class SubaddressImpl;
     friend class SubaddressAccountImpl;
 
-    tools::wallet2 * m_wallet;
+    std::unique_ptr<tools::wallet2> m_wallet;
     mutable boost::mutex m_statusMutex;
     mutable int m_status;
     mutable std::string m_errorString;
     std::string m_password;
-    TransactionHistoryImpl * m_history;
-    bool        m_trustedDaemon;
-    Wallet2CallbackImpl * m_wallet2Callback;
-    AddressBookImpl *  m_addressBook;
-    SubaddressImpl *  m_subaddress;
-    SubaddressAccountImpl *  m_subaddressAccount;
+    std::unique_ptr<TransactionHistoryImpl> m_history;
+    std::unique_ptr<Wallet2CallbackImpl> m_wallet2Callback;
+    std::unique_ptr<AddressBookImpl>  m_addressBook;
+    std::unique_ptr<SubaddressImpl>  m_subaddress;
+    std::unique_ptr<SubaddressAccountImpl>  m_subaddressAccount;
 
     // multi-threaded refresh stuff
     std::atomic<bool> m_refreshEnabled;
     std::atomic<bool> m_refreshThreadDone;
     std::atomic<int>  m_refreshIntervalMillis;
+    std::atomic<bool> m_refreshShouldRescan;
     // synchronizing  refresh loop;
     boost::mutex        m_refreshMutex;
 

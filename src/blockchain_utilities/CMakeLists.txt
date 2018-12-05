@@ -27,16 +27,6 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(blocksdat "")
-if(PER_BLOCK_CHECKPOINT)
-  if(APPLE)
-    add_custom_command(OUTPUT blocksdat.o MAIN_DEPENDENCY ../blocks/checkpoints.dat COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && touch stub.c && ${CMAKE_C_COMPILER} -o stub.o -c stub.c COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && ${CMAKE_LINKER} ${LD_RAW_FLAGS} -r -sectcreate __DATA __blocks_dat ../blocks/checkpoints.dat -o ${CMAKE_CURRENT_BINARY_DIR}/blocksdat.o stub.o && rm -f stub.*)
-  else()
-    add_custom_command(OUTPUT blocksdat.o MAIN_DEPENDENCY ../blocks/checkpoints.dat COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && cp ../blocks/checkpoints.dat blocks.dat && ${CMAKE_LINKER} ${LD_RAW_FLAGS} -r -b binary -o ${CMAKE_CURRENT_BINARY_DIR}/blocksdat.o blocks.dat && rm -f blocks.dat)
-  endif()
-  set(blocksdat "blocksdat.o")
-endif()
-
 set(blockchain_import_sources
   blockchain_import.cpp
   bootstrap_file.cpp
@@ -92,10 +82,39 @@ monero_private_headers(blockchain_usage
 
 
 
+set(blockchain_ancestry_sources
+  blockchain_ancestry.cpp
+  )
+
+set(blockchain_ancestry_private_headers)
+
+monero_private_headers(blockchain_ancestry
+	  ${blockchain_ancestry_private_headers})
+
+
+
+set(blockchain_depth_sources
+  blockchain_depth.cpp
+  )
+
+set(blockchain_depth_private_headers)
+
+monero_private_headers(blockchain_depth
+	  ${blockchain_depth_private_headers})
+
+set(blockchain_stats_sources
+  blockchain_stats.cpp
+  )
+
+set(blockchain_stats_private_headers)
+
+monero_private_headers(blockchain_stats
+	  ${blockchain_stats_private_headers})
+
+
 monero_add_executable(blockchain_import
   ${blockchain_import_sources}
-  ${blockchain_import_private_headers}
-  ${blocksdat})
+  ${blockchain_import_private_headers})
 
 target_link_libraries(blockchain_import
   PRIVATE
@@ -107,7 +126,8 @@ target_link_libraries(blockchain_import
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${CMAKE_THREAD_LIBS_INIT}
-    ${EXTRA_LIBRARIES})
+    ${EXTRA_LIBRARIES}
+    ${Blocks})
 
 if(ARCH_WIDTH)
   target_compile_definitions(blockchain_import
@@ -159,7 +179,7 @@ target_link_libraries(blockchain_blackball
 
 set_property(TARGET blockchain_blackball
 	PROPERTY
-	OUTPUT_NAME "bittube-blockchain-blackball")
+	OUTPUT_NAME "bittube-blockchain-mark-spent-outputs")
 install(TARGETS blockchain_blackball DESTINATION bin)
 
 
@@ -184,3 +204,65 @@ set_property(TARGET blockchain_usage
 	OUTPUT_NAME "bittube-blockchain-usage")
 install(TARGETS blockchain_usage DESTINATION bin)
 
+monero_add_executable(blockchain_ancestry
+  ${blockchain_ancestry_sources}
+  ${blockchain_ancestry_private_headers})
+
+target_link_libraries(blockchain_ancestry
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+
+set_property(TARGET blockchain_ancestry
+	PROPERTY
+	OUTPUT_NAME "bittube-blockchain-ancestry")
+install(TARGETS blockchain_ancestry DESTINATION bin)
+
+monero_add_executable(blockchain_depth
+  ${blockchain_depth_sources}
+  ${blockchain_depth_private_headers})
+
+target_link_libraries(blockchain_depth
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+
+set_property(TARGET blockchain_depth
+	PROPERTY
+	OUTPUT_NAME "bittube-blockchain-depth")
+install(TARGETS blockchain_depth DESTINATION bin)
+
+monero_add_executable(blockchain_stats
+  ${blockchain_stats_sources}
+  ${blockchain_stats_private_headers})
+
+target_link_libraries(blockchain_stats
+  PRIVATE
+    cryptonote_core
+    blockchain_db
+    version
+    epee
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXTRA_LIBRARIES})
+
+set_property(TARGET blockchain_stats
+	PROPERTY
+	OUTPUT_NAME "bittube-blockchain-stats")
+install(TARGETS blockchain_stats DESTINATION bin)

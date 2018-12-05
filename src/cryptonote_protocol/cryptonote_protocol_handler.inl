@@ -1078,8 +1078,10 @@ skip:
               if(tvc[i].m_verifivation_failed)
               {
                 if (!m_p2p->for_connection(span_connection_id, [&](cryptonote_connection_context& context, nodetool::peerid_type peer_id, uint32_t f)->bool{
+                  cryptonote::transaction tx;
+                  parse_and_validate_tx_from_blob(*it, tx); // must succeed if we got here
                   LOG_ERROR_CCONTEXT("transaction verification failed on NOTIFY_RESPONSE_GET_OBJECTS, tx_id = "
-                      << epee::string_tools::pod_to_hex(get_blob_hash(*it)) << ", dropping connection");
+                      << epee::string_tools::pod_to_hex(cryptonote::get_transaction_hash(tx)) << ", dropping connection");
                   drop_connection(context, false, true);
                   return 1;
                 }))
@@ -1169,8 +1171,20 @@ skip:
                 + " blocks/sec), " + std::to_string(m_block_queue.get_data_size() / 1048576.f) + " MB queued";
             if (ELPP->vRegistry()->allowed(el::Level::Debug, "sync-info"))
               timing_message += std::string(": ") + m_block_queue.get_overview();
-            MGINFO_YELLOW(context << " Synced " << m_core.get_current_blockchain_height() << "/" << m_core.get_target_blockchain_height()
+            if(m_core.get_target_blockchain_height() == 0){
+              MGINFO_YELLOW(context << " Synced " << m_core.get_current_blockchain_height() << "/" << m_core.get_target_blockchain_height()
                 << timing_message);
+            } else {
+              const int completition_percent = (m_core.get_current_blockchain_height() * 100 / m_core.get_target_blockchain_height());
+              if(completition_percent < 99) {//printing completion percent only if % is < of 99 cause for 99 >= this is useless
+                MGINFO_YELLOW(context << " Synced " << m_core.get_current_blockchain_height() << "/" << m_core.get_target_blockchain_height()
+                  << " (" << completition_percent << "% " << (m_core.get_target_blockchain_height() - m_core.get_current_blockchain_height())
+                  << " blocks remaining)" << timing_message);
+              } else {
+                MGINFO_YELLOW(context << " Synced " << m_core.get_current_blockchain_height() << "/" << m_core.get_target_blockchain_height()
+                  << timing_message);
+              }
+            }
           }
         }
       }
@@ -1672,11 +1686,6 @@ skip:
     fluffy_arg.b = arg.b;
     fluffy_arg.b.txs = fluffy_txs;
 
-    // pre-serialize them
-    std::string fullBlob, fluffyBlob;
-    epee::serialization::store_t_to_binary(arg, fullBlob);
-    epee::serialization::store_t_to_binary(fluffy_arg, fluffyBlob);
-
     // sort peers between fluffy ones and others
     std::list<boost::uuids::uuid> fullConnections, fluffyConnections;
     m_p2p->for_each_connection([this, &exclude_context, &fullConnections, &fluffyConnections](connection_context& context, nodetool::peerid_type peer_id, uint32_t support_flags)
@@ -1698,8 +1707,18 @@ skip:
     });
 
     // send fluffy ones first, we want to encourage people to run that
-    m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, fluffyBlob, fluffyConnections);
-    m_p2p->relay_notify_to_list(NOTIFY_NEW_BLOCK::ID, fullBlob, fullConnections);
+    if (!fluffyConnections.empty())
+    {
+      std::string fluffyBlob;
+      epee::serialization::store_t_to_binary(fluffy_arg, fluffyBlob);
+      m_p2p->relay_notify_to_list(NOTIFY_NEW_FLUFFY_BLOCK::ID, fluffyBlob, fluffyConnections);
+    }
+    if (!fullConnections.empty())
+    {
+      std::string fullBlob;
+      epee::serialization::store_t_to_binary(arg, fullBlob);
+      m_p2p->relay_notify_to_list(NOTIFY_NEW_BLOCK::ID, fullBlob, fullConnections);
+    }
 
     return true;
   }
@@ -1722,9 +1741,9 @@ skip:
     if (add_fail)
       m_p2p->add_host_fail(context.m_remote_address);
 
-    m_p2p->drop_connection(context);
-
     m_block_queue.flush_spans(context.m_connection_id, flush_all_spans);
+
+    m_p2p->drop_connection(context);
   }
   //------------------------------------------------------------------------------------------------------------------------
   template<class t_core>
@@ -1754,3 +1773,4 @@ skip:
     m_core.stop();
   }
 } // namespace
+

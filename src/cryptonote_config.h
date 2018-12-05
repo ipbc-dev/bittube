@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include <stdexcept>
 #include <string>
 #include <boost/uuid/uuid.hpp>
 
@@ -72,12 +73,13 @@
 // COIN - number of smallest units in one coin
 #define COIN                                            ((uint64_t)100000000) // pow(10, 8)
 
-#define LEGACY_MINIMUM_FEE								((uint64_t)100000)
+#define LEGACY_MINIMUM_FEE								              ((uint64_t)100000)
 #define FEE_PER_KB_OLD                                  ((uint64_t)100000) // pow(10, 5)
 #define FEE_PER_KB                                      ((uint64_t)100000) // pow(10, 5)
 #define DYNAMIC_FEE_PER_KB_BASE_FEE                     ((uint64_t)200000) // 2 * pow(10, 5)
 #define DYNAMIC_FEE_PER_KB_BASE_BLOCK_REWARD            ((uint64_t)45000000000) // 450 * pow(10, 8)
 #define DYNAMIC_FEE_PER_KB_BASE_FEE_V5                  ((uint64_t)200000 * (uint64_t)CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2 / CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5)
+#define DYNAMIC_FEE_REFERENCE_TRANSACTION_WEIGHT        ((uint64_t)3000)
 
 #define ORPHANED_BLOCKS_MAX_COUNT                       100
 
@@ -122,6 +124,8 @@
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       //5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
+#define P2P_DEFAULT_LIMIT_RATE_UP                       2048       // kB/s
+#define P2P_DEFAULT_LIMIT_RATE_DOWN                     8192       // kB/s
 
 #define P2P_FAILED_ADDR_FORGET_SECONDS                  (60*60)     //1 hour
 #define P2P_IP_BLOCKTIME                                (60*60*24)  //24 hour
@@ -148,14 +152,18 @@
 #define HF_VERSION_POW_VARIANT1                 3
 #define HF_VERSION_POW_VARIANT2                 4
 #define HF_VERSION_MIN_MIXIN_2                  4
+#define HF_VERSION_MIN_MIXIN_10                 8 //TODO
 #define HF_VERSION_ENFORCE_RCT                  4
 #define HF_VERSION_BULLETPROOF                  5
+#define HF_VERSION_PER_BYTE_FEE                 8 //TODO
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
 #define HASH_OF_HASHES_STEP                     256
 
-#define DEFAULT_TXPOOL_MAX_SIZE                 648000000ull // 3 days at 300000, in bytes
+#define DEFAULT_TXPOOL_MAX_WEIGHT               648000000ull // 3 days at 300000, in bytes
+
+#define BULLETPROOF_MAX_OUTPUTS                 16
 
 // New constants are intended to go here
 namespace config

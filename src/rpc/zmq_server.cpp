@@ -28,7 +28,6 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "zmq_server.h"
-#include <boost/chrono/chrono.hpp>
 
 namespace cryptonote
 {

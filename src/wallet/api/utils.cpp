@@ -52,6 +52,9 @@ bool isAddressLocal(const std::string &address)
 void onStartup()
 {
     tools::on_startup();
+#ifdef NDEBUG
+    tools::disable_core_dumps();
+#endif
 }
 
 }

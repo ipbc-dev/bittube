@@ -110,6 +110,9 @@ namespace wallet_args
 
     std::string lang = i18n_get_language();
     tools::on_startup();
+#ifdef NDEBUG
+    tools::disable_core_dumps();
+#endif
     tools::set_strict_default_file_permissions(true);
 
     epee::string_tools::set_module_name_and_folder(argv[0]);
@@ -208,6 +211,14 @@ namespace wallet_args
     MINFO(wallet_args::tr("Logging to: ") << log_path);
 
     Print(print) << boost::format(wallet_args::tr("Logging to %s")) % log_path;
+
+    const ssize_t lockable_memory = tools::get_lockable_memory();
+    if (lockable_memory >= 0 && lockable_memory < 256 * 4096) // 256 pages -> at least 256 secret keys and other such small/medium objects
+      Print(print) << tr("WARNING: You may not have a high enough lockable memory limit")
+#ifdef ELPP_OS_UNIX
+        << ", " << tr("see ulimit -l")
+#endif
+        ;
 
     return {std::move(vm), should_terminate};
   }
