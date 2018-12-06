@@ -98,7 +98,7 @@ namespace cryptonote
     return k;
   }
 
-  std::vector<block_reward_share> get_block_reward_shares(uint64_t block_reward, uint8_t version, const cryptonote::network_type nettype)
+  std::vector<block_reward_share> get_block_reward_shares(uint64_t block_reward, uint8_t version, const network_type nettype)
   {
     std::vector<block_reward_share> shares;
     if (version < BLOCK_MAJOR_VERSION_4) return shares;
@@ -146,7 +146,7 @@ namespace cryptonote
   }
 
   // TODO: refactor these to single function?
-  bool get_development_wallet_address(const cryptonote::network_type nettype, cryptonote::address_parse_info &address)
+  bool get_development_wallet_address(const network_type nettype, cryptonote::address_parse_info &address)
   {
     switch (nettype)
     {
@@ -165,7 +165,7 @@ namespace cryptonote
     return true;
   }
 
-  bool get_marketing_wallet_address(const cryptonote::network_type nettype, cryptonote::address_parse_info &address)
+  bool get_marketing_wallet_address(const network_type nettype, cryptonote::address_parse_info &address)
   {
     switch (nettype)
     {
@@ -184,7 +184,7 @@ namespace cryptonote
     return true;
   }
 
-  bool get_airtime_wallet_address(const cryptonote::network_type nettype, cryptonote::address_parse_info &address)
+  bool get_airtime_wallet_address(const network_type nettype, cryptonote::address_parse_info &address)
   {
     switch (nettype)
     {

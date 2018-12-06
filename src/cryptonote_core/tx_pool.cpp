@@ -1159,7 +1159,7 @@ namespace cryptonote
     fee = 0;
     
     //baseline empty block
-    get_block_reward(median_weight, total_weight, already_generated_coins, best_coinbase, version);
+    get_block_reward(median_weight, total_weight, already_generated_coins, fee, best_coinbase, version);
 
 
     size_t max_total_weight_pre_v4 = (130 * median_weight) / 100 - CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE;

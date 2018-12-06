@@ -713,11 +713,6 @@ uint64_t estimate_tx_weight(bool use_rct, int n_inputs, int mixin, int n_outputs
   return size;
 }
 
-uint8_t get_bulletproof_fork()
-{
-  return 8;
-}
-
 uint64_t estimate_fee(bool use_per_byte_fee, bool use_rct, int n_inputs, int mixin, int n_outputs, size_t extra_size, bool bulletproof, uint64_t base_fee, uint64_t fee_multiplier, uint64_t fee_quantization_mask)
 {
   if (use_per_byte_fee)
@@ -1857,20 +1852,6 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
     }
 
     uint64_t total_received_2 = sub_change;
-    for (const auto& i : tx_money_got_in_outs)
-      total_received_2 += i.second;
-    if (total_received_1 != total_received_2)
-    {
-      const el::Level level = el::Level::Warning;
-      MCLOG_RED(level, "global", "**********************************************************************");
-      MCLOG_RED(level, "global", "Consistency failure in amounts received");
-      MCLOG_RED(level, "global", "Check transaction " << txid);
-      MCLOG_RED(level, "global", "**********************************************************************");
-      exit(1);
-      return;
-    }
-
-    uint64_t total_received_2 = 0;
     for (const auto& i : tx_money_got_in_outs)
       total_received_2 += i.second;
     if (total_received_1 != total_received_2)
@@ -6211,7 +6192,7 @@ uint64_t wallet2::get_dynamic_base_fee_estimate() const
   boost::optional<std::string> result = m_node_rpc_proxy.get_dynamic_base_fee_estimate(FEE_ESTIMATE_GRACE_BLOCKS, fee);
   if (!result)
     return fee;
-  const uint64_t base_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE) ? FEE_PER_BYTE : FEE_PER_KB;
+  const uint64_t base_fee = use_fork_rules(HF_VERSION_PER_BYTE_FEE) ? HF_VERSION_PER_BYTE_FEE : FEE_PER_KB;
   LOG_PRINT_L1("Failed to query base fee, using " << print_money(base_fee));
   return base_fee;
 }

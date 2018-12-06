@@ -1559,6 +1559,7 @@ namespace cryptonote
       return false;
 
     if (tools::vercmp(version.c_str(), BITTUBE_VERSION) <= 0)
+    {
       m_update_available = false;
       return true;
     }

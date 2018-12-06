@@ -2993,7 +2993,7 @@ bool Blockchain::check_fee(size_t tx_weight, uint64_t fee) const
   {
     median = m_current_block_cumul_weight_limit / 2;
     already_generated_coins = m_db->height() ? m_db->get_block_already_generated_coins(m_db->height() - 1) : 0;
-    if (!get_block_reward(median, 1, already_generated_coins, base_reward, version))
+    if (!get_block_reward(median, 1, already_generated_coins, 0, base_reward, version))
       return false;
   }
 
@@ -4396,21 +4396,21 @@ const std::vector<HardFork::Params>& Blockchain::get_hard_fork_heights(network_t
   {
     std::vector<HardFork::Params> heights;
     for (const auto& i : mainnet_hard_forks)
-      heights.emplace_back(i.version, i.height, i.threshold, i.time);
+      heights.emplace_back(i.version, i.height, i.threshold, i.time, i.diff_reset_value);
     return heights;
   }();
   static const std::vector<HardFork::Params> testnet_heights = []()
   {
     std::vector<HardFork::Params> heights;
     for (const auto& i : testnet_hard_forks)
-      heights.emplace_back(i.version, i.height, i.threshold, i.time);
+      heights.emplace_back(i.version, i.height, i.threshold, i.time, i.diff_reset_value);
     return heights;
   }();
   static const std::vector<HardFork::Params> stagenet_heights = []()
   {
     std::vector<HardFork::Params> heights;
     for (const auto& i : stagenet_hard_forks)
-      heights.emplace_back(i.version, i.height, i.threshold, i.time);
+      heights.emplace_back(i.version, i.height, i.threshold, i.time, i.diff_reset_value);
     return heights;
   }();
   static const std::vector<HardFork::Params> dummy;
