@@ -33,7 +33,6 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
 #include "misc_log_ex.h"
-#include "span.h"
 #include "common/perf_timer.h"
 #include "cryptonote_config.h"
 extern "C"
@@ -221,7 +220,7 @@ static rct::key vector_power_sum(const rct::key &x, size_t n)
 }
 
 /* Given two scalar arrays, construct the inner product */
-static rct::key inner_product(const epee::span<const rct::key> &a, const epee::span<const rct::key> &b)
+static rct::key inner_product(const rct::keyV &a, const rct::keyV &b)
 {
   CHECK_AND_ASSERT_THROW_MES(a.size() == b.size(), "Incompatible sizes of a and b");
   rct::key res = rct::zero();
@@ -230,11 +229,6 @@ static rct::key inner_product(const epee::span<const rct::key> &a, const epee::s
     sc_muladd(res.bytes, a[i].bytes, b[i].bytes, res.bytes);
   }
   return res;
-}
-
-static rct::key inner_product(const rct::keyV &a, const rct::keyV &b)
-{
-  return inner_product(epee::span<const rct::key>(a.data(), a.size()), epee::span<const rct::key>(b.data(), b.size()));
 }
 
 /* Given two scalar arrays, construct the Hadamard product */
@@ -302,7 +296,7 @@ static rct::keyV vector_subtract(const rct::keyV &a, const rct::key &b)
 }
 
 /* Multiply a scalar and a vector */
-static rct::keyV vector_scalar(const epee::span<const rct::key> &a, const rct::key &x)
+static rct::keyV vector_scalar(const rct::keyV &a, const rct::key &x)
 {
   rct::keyV res(a.size());
   for (size_t i = 0; i < a.size(); ++i)
@@ -310,11 +304,6 @@ static rct::keyV vector_scalar(const epee::span<const rct::key> &a, const rct::k
     sc_mul(res[i].bytes, a[i].bytes, x.bytes);
   }
   return res;
-}
-
-static rct::keyV vector_scalar(const rct::keyV &a, const rct::key &x)
-{
-  return vector_scalar(epee::span<const rct::key>(a.data(), a.size()), x);
 }
 
 /* Create a vector from copies of a single value */
@@ -414,12 +403,17 @@ static rct::keyV invert(rct::keyV x)
 }
 
 /* Compute the slice of a vector */
-static epee::span<const rct::key> slice(const rct::keyV &a, size_t start, size_t stop)
+static rct::keyV slice(const rct::keyV &a, size_t start, size_t stop)
 {
   CHECK_AND_ASSERT_THROW_MES(start < a.size(), "Invalid start index");
   CHECK_AND_ASSERT_THROW_MES(stop <= a.size(), "Invalid stop index");
   CHECK_AND_ASSERT_THROW_MES(start < stop, "Invalid start/stop indices");
-  return epee::span<const rct::key>(&a[start], stop - start);
+  rct::keyV res(stop - start);
+  for (size_t i = start; i < stop; ++i)
+  {
+    res[i - start] = a[i];
+  }
+  return res;
 }
 
 static rct::key hash_cache_mash(rct::key &hash_cache, const rct::key &mash0, const rct::key &mash1)

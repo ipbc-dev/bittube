@@ -156,6 +156,7 @@
 #define HF_VERSION_ENFORCE_RCT                  4
 #define HF_VERSION_BULLETPROOF                  5
 #define HF_VERSION_PER_BYTE_FEE                 8 //TODO
+#define HF_VERSION_PADDED_BULLETS               99 //TODO
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
