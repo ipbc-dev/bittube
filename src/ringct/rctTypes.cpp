@@ -1,5 +1,4 @@
 // Copyright (c) 2016, Monero Research Labs
-// Copyright (c) 2018, The BitTube Project
 //
 // Author: Shen Noether <shen.noether@gmx.com>
 // 

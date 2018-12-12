@@ -1,5 +1,4 @@
 // Copyright (c) 2016, Monero Research Labs
-// Copyright (c) 2018, The BitTube Project
 //
 // Author: Shen Noether <shen.noether@gmx.com>
 //
@@ -62,7 +61,7 @@ extern "C" {
 #define DP(x)
 #endif
 
-//atomic units of moneros
+//atomic units of bittubes
 #define ATOMS 64
 
 //for printing large ints
@@ -131,7 +130,7 @@ namespace rct {
         BEGIN_SERIALIZE_OBJECT()
           FIELD(mask)
           FIELD(amount)
-          // FIELD(senderPk) // not serialized, as we do not use it in Bittube currently
+          // FIELD(senderPk) // not serialized, as we do not use it in bittube currently
         END_SERIALIZE()
     };
 
