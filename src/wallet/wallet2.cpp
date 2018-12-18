@@ -6265,7 +6265,7 @@ int wallet2::get_fee_algorithm() const
 //------------------------------------------------------------------------------------------------------------------------------
 uint64_t wallet2::get_min_ring_size() const
 {
-  if (use_fork_rules(HF_VERSION_PADDED_BULLETS, 10))
+  if (use_fork_rules(BLOCK_MAJOR_VERSION_5, 10))
     return 3;
   return 0;
 }
