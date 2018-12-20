@@ -106,31 +106,67 @@ namespace cryptonote
     cryptonote::address_parse_info info;
     if (version >= HF_VERSION_DEV_REWARD) {
       get_development_wallet_address(nettype, info);
-      shares.emplace_back(block_reward_share{"development", get_development_reward(block_reward), info.address});
+      shares.emplace_back(block_reward_share{"development", get_development_reward(block_reward, version), info.address});
       get_marketing_wallet_address(nettype, info);
-      shares.emplace_back(block_reward_share{"marketing", get_marketing_reward(block_reward), info.address});
+      shares.emplace_back(block_reward_share{"marketing", get_marketing_reward(block_reward, version), info.address});
     }
 
     if (version >= HF_VERSION_AIRTIME_REWARD) {
       get_airtime_wallet_address(nettype, info);
-      shares.emplace_back(block_reward_share{"airtime", get_airtime_reward(block_reward), info.address});
+      shares.emplace_back(block_reward_share{"airtime", get_airtime_reward(block_reward, version), info.address});
+    }
+    
+    if (version >= HF_VERSION_COMMUNITY_DEVS) {
+      get_community_devs_wallet_address(nettype, info);
+      shares.emplace_back(block_reward_share{"community_developers", get_community_devs_reward(block_reward, version), info.address});
+    }
+
+    if (version >= HF_VERSION_COMMUNITY_MODS) {
+      get_community_mods_wallet_address(nettype, info);
+      shares.emplace_back(block_reward_share{"community_moderators", get_community_mods_reward(block_reward, version), info.address});
+    }
+
+    if (version >= HF_VERSION_COMMUNITY_REF) {
+      get_community_ref_wallet_address(nettype, info);
+      shares.emplace_back(block_reward_share{"community_referrals", get_community_ref_reward(block_reward, version), info.address});
     }
     return shares;
   }
 
-  uint64_t get_development_reward(uint64_t block_reward)
+  uint64_t get_development_reward(uint64_t block_reward, uint8_t version)
   {
+  if (version > BLOCK_MAJOR_VERSION_5)
+    return block_reward * 50 / 1000; // 5%
     return block_reward * 15 / 1000; // 1.5%
   }
 
-  uint64_t get_marketing_reward(uint64_t block_reward)
+  uint64_t get_marketing_reward(uint64_t block_reward, uint8_t version)
   {
-    return block_reward * 15 / 1000; // 1.5%
+  if (version > BLOCK_MAJOR_VERSION_5)
+    return block_reward * 50 / 1000; // 5%
+    return block_reward * 15 / 1000; // 1.5% 
   }
-
-  uint64_t get_airtime_reward(uint64_t block_reward)
+ 
+  uint64_t get_airtime_reward(uint64_t block_reward, uint8_t version)
   {
+  if (version > BLOCK_MAJOR_VERSION_5)
+    return block_reward * 45 / 100; // 45%
     return block_reward * 27 / 100; // 27%
+  }
+  
+  uint64_t get_community_devs_reward(uint64_t block_reward, uint8_t version)
+  {
+    return block_reward * 30 / 1000; // 3%
+  }
+
+  uint64_t get_community_mods_reward(uint64_t block_reward, uint8_t version)
+  {
+    return block_reward * 10 / 1000; // 1%
+  }
+
+  uint64_t get_community_ref_reward(uint64_t block_reward, uint8_t version)
+  {
+    return block_reward * 10 / 1000; // 1%
   }
 
   bool get_deterministic_output_key(const account_public_address& address, const keypair& tx_key, size_t output_index, crypto::public_key& output_key)
@@ -164,6 +200,66 @@ namespace cryptonote
     }
     return true;
   }
+
+  /*-------------------------------------------*/
+  bool get_community_devs_wallet_address(const network_type nettype, cryptonote::address_parse_info &address)
+  {
+    switch (nettype)
+    {
+      case STAGENET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::COMMUNITY_DEVS_WALLET_ADDRESS);
+        break;
+      case TESTNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::COMMUNITY_DEVS_WALLET_ADDRESS);
+        break;
+      case MAINNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::COMMUNITY_DEVS_WALLET_ADDRESS);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  bool get_community_ref_wallet_address(const network_type nettype, cryptonote::address_parse_info &address)
+  {
+    switch (nettype)
+    {
+      case STAGENET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::COMMUNITY_REF_WALLET_ADDRESS);
+        break;
+      case TESTNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::COMMUNITY_REF_WALLET_ADDRESS);
+        break;
+      case MAINNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::COMMUNITY_REF_WALLET_ADDRESS);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  bool get_community_mods_wallet_address(const network_type nettype, cryptonote::address_parse_info &address)
+  {
+    switch (nettype)
+    {
+      case STAGENET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::COMMUNITY_MODS_WALLET_ADDRESS);
+        break;
+      case TESTNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::COMMUNITY_MODS_WALLET_ADDRESS);
+        break;
+      case MAINNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::COMMUNITY_MODS_WALLET_ADDRESS);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  /*---------------------------------------------------------------*/
 
   bool get_marketing_wallet_address(const network_type nettype, cryptonote::address_parse_info &address)
   {
