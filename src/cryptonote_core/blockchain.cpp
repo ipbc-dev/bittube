@@ -2574,7 +2574,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
       }
     }
 
-    if (hf_version >= HF_VERSION_PADDED_BULLETS && mixin > 2)
+    if (hf_version > HF_VERSION_PADDED_BULLETS && mixin > 2)
     {
       MERROR_VER("Tx " << get_transaction_hash(tx) << " has invalid ring size (" << (mixin + 1) << "), it should be 3");
       tvc.m_low_mixin = true;
