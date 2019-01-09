@@ -135,22 +135,22 @@ namespace cryptonote
 
   uint64_t get_development_reward(uint64_t block_reward, uint8_t version)
   {
-  if (version > BLOCK_MAJOR_VERSION_5)
-    return block_reward * 50 / 1000; // 5%
+    if (version > BLOCK_MAJOR_VERSION_5)
+      return block_reward * 50 / 1000; // 5%
     return block_reward * 15 / 1000; // 1.5%
   }
 
   uint64_t get_marketing_reward(uint64_t block_reward, uint8_t version)
   {
-  if (version > BLOCK_MAJOR_VERSION_5)
-    return block_reward * 50 / 1000; // 5%
+    if (version > BLOCK_MAJOR_VERSION_5)
+      return block_reward * 50 / 1000; // 5%
     return block_reward * 15 / 1000; // 1.5% 
   }
  
   uint64_t get_airtime_reward(uint64_t block_reward, uint8_t version)
   {
-  if (version > BLOCK_MAJOR_VERSION_5)
-    return block_reward * 45 / 100; // 45%
+    if (version > BLOCK_MAJOR_VERSION_5)
+      return block_reward * 45 / 100; // 45%
     return block_reward * 27 / 100; // 27%
   }
   

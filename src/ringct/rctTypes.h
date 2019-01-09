@@ -438,15 +438,15 @@ namespace rct {
         keyV& get_pseudo_outs()
         {
           if (type == RCTTypeBulletproof)
-           return type == RCTTypeBulletproof ? p.pseudoOuts : pseudoOuts;
-           return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
+            return type == RCTTypeBulletproof ? p.pseudoOuts : pseudoOuts;
+          return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
         }
 
         keyV const& get_pseudo_outs() const
         {
           if (type == RCTTypeBulletproof)
-           return type == RCTTypeBulletproof ? p.pseudoOuts : pseudoOuts;
-           return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
+            return type == RCTTypeBulletproof ? p.pseudoOuts : pseudoOuts;
+          return type == RCTTypeSimpleBulletproof ? p.pseudoOuts : pseudoOuts;
         }
     };
 
