@@ -99,6 +99,10 @@ static const struct {
  { 4, 110000, 0, 1530489600, 100 },
   // version 5 starts from block 140000.
  { 5, 140000, 0, 1533513600, 0 },
+  // version 6 starts from block 268000 around 02/07/2019.
+ { 6, 268000, 0, 1549545276, 0 },
+  // version 7 starts from block 268720 around 02/08/2019.
+ { 7, 268720, 0, 1549631676, 0 }, 
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 23000;
 
