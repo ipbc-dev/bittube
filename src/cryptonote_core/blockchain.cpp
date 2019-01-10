@@ -2427,8 +2427,20 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
       }
     }
   }
+  
+  if (hf_version < HF_VERSION_PADDED_BULLETS && tx.rct_signatures.type == rct::RCTTypeBulletproof) {
+    if (tx.version >= 2) {
+      const bool bulletproof = rct::is_rct_bulletproof(tx.rct_signatures.type);
+      if (bulletproof || !tx.rct_signatures.p.bulletproofs.empty())
+      {
+        MERROR_VER("Bulletproofs Padded are not allowed before v6");
+        tvc.m_invalid_output = true;
+        return false;
+      }
+    }
+  }
 
-  // from v9, forbid borromean range proofs
+  // from v7, forbid borromean range proofs
   if (hf_version > HF_VERSION_PADDED_BULLETS) {
     if (tx.version >= 2) {
       const bool borromean = rct::is_rct_borromean(tx.rct_signatures.type);
