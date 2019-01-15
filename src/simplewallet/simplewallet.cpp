@@ -34,6 +34,11 @@
  * 
  * \brief Source file that defines simple_wallet class.
  */
+
+#ifdef _WIN32
+ #define __STDC_FORMAT_MACROS // explicitly define the PRIu64 macro on mingw
+#endif
+
 #include <thread>
 #include <iostream>
 #include <sstream>
