@@ -96,9 +96,9 @@ inline void aes_genkey(const __m128i* memory, __m128i& k0, __m128i& k1, __m128i&
 inline __m128i aes_round_tweak_div(__m128i& val, const __m128i& key)
 {
   union alignas(16) {
-    uint32_t k[4];
-    uint64_t v64[2];
-    // __uint128_t v128;
+	uint32_t k[4];
+	uint64_t v64[2];
+	// __uint128_t v128;
   };
   alignas(16) uint32_t x[4];
   _mm_store_si128((__m128i*)k, key);
@@ -135,15 +135,15 @@ inline void aes_round8(const __m128i& key, __m128i& x0, __m128i& x1, __m128i& x2
 
 inline void xor_shift(__m128i& x0, __m128i& x1, __m128i& x2, __m128i& x3, __m128i& x4, __m128i& x5, __m128i& x6, __m128i& x7)
 {
-    __m128i tmp0 = x0;
-    x0 = _mm_xor_si128(x0, x1);
-    x1 = _mm_xor_si128(x1, x2);
-    x2 = _mm_xor_si128(x2, x3);
-    x3 = _mm_xor_si128(x3, x4);
-    x4 = _mm_xor_si128(x4, x5);
-    x5 = _mm_xor_si128(x5, x6);
-    x6 = _mm_xor_si128(x6, x7);
-    x7 = _mm_xor_si128(x7, tmp0);
+	__m128i tmp0 = x0;
+	x0 = _mm_xor_si128(x0, x1);
+	x1 = _mm_xor_si128(x1, x2);
+	x2 = _mm_xor_si128(x2, x3);
+	x3 = _mm_xor_si128(x3, x4);
+	x4 = _mm_xor_si128(x4, x5);
+	x5 = _mm_xor_si128(x5, x6);
+	x6 = _mm_xor_si128(x6, x7);
+	x7 = _mm_xor_si128(x7, tmp0);
 }
 
 template<size_t MEMORY, size_t ITER, size_t VERSION>
@@ -353,11 +353,23 @@ inline uint64_t xmm_extract_64(__m128i x)
 
 inline void cryptonight_monero_tweak(uint64_t* mem_out, __m128i tmp)
 {
+#ifdef BUILD32
+	uint64_t r1 = uint32_t(_mm_cvtsi128_si32(_mm_shuffle_epi32(tmp, _MM_SHUFFLE(1,1,1,1))));
+	r1 <<= 32;
+	r1 |= uint32_t(_mm_cvtsi128_si32(tmp));
+	mem_out[0] = r1;
+#else
 	mem_out[0] = _mm_cvtsi128_si64(tmp);
-
+#endif  
 	tmp = _mm_castps_si128(_mm_movehl_ps(_mm_castsi128_ps(tmp), _mm_castsi128_ps(tmp)));
+#ifdef BUILD32
+	uint64_t r2 = uint32_t(_mm_cvtsi128_si32(_mm_shuffle_epi32(tmp, _MM_SHUFFLE(1,1,1,1))));
+	r2 <<= 32;
+	r2 |= uint32_t(_mm_cvtsi128_si32(tmp));
+	uint64_t vh = r2;
+#else
 	uint64_t vh = _mm_cvtsi128_si64(tmp);
-
+#endif 
 	uint8_t x = static_cast<uint8_t>(vh >> 24);
 	static const uint16_t table = 0x7531;
 	const uint8_t index = (((x >> 3) & 6) | (x & 1)) << 1;
@@ -374,8 +386,8 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 
   uint64_t monero_const;
   if (VERSION >= 1) {
-    monero_const = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(in) + 35);
-    monero_const ^= spad.as_uqword(24);
+	monero_const = *reinterpret_cast<const uint64_t*>(reinterpret_cast<const uint8_t*>(in) + 35);
+	monero_const ^= spad.as_uqword(24);
   }
 
 	explode_scratchpad_hard();
@@ -394,17 +406,17 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 		__m128i cx;
 		cx = _mm_load_si128(scratchpad_ptr(idx0).as_xmm());
 
-    if (VERSION >= 2) {
-      cx = aes_round_tweak_div(cx, _mm_set_epi64x(ah0, al0));
-    } else {
+	if (VERSION >= 2) {
+	  cx = aes_round_tweak_div(cx, _mm_set_epi64x(ah0, al0));
+	} else {
 		cx = _mm_aesenc_si128(cx, _mm_set_epi64x(ah0, al0));
-    }
+	}
 
-    if (VERSION >= 1) { // by design, use both tweaked aes and monero tweak for >= v2
-      cryptonight_monero_tweak(scratchpad_ptr(idx0).as_uqword(), _mm_xor_si128(bx0, cx));
-    } else {
+	if (VERSION >= 1) { // by design, use both tweaked aes and monero tweak for >= v2
+	  cryptonight_monero_tweak(scratchpad_ptr(idx0).as_uqword(), _mm_xor_si128(bx0, cx));
+	} else {
 		_mm_store_si128(scratchpad_ptr(idx0).as_xmm(), _mm_xor_si128(bx0, cx));
-    }
+	}
 		idx0 = xmm_extract_64(cx);
 		bx0 = cx;
 
@@ -417,11 +429,11 @@ void cn_slow_hash<MEMORY,ITER,VERSION>::hardware_hash(const void* in, size_t len
 		al0 += hi;
 		ah0 += lo;
 		scratchpad_ptr(idx0).as_uqword(0) = al0;
-    if (VERSION >= 1) {
-      scratchpad_ptr(idx0).as_uqword(1) = ah0 ^ monero_const ^ al0;
-    } else {
+	if (VERSION >= 1) {
+	  scratchpad_ptr(idx0).as_uqword(1) = ah0 ^ monero_const ^ al0;
+	} else {
 		scratchpad_ptr(idx0).as_uqword(1) = ah0;
-    }
+	}
 		ah0 ^= ch;
 		al0 ^= cl;
 		idx0 = al0;
