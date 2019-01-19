@@ -875,24 +875,6 @@ void wallet_device_callback::on_passphrase_request(bool on_device, epee::wipeabl
     wallet->on_passphrase_request(on_device, passphrase);
 }
 
-void wallet_device_callback::on_button_request()
-{
-  if (wallet)
-    wallet->on_button_request();
-}
-
-void wallet_device_callback::on_pin_request(epee::wipeable_string & pin)
-{
-  if (wallet)
-    wallet->on_pin_request(pin);
-}
-
-void wallet_device_callback::on_passphrase_request(bool on_device, epee::wipeable_string & passphrase)
-{
-  if (wallet)
-    wallet->on_passphrase_request(on_device, passphrase);
-}
-
 wallet2::wallet2(network_type nettype, uint64_t kdf_rounds, bool unattended):
   m_multisig_rescan_info(NULL),
   m_multisig_rescan_k(NULL),
