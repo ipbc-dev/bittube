@@ -25,7 +25,9 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+#ifdef _WIN32
+ #define __STDC_FORMAT_MACROS // explicitly define the SCNu64 macro on mingw
+#endif
 #include <unordered_map>
 #include <unordered_set>
 #include <boost/range/adaptor/transformed.hpp>
