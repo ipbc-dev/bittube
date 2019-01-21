@@ -220,6 +220,14 @@ namespace tools
       }
     };
     //----------------------------------------------------------------------------------------------------
+    struct password_entry_failed : public wallet_runtime_error
+    {
+      explicit password_entry_failed(std::string&& loc, const std::string &msg = "Password entry failed")
+        : wallet_runtime_error(std::move(loc), msg)
+      {
+      }
+    };
+    //----------------------------------------------------------------------------------------------------
     const char* const file_error_messages[] = {
       "file already exists",
       "file not found",
@@ -812,6 +820,31 @@ namespace tools
     private:
       std::string m_keys_file;
       std::string m_wallet_file;
+    };
+    //----------------------------------------------------------------------------------------------------
+    struct mms_error : public wallet_logic_error
+    {
+    protected:
+      explicit mms_error(std::string&& loc, const std::string& message)
+        : wallet_logic_error(std::move(loc), message)
+      {
+      }
+    };
+    //----------------------------------------------------------------------------------------------------
+    struct no_connection_to_bitmessage : public mms_error
+    {
+      explicit no_connection_to_bitmessage(std::string&& loc, const std::string& address)
+        : mms_error(std::move(loc), "no connection to PyBitmessage at address " + address)
+      {
+      }
+    };
+    //----------------------------------------------------------------------------------------------------
+    struct bitmessage_api_error : public mms_error
+    {
+      explicit bitmessage_api_error(std::string&& loc, const std::string& error_string)
+        : mms_error(std::move(loc), "PyBitmessage returned " + error_string)
+      {
+      }
     };
     //----------------------------------------------------------------------------------------------------
 

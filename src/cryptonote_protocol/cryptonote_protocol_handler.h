@@ -132,6 +132,7 @@ namespace cryptonote
     bool should_download_next_span(cryptonote_connection_context& context) const;
     void drop_connection(cryptonote_connection_context &context, bool add_fail, bool flush_all_spans);
     bool kick_idle_peers();
+    bool check_standby_peers();
     int try_add_next_blocks(cryptonote_connection_context &context);
 
     t_core& m_core;
@@ -144,6 +145,7 @@ namespace cryptonote
     boost::mutex m_sync_lock;
     block_queue m_block_queue;
     epee::math_helper::once_a_time_seconds<30> m_idle_peer_kicker;
+    epee::math_helper::once_a_time_milliseconds<100> m_standby_checker;
 
     boost::mutex m_buffer_mutex;
     double get_avg_block_size();
@@ -156,7 +158,7 @@ namespace cryptonote
         std::string blob;
         epee::serialization::store_t_to_binary(arg, blob);
         //handler_response_blocks_now(blob.size()); // XXX
-        return m_p2p->invoke_notify_to_peer(t_parameter::ID, blob, context);
+        return m_p2p->invoke_notify_to_peer(t_parameter::ID, epee::strspan<uint8_t>(blob), context);
       }
 
       template<class t_parameter>
@@ -165,7 +167,7 @@ namespace cryptonote
         LOG_PRINT_L2("[" << epee::net_utils::print_connection_context_short(exclude_context) << "] post relay " << typeid(t_parameter).name() << " -->");
         std::string arg_buff;
         epee::serialization::store_t_to_binary(arg, arg_buff);
-        return m_p2p->relay_notify_to_all(t_parameter::ID, arg_buff, exclude_context);
+        return m_p2p->relay_notify_to_all(t_parameter::ID, epee::strspan<uint8_t>(arg_buff), exclude_context);
       }
   };
 

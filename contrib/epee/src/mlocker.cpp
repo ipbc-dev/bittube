@@ -40,6 +40,9 @@
 
 #include <atomic>
 
+#undef MONERO_DEFAULT_LOG_CATEGORY
+#define MONERO_DEFAULT_LOG_CATEGORY "mlocker"
+
 // did an mlock operation previously fail? we only
 // want to log an error once and be done with it
 static std::atomic<bool> previously_failed{ false };
@@ -53,7 +56,6 @@ static size_t query_page_size()
     MERROR("Failed to determine page size");
     return 0;
   }
-  MINFO("Page size: " << ret);
   return ret;
 #else
 #warning Missing query_page_size implementation

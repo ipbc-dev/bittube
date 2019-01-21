@@ -164,9 +164,21 @@ bool t_command_parser_executor::print_height(const std::vector<std::string>& arg
 
 bool t_command_parser_executor::print_block(const std::vector<std::string>& args)
 {
+  bool include_hex = false;
+
+  // Assumes that optional flags come after mandatory argument <transaction_hash>
+  for (unsigned int i = 1; i < args.size(); ++i) {
+    if (args[i] == "+hex")
+      include_hex = true;
+    else
+    {
+      std::cout << "unexpected argument: " << args[i] << std::endl;
+      return true;
+    }
+  }
   if (args.empty())
   {
-    std::cout << "expected: print_block (<block_hash> | <block_height>)" << std::endl;
+    std::cout << "expected: print_block (<block_hash> | <block_height>) [+hex]" << std::endl;
     return false;
   }
 
@@ -174,14 +186,14 @@ bool t_command_parser_executor::print_block(const std::vector<std::string>& args
   try
   {
     uint64_t height = boost::lexical_cast<uint64_t>(arg);
-    return m_executor.print_block_by_height(height);
+    return m_executor.print_block_by_height(height, include_hex);
   }
   catch (const boost::bad_lexical_cast&)
   {
     crypto::hash block_hash;
     if (parse_hash256(arg, block_hash))
     {
-      return m_executor.print_block_by_hash(block_hash);
+      return m_executor.print_block_by_hash(block_hash, include_hex);
     }
   }
 
@@ -673,6 +685,31 @@ bool t_command_parser_executor::sync_info(const std::vector<std::string>& args)
   if (args.size() != 0) return false;
 
   return m_executor.sync_info();
+}
+
+bool t_command_parser_executor::pop_blocks(const std::vector<std::string>& args)
+{
+  if (args.size() != 1)
+  {
+    std::cout << "Exactly one parameter is needed" << std::endl;
+    return false;
+  }
+
+  try
+  {
+    uint64_t nblocks = boost::lexical_cast<uint64_t>(args[0]);
+    if (nblocks < 1)
+    {
+      std::cout << "number of blocks must be greater than 0" << std::endl;
+      return false;
+    }
+    return m_executor.pop_blocks(nblocks);
+  }
+  catch (const boost::bad_lexical_cast&)
+  {
+    std::cout << "number of blocks must be a number greater than 0" << std::endl;
+  }
+  return false;
 }
 
 bool t_command_parser_executor::version(const std::vector<std::string>& args)

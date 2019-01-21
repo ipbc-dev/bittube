@@ -51,8 +51,8 @@ namespace Language
   class Singleton
   {
     Singleton() {}
-    Singleton(Singleton &s) {}
-    Singleton& operator=(const Singleton&) {}
+    Singleton(Singleton &s) = delete;
+    Singleton& operator=(const Singleton&) = delete;
   public:
     static T* instance()
     {

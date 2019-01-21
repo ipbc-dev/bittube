@@ -535,6 +535,7 @@ namespace cryptonote
       * @note see Blockchain::get_tx_outputs_gindexs
       */
      bool get_tx_outputs_gindexs(const crypto::hash& tx_id, std::vector<uint64_t>& indexs) const;
+     bool get_tx_outputs_gindexs(const crypto::hash& tx_id, size_t n_txes, std::vector<std::vector<uint64_t>>& indexs) const;
 
      /**
       * @copydoc Blockchain::get_tail_id
@@ -754,6 +755,13 @@ namespace cryptonote
       * @return whether fluffy blocks are enabled
       */
      bool fluffy_blocks_enabled() const { return m_fluffy_blocks_enabled; }
+
+     /**
+      * @brief get whether transaction relay should be padded
+      *
+      * @return whether transaction relay should be padded
+      */
+     bool pad_transactions() const { return m_pad_transactions; }
 
      /**
       * @brief check a set of hashes against the precompiled hash set
@@ -1014,6 +1022,7 @@ namespace cryptonote
 
      bool m_fluffy_blocks_enabled;
      bool m_offline;
+     bool m_pad_transactions;
    };
 }
 

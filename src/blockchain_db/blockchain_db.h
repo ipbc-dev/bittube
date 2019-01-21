@@ -1259,7 +1259,7 @@ public:
    *
    * @return the requested output data
    */
-  virtual output_data_t get_output_key(const uint64_t& amount, const uint64_t& index) = 0;
+  virtual output_data_t get_output_key(const uint64_t& amount, const uint64_t& index, bool include_commitmemt = true) const = 0;
 
   /**
    * @brief gets an output's tx hash and index
@@ -1311,7 +1311,7 @@ public:
    * @param offsets a list of amount-specific output indices
    * @param outputs return-by-reference a list of outputs' metadata
    */
-  virtual void get_output_key(const epee::span<const uint64_t> &amounts, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs, bool allow_partial = false) = 0;
+  virtual void get_output_key(const epee::span<const uint64_t> &amounts, const std::vector<uint64_t> &offsets, std::vector<output_data_t> &outputs, bool allow_partial = false) const = 0;
   
   /*
    * FIXME: Need to check with git blame and ask what this does to
@@ -1330,10 +1330,11 @@ public:
    * If an output cannot be found, the subclass should throw OUTPUT_DNE.
    *
    * @param tx_id a transaction ID
+   * @param n_txes how many txes to get data for, starting with tx_id
    *
    * @return a list of amount-specific output indices
    */
-  virtual std::vector<uint64_t> get_tx_amount_output_indices(const uint64_t tx_id) const = 0;
+  virtual std::vector<std::vector<uint64_t>> get_tx_amount_output_indices(const uint64_t tx_id, size_t n_txes = 1) const = 0;
 
   /**
    * @brief check if a key image is stored as spent
@@ -1404,6 +1405,13 @@ public:
    * @return the blob for that transaction
    */
   virtual cryptonote::blobdata get_txpool_tx_blob(const crypto::hash& txid) const = 0;
+
+  /**
+   * @brief prune output data for the given amount
+   *
+   * @param amount the amount for which to prune data
+   */
+  virtual void prune_outputs(uint64_t amount) = 0;
 
   /**
    * @brief runs a function over all txpool transactions
