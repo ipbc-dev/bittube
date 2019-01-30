@@ -3017,9 +3017,14 @@ bool wallet2::get_rct_distribution(uint64_t &start_height, std::vector<uint64_t>
   req.from_height = 0;
   req.cumulative = false;
   req.binary = true;
-  req.compress = true;
   m_daemon_rpc_mutex.lock();
-  bool r = net_utils::invoke_http_bin("/get_output_distribution.bin", req, res, m_http_client, rpc_timeout);
+  bool r = false;
+  if (rpc_version >= MAKE_CORE_RPC_VERSION(2, 1)) {
+    req.compress = true;
+    r = net_utils::invoke_http_bin("/get_output_distribution.bin", req, res, m_http_client, rpc_timeout);
+  } else {
+    r = net_utils::invoke_http_json_rpc("/json_rpc", "get_output_distribution", req, res, m_http_client, rpc_timeout);
+  }
   m_daemon_rpc_mutex.unlock();
   if (!r)
   {
