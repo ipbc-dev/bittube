@@ -341,7 +341,7 @@ std::tuple<bool, std::string, std::string, std::string, std::string> WalletManag
 #else
     static const char buildtag[] = "source";
     // Override the subdir string when built from source
-    subdir = "source";
+    // subdir = "source";
 #endif
 
     std::string version, hash;

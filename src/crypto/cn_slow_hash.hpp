@@ -57,7 +57,11 @@
 #define HAS_INTEL_HW
 #endif
 
-#if defined(__aarch64__)
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
+#if defined(__aarch64__) && !defined(TARGET_OS_IPHONE)
 #pragma GCC target ("+crypto")
 #include <sys/auxv.h>
 #include <asm/hwcap.h>

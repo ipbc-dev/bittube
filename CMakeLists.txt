@@ -590,6 +590,10 @@ else()
     message(STATUS "AES support disabled")
   endif()
 
+  if(IOS AND ARCH STREQUAL "x86_64")
+    set(ARCH_FLAG "-march=x86-64")
+  endif()
+
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ARCH_FLAG}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ARCH_FLAG}")
 
@@ -980,6 +984,7 @@ if(NORM_LIBRARY)
 endif()
 if(SODIUM_LIBRARY)
   set(ZMQ_LIB "${ZMQ_LIB};${SODIUM_LIBRARY}")
+  include_directories(SYSTEM "${SODIUM_INCLUDE_DIR}")
 endif()
 
 add_subdirectory(contrib)
