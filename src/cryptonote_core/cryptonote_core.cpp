@@ -807,8 +807,17 @@ namespace cryptonote
           tx_info[n].tvc.m_verifivation_failed = true;
           tx_info[n].result = false;
           break;
-        case rct::RCTTypeSimple:
         case rct::RCTTypeSimpleBulletproof:
+          if (!rct::verRctSemanticsSimple_old(rv))
+          {
+            MERROR_VER("rct signature semantics check failed");
+            set_semantics_failed(tx_info[n].tx_hash);
+            tx_info[n].tvc.m_verifivation_failed = true;
+            tx_info[n].result = false;
+            break;
+          }
+          break;
+        case rct::RCTTypeSimple:
           if (!rct::verRctSemanticsSimple(rv))
           {
             MERROR_VER("rct signature semantics check failed");
