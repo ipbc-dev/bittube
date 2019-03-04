@@ -1396,15 +1396,9 @@ void wallet2::scan_output(const cryptonote::transaction &tx, bool miner_tx, cons
     CRITICAL_REGION_LOCAL(password_lock);
     if (!m_encrypt_keys_after_refresh)
     {
-<<<<<<< HEAD
-      boost::optional<epee::wipeable_string> pwd = m_callback->on_get_password("output received");
+      boost::optional<epee::wipeable_string> pwd = m_callback->on_get_password(pool ? "output found in pool" : "output received");
       THROW_WALLET_EXCEPTION_IF(!pwd, error::password_needed, tr("Password is needed to compute key image for incoming bittube"));
       THROW_WALLET_EXCEPTION_IF(!verify_password(*pwd), error::password_needed, tr("Invalid password: password is needed to compute key image for incoming bittube"));
-=======
-      boost::optional<epee::wipeable_string> pwd = m_callback->on_get_password(pool ? "output found in pool" : "output received");
-      THROW_WALLET_EXCEPTION_IF(!pwd, error::password_needed, tr("Password is needed to compute key image for incoming monero"));
-      THROW_WALLET_EXCEPTION_IF(!verify_password(*pwd), error::password_needed, tr("Invalid password: password is needed to compute key image for incoming monero"));
->>>>>>> 8258a9e... wallet: do not check txpool in background mode
       decrypt_keys(*pwd);
       m_encrypt_keys_after_refresh = *pwd;
     }
