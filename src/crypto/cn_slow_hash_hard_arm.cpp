@@ -310,12 +310,25 @@ inline uint8x16_t _mm_set_epi64x(const uint64_t a, const uint64_t b)
     return vreinterpretq_u8_u64(vcombine_u64(vcreate_u64(b), vcreate_u64(a)));
 }
 
-inline void cryptonight_monero_tweak(uint64_t* mem_out, uint64x2_t tmp)
+inline void cryptonight_monero_tweak(uint64_t* mem_out, __m128i tmp)
 {
-  mem_out[0] = vgetq_lane_u64(tmp, 0);
-
-	uint64_t vh = vgetq_lane_u64(tmp, 1);
-
+#ifdef BUILD32
+	uint64_t r1 = uint32_t(_mm_cvtsi128_si32(_mm_shuffle_epi32(tmp, _MM_SHUFFLE(1,1,1,1))));
+	r1 <<= 32;
+	r1 |= uint32_t(_mm_cvtsi128_si32(tmp));
+	mem_out[0] = r1;
+#else
+	mem_out[0] = _mm_cvtsi128_si64(tmp);
+#endif  
+	tmp = _mm_castps_si128(_mm_movehl_ps(_mm_castsi128_ps(tmp), _mm_castsi128_ps(tmp)));
+#ifdef BUILD32
+	uint64_t r2 = uint32_t(_mm_cvtsi128_si32(_mm_shuffle_epi32(tmp, _MM_SHUFFLE(1,1,1,1))));
+	r2 <<= 32;
+	r2 |= uint32_t(_mm_cvtsi128_si32(tmp));
+	uint64_t vh = r2;
+#else
+	uint64_t vh = _mm_cvtsi128_si64(tmp);
+#endif 
 	uint8_t x = static_cast<uint8_t>(vh >> 24);
 	static const uint16_t table = 0x7531;
 	const uint8_t index = (((x >> 3) & 6) | (x & 1)) << 1;
