@@ -119,6 +119,7 @@
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000     //50000000 bytes maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       //5 seconds
+#define P2P_DEFAULT_TOR_CONNECT_TIMEOUT                 20         // seconds
 #define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       //2 seconds
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  //2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       //5 seconds
@@ -159,6 +160,7 @@
 #define HF_VERSION_BULLETPROOF                  5
 #define HF_VERSION_PER_BYTE_FEE                 6 //TODO
 #define HF_VERSION_PADDED_BULLETS               6 //TODO
+#define HF_VERSION_SMALLER_BP                   10
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
@@ -167,6 +169,11 @@
 #define DEFAULT_TXPOOL_MAX_WEIGHT               648000000ull // 3 days at 300000, in bytes
 
 #define BULLETPROOF_MAX_OUTPUTS                 16
+
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE          4096 // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_LOG_STRIPES          3 // the higher, the more space saved
+#define CRYPTONOTE_PRUNING_TIP_BLOCKS           5500 // the smaller, the more space saved
+//#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
 
 // New constants are intended to go here
 namespace config

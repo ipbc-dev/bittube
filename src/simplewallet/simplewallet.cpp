@@ -2708,9 +2708,11 @@ simple_wallet::simple_wallet()
                                   "  Set the wallet's refresh behaviour.\n "
                                   "priority [0|1|2|3|4]\n "
                                   "  Set the fee to default/unimportant/normal/elevated/priority.\n "
-                                  "confirm-missing-payment-id <1|0>\n "
-                                  "ask-password <1|0> (or never|action|decrypt)>\n"
-                                  "unit <bittube|millitube|microtube>\n "
+                                  "confirm-missing-payment-id <1|0> (obsolete)\n "
+                                  "ask-password <0|1|2   (or never|action|decrypt)>\n "
+                                  "  action: ask the password before many actions such as transfer, etc\n "
+                                  "  decrypt: same as action, but keeps the spend key encrypted in memory when not needed\n "
+                                  "unit <bittube|millitube|microtube|nanotube|picotu e>\n "
                                   "  Set the default bittube (sub-)unit.\n "
                                   "min-outputs-count [n]\n "
                                   "  Try to keep at least that many outputs of value at least min-outputs-value.\n "
@@ -5651,6 +5653,15 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
 
     // actually commit the transactions
     if (m_wallet->multisig() && called_by_mms)
+    {
+      std::string ciphertext = m_wallet->save_multisig_tx(ptx_vector);
+      if (!ciphertext.empty())
+      {
+        get_message_store().process_wallet_created_data(get_multisig_wallet_state(), mms::message_type::partially_signed_tx, ciphertext);
+        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to MMS");
+      }
+    }
+    else if (m_wallet->multisig())
     {
       std::string ciphertext = m_wallet->save_multisig_tx(ptx_vector);
       if (!ciphertext.empty())

@@ -54,6 +54,8 @@
 #include "ringct/rctSigs.h"
 #include "common/perf_timer.h"
 #include "common/notify.h"
+#include "common/varint.h"
+#include "common/pruning.h"
 
 #undef MONERO_DEFAULT_LOG_CATEGORY
 #define MONERO_DEFAULT_LOG_CATEGORY "blockchain"
@@ -627,8 +629,14 @@ block Blockchain::pop_block_from_blockchain()
   m_hardfork->on_block_popped(1);
 
   // return transactions from popped block to the tx_pool
+  size_t pruned = 0;
   for (transaction& tx : popped_txs)
   {
+    if (tx.pruned)
+    {
+      ++pruned;
+      continue;
+    }
     if (!is_coinbase(tx))
     {
       cryptonote::tx_verification_context tvc = AUTO_VAL_INIT(tvc);
@@ -650,6 +658,8 @@ block Blockchain::pop_block_from_blockchain()
       }
     }
   }
+  if (pruned)
+    MWARNING(pruned << " pruned txes could not be added back to the txpool");
 
   m_blocks_longhash_table.clear();
   m_scan_table.clear();
@@ -1047,6 +1057,11 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::
   }
 
   m_hardfork->reorganize_from_chain_height(split_height);
+
+  std::shared_ptr<tools::Notify> reorg_notify = m_reorg_notify;
+  if (reorg_notify)
+    reorg_notify->notify("%s", std::to_string(split_height).c_str(), "%h", std::to_string(m_db->height()).c_str(),
+        "%n", std::to_string(m_db->height() - split_height).c_str(), NULL);
 
   MGINFO_GREEN("REORGANIZE SUCCESS! on height: " << split_height << ", new blockchain size: " << m_db->height());
   return true;
@@ -2069,6 +2084,51 @@ bool Blockchain::get_transactions_blobs(const t_ids_container& txs_ids, t_tx_con
   return true;
 }
 //------------------------------------------------------------------
+size_t get_transaction_version(const cryptonote::blobdata &bd)
+{
+  size_t version;
+  const char* begin = static_cast<const char*>(bd.data());
+  const char* end = begin + bd.size();
+  int read = tools::read_varint(begin, end, version);
+  if (read <= 0)
+    throw std::runtime_error("Internal error getting transaction version");
+  return version;
+}
+//------------------------------------------------------------------
+template<class t_ids_container, class t_tx_container, class t_missed_container>
+bool Blockchain::get_split_transactions_blobs(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs) const
+{
+  LOG_PRINT_L3("Blockchain::" << __func__);
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+
+  reserve_container(txs, txs_ids.size());
+  for (const auto& tx_hash : txs_ids)
+  {
+    try
+    {
+      cryptonote::blobdata tx;
+      if (m_db->get_pruned_tx_blob(tx_hash, tx))
+      {
+        txs.push_back(std::make_tuple(tx_hash, std::move(tx), crypto::null_hash, cryptonote::blobdata()));
+        if (!is_v1_tx(std::get<1>(txs.back())) && !m_db->get_prunable_tx_hash(tx_hash, std::get<2>(txs.back())))
+        {
+          MERROR("Prunable data hash not found for " << tx_hash);
+          return false;
+        }
+        if (!m_db->get_prunable_tx_blob(tx_hash, std::get<3>(txs.back())))
+          std::get<3>(txs.back()).clear();
+      }
+      else
+        missed_txs.push_back(tx_hash);
+    }
+    catch (const std::exception& e)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+//------------------------------------------------------------------
 template<class t_ids_container, class t_tx_container, class t_missed_container>
 bool Blockchain::get_transactions(const t_ids_container& txs_ids, t_tx_container& txs, t_missed_container& missed_txs) const
 {
@@ -2117,9 +2177,12 @@ bool Blockchain::find_blockchain_supplement(const std::list<crypto::hash>& qbloc
 
   m_db->block_txn_start(true);
   current_height = get_current_blockchain_height();
+  const uint32_t pruning_seed = get_blockchain_pruning_seed();
+  start_height = tools::get_next_unpruned_block_height(start_height, current_height, pruning_seed);
+  uint64_t stop_height = tools::get_next_pruned_block_height(start_height, current_height, pruning_seed);
   size_t count = 0;
-  hashes.reserve(std::max((size_t)(current_height - start_height), (size_t)BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT));
-  for(size_t i = start_height; i < current_height && count < BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT; i++, count++)
+  hashes.reserve(std::min((size_t)(stop_height - start_height), (size_t)BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT));
+  for(size_t i = start_height; i < stop_height && count < BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT; i++, count++)
   {
     hashes.push_back(m_db->get_block_hash_from_height(i));
   }
@@ -2496,6 +2559,18 @@ bool Blockchain::check_tx_outputs(const transaction& tx, tx_verification_context
     }
   }
 
+  // from v10, allow bulletproofs v2
+  if (hf_version < HF_VERSION_SMALLER_BP) {
+    if (tx.version >= 2) {
+      if (tx.rct_signatures.type == rct::RCTTypeBulletproof2)
+      {
+        MERROR_VER("Bulletproofs v2 are not allowed before v" << HF_VERSION_SMALLER_BP);
+        tvc.m_invalid_output = true;
+        return false;
+      }
+    }
+  }
+
   return true;
 }
 //------------------------------------------------------------------
@@ -2536,7 +2611,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
       }
     }
   }
-  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof)
+  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof || rv.type == rct::RCTTypeBulletproof2)
   {
     CHECK_AND_ASSERT_MES(!pubkeys.empty() && !pubkeys[0].empty(), false, "empty pubkeys");
     rv.mixRing.resize(pubkeys.size());
@@ -2562,7 +2637,7 @@ bool Blockchain::expand_transaction_2(transaction &tx, const crypto::hash &tx_pr
     for (size_t n = 0; n < tx.vin.size(); ++n)
       rv.p.MGs[0].II[n] = rct::ki2rct(boost::get<txin_to_key>(tx.vin[n]).k_image);
   }
-  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof)
+  else if (rv.type == rct::RCTTypeSimple || rv.type == rct::RCTTypeBulletproof || rv.type == rct::RCTTypeSimpleBulletproof || rv.type == rct::RCTTypeBulletproof2)
   {
     CHECK_AND_ASSERT_MES(rv.p.MGs.size() == tx.vin.size(), false, "Bad MGs size");
     for (size_t n = 0; n < tx.vin.size(); ++n)
@@ -2837,6 +2912,7 @@ bool Blockchain::check_tx_inputs(transaction& tx, tx_verification_context &tvc, 
     case rct::RCTTypeSimple:
     case rct::RCTTypeSimpleBulletproof:
     case rct::RCTTypeBulletproof:
+    case rct::RCTTypeBulletproof2:
     {
       // check all this, either reconstructed (so should really pass), or not
       {
@@ -3411,7 +3487,7 @@ leave:
     {
       if (memcmp(&hash, &expected_hash, sizeof(hash)) != 0)
       {
-        MERROR_VER("Block with id is INVALID: " << id);
+        MERROR_VER("Block with id is INVALID: " << id << ", expected " << expected_hash);
         bvc.m_verifivation_failed = true;
         goto leave;
       }
@@ -3683,9 +3759,38 @@ leave:
 
   std::shared_ptr<tools::Notify> block_notify = m_block_notify;
   if (block_notify)
-    block_notify->notify(epee::string_tools::pod_to_hex(id).c_str());
+    block_notify->notify("%s", epee::string_tools::pod_to_hex(id).c_str(), NULL);
 
   return true;
+}
+//------------------------------------------------------------------
+bool Blockchain::prune_blockchain(uint32_t pruning_seed)
+{
+  uint8_t hf_version = m_hardfork->get_current_version();
+  if (hf_version < 10)
+  {
+    MERROR("Most of the network will only be ready for pruned blockchains from v10, not pruning");
+    return false;
+  }
+  return m_db->prune_blockchain(pruning_seed);
+}
+//------------------------------------------------------------------
+bool Blockchain::update_blockchain_pruning()
+{
+  m_tx_pool.lock();
+  epee::misc_utils::auto_scope_leave_caller unlocker = epee::misc_utils::create_scope_leave_handler([&](){m_tx_pool.unlock();});
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+
+  return m_db->update_pruning();
+}
+//------------------------------------------------------------------
+bool Blockchain::check_blockchain_pruning()
+{
+  m_tx_pool.lock();
+  epee::misc_utils::auto_scope_leave_caller unlocker = epee::misc_utils::create_scope_leave_handler([&](){m_tx_pool.unlock();});
+  CRITICAL_REGION_LOCAL(m_blockchain_lock);
+
+  return m_db->check_pruning();
 }
 //------------------------------------------------------------------
 bool Blockchain::update_next_cumulative_weight_limit()
@@ -3910,6 +4015,8 @@ bool Blockchain::cleanup_handle_incoming_blocks(bool force_sync)
 
   CRITICAL_REGION_END();
   m_tx_pool.unlock();
+
+  update_blockchain_pruning();
 
   return success;
 }
@@ -4684,4 +4791,5 @@ void Blockchain::cache_block_template(const block &b, const cryptonote::account_
 namespace cryptonote {
 template bool Blockchain::get_transactions(const std::vector<crypto::hash>&, std::vector<transaction>&, std::vector<crypto::hash>&) const;
 template bool Blockchain::get_transactions_blobs(const std::vector<crypto::hash>&, std::vector<cryptonote::blobdata>&, std::vector<crypto::hash>&, bool) const;
+template bool Blockchain::get_split_transactions_blobs(const std::vector<crypto::hash>&, std::vector<std::tuple<crypto::hash, cryptonote::blobdata, crypto::hash, cryptonote::blobdata>>&, std::vector<crypto::hash>&) const;
 }

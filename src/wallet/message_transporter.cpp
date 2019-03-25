@@ -101,7 +101,7 @@ bool message_transporter::receive_messages(const std::vector<std::string> &desti
                                            std::vector<transport_message> &messages)
 {
   // The message body of the Bitmessage message is basically the transport message, as JSON (and nothing more).
-  // Weeding out other, non-MMS messages is done in a simple way: If it deserializes without error, it's an MMS message
+  // Weeding out other, non-MMS messages is done in a simple way: If it deserializes wiWthout error, it's an MMS message
   // That JSON is Base64-encoded by the MMS because the Bittube epee JSON serializer does not escape anything and happily
   // includes even 0 (NUL) in strings, which might confuse Bitmessage or at least display confusingly in the client.
   // There is yet another Base64-encoding of course as part of the Bitmessage API for the message body parameter
