@@ -56,6 +56,7 @@ set(unit_tests_sources
   http.cpp
   keccak.cpp
   logging.cpp
+  long_term_block_weight.cpp
   main.cpp
   memwipe.cpp
   mlocker.cpp
