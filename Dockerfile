@@ -185,6 +185,12 @@ RUN set -ex && \
     rm -rf /var/lib/apt
 COPY --from=builder /src/build/release/bin /usr/local/bin/
 
+# Create monero user
+RUN adduser --system --group --disabled-password monero && \
+	mkdir -p /wallet /home/monero/.bitmonero && \
+	chown -R monero:monero /home/monero/.bitmonero && \
+	chown -R monero:monero /wallet
+
 # Contains the blockchain
 VOLUME /root/.bittube
 

@@ -375,7 +375,7 @@ namespace tools
       std::vector<uint8_t> extra;
       uint64_t unlock_time;
       bool use_rct;
-      bool use_bulletproofs;
+      rct::RCTConfig rct_config;
       std::vector<cryptonote::tx_destination_entry> dests; // original setup, does not include change
       uint32_t subaddr_account;   // subaddress account of your wallet to be used in this transfer
       std::set<uint32_t> subaddr_indices;  // set of address indices used as inputs in this transfer
@@ -388,7 +388,7 @@ namespace tools
         FIELD(extra)
         FIELD(unlock_time)
         FIELD(use_rct)
-        FIELD(use_bulletproofs)
+        FIELD(rct_config)
         FIELD(dests)
         FIELD(subaddr_account)
         FIELD(subaddr_indices)
@@ -800,6 +800,7 @@ namespace tools
     std::vector<wallet2::pending_tx> create_transactions_all(uint64_t below, const cryptonote::account_public_address &address, bool is_subaddress, const size_t outputs, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra, uint32_t subaddr_account, std::set<uint32_t> subaddr_indices);
     std::vector<wallet2::pending_tx> create_transactions_single(const crypto::key_image &ki, const cryptonote::account_public_address &address, bool is_subaddress, const size_t outputs, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra);
     std::vector<wallet2::pending_tx> create_transactions_from(const cryptonote::account_public_address &address, bool is_subaddress, const size_t outputs, std::vector<size_t> unused_transfers_indices, std::vector<size_t> unused_dust_indices, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra);
+    bool sanity_check(const std::vector<wallet2::pending_tx> &ptx_vector, std::vector<cryptonote::tx_destination_entry> dsts) const;
     void cold_tx_aux_import(const std::vector<pending_tx>& ptx, const std::vector<std::string>& tx_device_aux);
     void cold_sign_tx(const std::vector<pending_tx>& ptx_vector, signed_tx_set &exported_txs, std::vector<cryptonote::address_parse_info> &dsts_info, std::vector<std::string> & tx_device_aux);
     uint64_t cold_key_image_sync(uint64_t &spent, uint64_t &unspent);
@@ -1013,8 +1014,11 @@ namespace tools
     bool get_tx_key(const crypto::hash &txid, crypto::secret_key &tx_key, std::vector<crypto::secret_key> &additional_tx_keys);
     void check_tx_key(const crypto::hash &txid, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const cryptonote::account_public_address &address, uint64_t &received, bool &in_pool, uint64_t &confirmations);
     void check_tx_key_helper(const crypto::hash &txid, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, const cryptonote::account_public_address &address, uint64_t &received, bool &in_pool, uint64_t &confirmations);
+    void check_tx_key_helper(const cryptonote::transaction &tx, const crypto::key_derivation &derivation, const std::vector<crypto::key_derivation> &additional_derivations, const cryptonote::account_public_address &address, uint64_t &received) const;
     std::string get_tx_proof(const crypto::hash &txid, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message);
+    std::string get_tx_proof(const cryptonote::transaction &tx, const crypto::secret_key &tx_key, const std::vector<crypto::secret_key> &additional_tx_keys, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message) const;
     bool check_tx_proof(const crypto::hash &txid, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message, const std::string &sig_str, uint64_t &received, bool &in_pool, uint64_t &confirmations);
+    bool check_tx_proof(const cryptonote::transaction &tx, const cryptonote::account_public_address &address, bool is_subaddress, const std::string &message, const std::string &sig_str, uint64_t &received) const;
 
     std::string get_spend_proof(const crypto::hash &txid, const std::string &message);
     bool check_spend_proof(const crypto::hash &txid, const std::string &message, const std::string &sig_str);
@@ -1488,7 +1492,7 @@ BOOST_CLASS_VERSION(tools::wallet2::address_book_row, 17)
 BOOST_CLASS_VERSION(tools::wallet2::reserve_proof_entry, 0)
 BOOST_CLASS_VERSION(tools::wallet2::unsigned_tx_set, 0)
 BOOST_CLASS_VERSION(tools::wallet2::signed_tx_set, 1)
-BOOST_CLASS_VERSION(tools::wallet2::tx_construction_data, 3)
+BOOST_CLASS_VERSION(tools::wallet2::tx_construction_data, 4)
 BOOST_CLASS_VERSION(tools::wallet2::pending_tx, 3)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_sig, 0)
 
@@ -1857,11 +1861,27 @@ namespace boost
       a & x.subaddr_account;
       a & x.subaddr_indices;
       if (ver < 2)
+      {
+        if (!typename Archive::is_saving())
+          x.rct_config = { rct::RangeProofBorromean, 0 };
         return;
+      }
       a & x.selected_transfers;
       if (ver < 3)
+      {
+        if (!typename Archive::is_saving())
+          x.rct_config = { rct::RangeProofBorromean, 0 };
         return;
-      a & x.use_bulletproofs;
+      }
+      if (ver < 4)
+      {
+        bool use_bulletproofs = x.rct_config.range_proof_type != rct::RangeProofBorromean;
+        a & use_bulletproofs;
+        if (!typename Archive::is_saving())
+          x.rct_config = { use_bulletproofs ? rct::RangeProofBulletproof : rct::RangeProofBorromean, 0 };
+        return;
+      }
+      a & x.rct_config;
     }
 
     template <class Archive>
