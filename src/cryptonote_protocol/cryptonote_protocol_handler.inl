@@ -269,6 +269,7 @@ namespace cryptonote
       cnx.current_upload = cntxt.m_current_speed_up / 1024;
 
       cnx.connection_id = epee::string_tools::pod_to_hex(cntxt.m_connection_id);
+      cnx.ssl = cntxt.m_ssl;
 
       cnx.height = cntxt.m_remote_blockchain_height;
       cnx.pruning_seed = cntxt.m_pruning_seed;
@@ -2112,7 +2113,7 @@ skip:
       MDEBUG("Attempting to conceal origin of tx via anonymity network connection(s)");
 
     // no check for success, so tell core they're relayed unconditionally
-    const bool pad_transactions = m_core.pad_transactions();
+    const bool pad_transactions = m_core.pad_transactions() || hide_tx_broadcast;
     size_t bytes = pad_transactions ? 9 /* header */ + 4 /* 1 + 'txs' */ + tools::get_varint_data(arg.txs.size()).size() : 0;
     for(auto tx_blob_it = arg.txs.begin(); tx_blob_it!=arg.txs.end(); ++tx_blob_it)
     {

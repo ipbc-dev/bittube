@@ -1,6 +1,71 @@
 # BitTube
 
+<<<<<<< HEAD
 Based on [Monero](https://github.com/bittube-project/monero)
+=======
+Copyright (c) 2014-2018 The Monero Project.   
+Portions Copyright (c) 2012-2013 The Cryptonote developers.
+
+## Development resources
+
+- Web: [getmonero.org](https://getmonero.org)
+- Forum: [forum.getmonero.org](https://forum.getmonero.org)
+- Mail: [dev@getmonero.org](mailto:dev@getmonero.org)
+- GitHub: [https://github.com/monero-project/monero](https://github.com/monero-project/monero)
+- IRC: [#monero-dev on Freenode](https://webchat.freenode.net/?randomnick=1&channels=%23monero-dev&prompt=1&uio=d4)
+
+## Vulnerability response
+
+- Our [Vulnerability Response Process](https://github.com/monero-project/meta/blob/master/VULNERABILITY_RESPONSE_PROCESS.md) encourages responsible disclosure
+- We are also available via [HackerOne](https://hackerone.com/monero)
+
+## Research
+
+The [Monero Research Lab](https://src.getmonero.org/resources/research-lab/) is an open forum where the community coordinates research into Monero cryptography, protocols, fungibility, analysis, and more. We welcome collaboration and contributions from outside researchers! Because not all Lab work and publications are distributed as traditional preprints or articles, they may be easy to miss if you are conducting literature reviews for your own Monero research. You are encouraged to get in touch with our researchers if you have questions, wish to collaborate, or would like guidance to help avoid unnecessarily duplicating earlier or known work.
+
+Our researchers are available on IRC in [#monero-research-lab on Freenode](https://webchat.freenode.net/?randomnick=1&channels=%23monero-research-lab&prompt=1&uio=d4) or by email:
+
+- Sarang Noether, Ph.D.: [sarang@getmonero.org](mailto:sarang@getmonero.org) or [sarang.noether@protonmail.com](mailto:sarang.noether@protonmail.com); [research repository](https://github.com/SarangNoether/research-lab)
+- Surae Noether (Brandon Goodell), Ph.D.: [surae@getmonero.org](mailto:surae@getmonero.org) or [surae.noether@protonmail.com](mailto:surae.noether@protonmail.com); [research repository](https://github.com/b-g-goodell/research-lab)
+
+## Announcements
+
+- You can subscribe to an [announcement listserv](https://lists.getmonero.org) to get critical announcements from the Monero core team. The announcement list can be very helpful for knowing when software updates are needed.
+
+## Translations
+The CLI wallet is available in different languages. If you want to help translate it, join Pootle, our self-hosted localization platform: [translate.getmonero.org](https://translate.getmonero.org). Every translation *must* be uploaded on Pootle, pull requests directly editing the code on this repository will be closed.
+&nbsp;
+
+If you need help/support/info, contact the localization workgroup. You can do so in various ways: by email (translate[at]getmonero[dot]org), on the official chat (#monero-translations). A complete list of contacts can be found on the repository of the workgroup: [monero-ecosystem/monero-translations](https://github.com/monero-ecosystem/monero-translations#contacts).
+
+## Build
+
+### IMPORTANT
+
+These builds are of the master branch, which is used for active development and can be either unstable or incompatible with release software. Please compile release branches.
+
+| Operating System      | Processor | Status |
+| --------------------- | -------- |--------|
+| Ubuntu 16.04          |  i686    | [![Ubuntu 16.04 i686](https://build.getmonero.org/png?builder=monero-static-ubuntu-i686)](https://build.getmonero.org/builders/monero-static-ubuntu-i686)
+| Ubuntu 16.04          |  amd64   | [![Ubuntu 16.04 amd64](https://build.getmonero.org/png?builder=monero-static-ubuntu-amd64)](https://build.getmonero.org/builders/monero-static-ubuntu-amd64)
+| Ubuntu 16.04          |  armv7   | [![Ubuntu 16.04 armv7](https://build.getmonero.org/png?builder=monero-static-ubuntu-arm7)](https://build.getmonero.org/builders/monero-static-ubuntu-arm7)
+| Debian Stable         |  armv8   | [![Debian armv8](https://build.getmonero.org/png?builder=monero-static-debian-armv8)](https://build.getmonero.org/builders/monero-static-debian-armv8)
+| OSX 10.11             |  amd64   | [![OSX 10.11 amd64](https://build.getmonero.org/png?builder=monero-static-osx-10.11)](https://build.getmonero.org/builders/monero-static-osx-10.11)
+| OSX 10.12             |  amd64   | [![OSX 10.12 amd64](https://build.getmonero.org/png?builder=monero-static-osx-10.12)](https://build.getmonero.org/builders/monero-static-osx-10.12)
+| OSX 10.13             |  amd64   | [![OSX 10.13 amd64](https://build.getmonero.org/png?builder=monero-static-osx-10.13)](https://build.getmonero.org/builders/monero-static-osx-10.13)
+| FreeBSD 11            |  amd64   | [![FreeBSD 11 amd64](https://build.getmonero.org/png?builder=monero-static-freebsd64)](https://build.getmonero.org/builders/monero-static-freebsd64)
+| DragonFly BSD 4.6     |  amd64   | [![DragonFly BSD amd64](https://build.getmonero.org/png?builder=monero-static-dragonflybsd-amd64)](https://build.getmonero.org/builders/monero-static-dragonflybsd-amd64)
+| Windows (MSYS2/MinGW) |  i686    | [![Windows (MSYS2/MinGW) i686](https://build.getmonero.org/png?builder=monero-static-win32)](https://build.getmonero.org/builders/monero-static-win32)
+| Windows (MSYS2/MinGW) |  amd64   | [![Windows (MSYS2/MinGW) amd64](https://build.getmonero.org/png?builder=monero-static-win64)](https://build.getmonero.org/builders/monero-static-win64)
+
+## Coverage
+
+| Type      | Status |
+|-----------|--------|
+| Coverity  | [![Coverity Status](https://scan.coverity.com/projects/9657/badge.svg)](https://scan.coverity.com/projects/9657/)
+| Coveralls | [![Coveralls Status](https://coveralls.io/repos/github/monero-project/monero/badge.svg?branch=master)](https://coveralls.io/github/monero-project/monero?branch=master)
+| License   | [![License](https://img.shields.io/badge/license-BSD3-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+>>>>>>> 5057eb1199a9f1e4be4f0f9e0fe7cea5eea6027c
 
 ## Introduction
 
@@ -66,6 +131,9 @@ build the library binary manually. This can be done with the following command `
 Debian / Ubuntu one liner for all dependencies  
 ``` sudo apt update && sudo apt install build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev```
 
+FreeBSD one liner for required to build dependencies
+```pkg install git gmake cmake pkgconf boost-libs cppzmq libsodium```
+
 ### Cloning the repository
 
 Clone recursively to pull-in needed submodule(s):
@@ -86,8 +154,13 @@ invokes cmake commands as needed.
 * Install the dependencies
 * Change to the root of the source code directory, change to the most recent release branch, and build:
 
+<<<<<<< HEAD
         cd bittube
         git checkout 2.1.0.1
+=======
+        cd monero
+        git checkout release-v0.13
+>>>>>>> 5057eb1199a9f1e4be4f0f9e0fe7cea5eea6027c
         make
 
     *Optional*: If your machine has several cores and enough memory, enable
@@ -149,9 +222,15 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 
 * Clone bittube and checkout most recent release version:
 ```
+<<<<<<< HEAD
         git clone https://github.com/ipbc-dev/bittube.git
 	cd bittube
 	git checkout tags/2.1.0.1
+=======
+        git clone https://github.com/monero-project/monero.git
+	cd monero
+	git checkout tags/release-v0.13
+>>>>>>> 5057eb1199a9f1e4be4f0f9e0fe7cea5eea6027c
 ```
 * Build:
 ```
@@ -248,9 +327,17 @@ application.
 	
         cd bittube
 
+<<<<<<< HEAD
 * If you would like a specific [version/tag](https://github.com/ipbc-dev/bittube/tags), do a git checkout for that version. eg. '2.1.0.1'. If you dont care about the version and just want binaries from master, skip this step:
 	
         git checkout 2.1.0.1
+=======
+        cd monero
+
+* If you would like a specific [version/tag](https://github.com/monero-project/monero/tags), do a git checkout for that version. eg. 'release-0.13'. If you dont care about the version and just want binaries from master, skip this step:
+
+        git checkout release-v0.13
+>>>>>>> 5057eb1199a9f1e4be4f0f9e0fe7cea5eea6027c
 
 * If you are on a 64-bit system, run:
 
@@ -274,7 +361,11 @@ application.
 
 ### On FreeBSD:
 
+<<<<<<< HEAD
 The project can be built from scratch by following instructions for Linux above. If you are running BitTube in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
+=======
+The project can be built from scratch by following instructions for Linux above(but use `gmake` instead of `make`). If you are running monero in a jail you need to add the flag: `allow.sysvipc=1` to your jail configuration, otherwise lmdb will throw the error message: `Failed to open lmdb environment: Function not implemented`.
+>>>>>>> 5057eb1199a9f1e4be4f0f9e0fe7cea5eea6027c
 
 We expect to add BitTube into the ports tree in the near future, which will aid in managing installations using ports or packages.
 

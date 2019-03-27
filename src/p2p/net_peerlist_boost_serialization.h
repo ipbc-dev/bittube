@@ -36,6 +36,7 @@
 #include "common/expect.h"
 #include "net/net_utils_base.h"
 #include "net/tor_address.h"
+#include "net/i2p_address.h"
 #include "p2p/p2p_protocol_defs.h"
 
 #ifdef CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
@@ -77,6 +78,9 @@ namespace boost
         case net::tor_address::get_type_id():
           do_serialize<net::tor_address>(is_saving, a, na);
           break;
+        case net::i2p_address::get_type_id():
+          do_serialize<net::i2p_address>(is_saving, a, na);
+          break;
         case epee::net_utils::address_type::invalid:
         default:
           throw std::runtime_error("Unsupported network address type");
@@ -108,6 +112,20 @@ namespace boost
     }
 
     template <class Archive, class ver_type>
+    inline void save(Archive& a, const net::i2p_address& na, const ver_type)
+    {
+      const size_t length = std::strlen(na.host_str());
+      if (length > 255)
+        MONERO_THROW(net::error::invalid_i2p_address, "i2p address too long");
+
+      const uint16_t port{na.port()};
+      const uint8_t len = length;
+      a & port;
+      a & len;
+      a.save_binary(na.host_str(), length);
+    }
+
+    template <class Archive, class ver_type>
     inline void load(Archive& a, net::tor_address& na, const ver_type)
     {
       uint16_t port = 0;
@@ -129,7 +147,34 @@ namespace boost
     }
 
     template <class Archive, class ver_type>
+    inline void load(Archive& a, net::i2p_address& na, const ver_type)
+    {
+      uint16_t port = 0;
+      uint8_t length = 0;
+      a & port;
+      a & length;
+
+      if (length > net::i2p_address::buffer_size())
+        MONERO_THROW(net::error::invalid_i2p_address, "i2p address too long");
+
+      char host[net::i2p_address::buffer_size()] = {0};
+      a.load_binary(host, length);
+      host[sizeof(host) - 1] = 0;
+
+      if (std::strcmp(host, net::i2p_address::unknown_str()) == 0)
+        na = net::i2p_address::unknown();
+      else
+        na = MONERO_UNWRAP(net::i2p_address::make(host, port));
+    }
+
+    template <class Archive, class ver_type>
     inline void serialize(Archive &a, net::tor_address& na, const ver_type ver)
+    {
+      boost::serialization::split_free(a, na, ver);
+    }
+
+    template <class Archive, class ver_type>
+    inline void serialize(Archive &a, net::i2p_address& na, const ver_type ver)
     {
       boost::serialization::split_free(a, na, ver);
     }
