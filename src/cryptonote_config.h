@@ -161,10 +161,10 @@
 #define HF_VERSION_MIN_MIXIN_2                  4
 #define HF_VERSION_ENFORCE_RCT                  4
 #define HF_VERSION_BULLETPROOF                  5
-#define HF_VERSION_PER_BYTE_FEE                 6 //TODO
-#define HF_VERSION_PADDED_BULLETS               6 //TODO
-#define HF_VERSION_SMALLER_BP                   10
-#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT       10
+#define HF_VERSION_PER_BYTE_FEE                 6
+#define HF_VERSION_PADDED_BULLETS               6
+#define HF_VERSION_SMALLER_BP                   8 //TODO v8?
+#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT       8 //TODO v8?
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 

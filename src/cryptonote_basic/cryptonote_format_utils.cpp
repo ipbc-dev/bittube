@@ -151,7 +151,7 @@ namespace cryptonote
       if (!base_only)
       {
         const bool bulletproof = rct::is_rct_bulletproof(rv.type);
-        if (bulletproof && rv.type == rct::RCTTypeBulletproof)
+        if ((bulletproof && rv.type == rct::RCTTypeBulletproof) || (bulletproof && rv.type == rct::RCTTypeBulletproof2))
         {
           if (rv.p.bulletproofs.size() != 1)
           {
@@ -164,7 +164,7 @@ namespace cryptonote
             return false;
           }
           const size_t max_outputs = 1 << (rv.p.bulletproofs[0].L.size() - 6);
-          if (max_outputs < tx.vout.size() && rv.type == rct::RCTTypeBulletproof)
+          if (max_outputs < tx.vout.size())
           {
             LOG_PRINT_L1("Failed to parse transaction from blob, bad bulletproofs max outputs in tx " << get_transaction_hash(tx));
             return false;
@@ -421,7 +421,7 @@ namespace cryptonote
     const size_t n_outputs = tx.vout.size();
     if (n_outputs <= 2)
       return blob_size;
-    if (rv.type != rct::RCTTypeBulletproof)
+    if (rv.type != rct::RCTTypeBulletproof && rv.type != rct::RCTTypeBulletproof2)
       return blob_size;  
     const uint64_t bp_base = 368;
     const size_t n_padded_outputs = rct::n_bulletproof_max_amounts(rv.p.bulletproofs);
