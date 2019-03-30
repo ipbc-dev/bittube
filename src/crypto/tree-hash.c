@@ -35,6 +35,15 @@
 
 #include "hash-ops.h"
 
+#ifdef _MSC_VER
+#include <malloc.h>
+#elif !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__DragonFly__) \
+  && !defined(__NetBSD__)
+ #include <alloca.h>
+#else
+ #include <stdlib.h>
+#endif
+
 /*** 
 * Round to power of two, for count>=3 and for count being not too large (as reasonable for tree hash calculations)
 */
