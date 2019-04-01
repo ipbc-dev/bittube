@@ -63,6 +63,7 @@
 #include "common/password.h"
 #include "node_rpc_proxy.h"
 #include "message_store.h"
+#include "wallet_light_rpc.h"
 
 #undef MONERO_DEFAULT_LOG_CATEGORY
 #define MONERO_DEFAULT_LOG_CATEGORY "wallet.wallet2"
@@ -266,6 +267,7 @@ namespace tools
       size_t m_internal_output_index;
       uint64_t m_global_output_index;
       bool m_spent;
+      bool m_frozen;
       uint64_t m_spent_height;
       crypto::key_image m_key_image; //TODO: key_image stored twice :(
       rct::key m_mask;
@@ -291,6 +293,7 @@ namespace tools
         FIELD(m_internal_output_index)
         FIELD(m_global_output_index)
         FIELD(m_spent)
+        FIELD(m_frozen)
         FIELD(m_spent_height)
         FIELD(m_key_image)
         FIELD(m_mask)
@@ -1179,11 +1182,11 @@ namespace tools
     // fetch txs and store in m_payments
     void light_wallet_get_address_txs();
     // get_address_info
-    bool light_wallet_get_address_info(cryptonote::COMMAND_RPC_GET_ADDRESS_INFO::response &response);
+    bool light_wallet_get_address_info(tools::COMMAND_RPC_GET_ADDRESS_INFO::response &response);
     // Login. new_address is true if address hasn't been used on lw node before.
     bool light_wallet_login(bool &new_address);
     // Send an import request to lw node. returns info about import fee, address and payment_id
-    bool light_wallet_import_wallet_request(cryptonote::COMMAND_RPC_IMPORT_WALLET_REQUEST::response &response);
+    bool light_wallet_import_wallet_request(tools::COMMAND_RPC_IMPORT_WALLET_REQUEST::response &response);
     // get random outputs from light wallet server
     void light_wallet_get_outs(std::vector<std::vector<get_outs_entry>> &outs, const std::vector<size_t> &selected_transfers, size_t fake_outputs_count);
     // Parse rct string
@@ -1246,6 +1249,14 @@ namespace tools
     bool unblackball_output(const std::pair<uint64_t, uint64_t> &output);
     bool is_output_blackballed(const std::pair<uint64_t, uint64_t> &output) const;
 
+    void freeze(size_t idx);
+    void thaw(size_t idx);
+    bool frozen(size_t idx) const;
+    void freeze(const crypto::key_image &ki);
+    void thaw(const crypto::key_image &ki);
+    bool frozen(const crypto::key_image &ki) const;
+    bool frozen(const transfer_details &td) const;
+
     // MMS -------------------------------------------------------------------------------------------------
     mms::message_store& get_message_store() { return m_message_store; };
     const mms::message_store& get_message_store() const { return m_message_store; };
@@ -1281,7 +1292,7 @@ namespace tools
     bool load_keys(const std::string& keys_file_name, const epee::wipeable_string& password);
     void process_new_transaction(const crypto::hash &txid, const cryptonote::transaction& tx, const std::vector<uint64_t> &o_indices, uint64_t height, uint64_t ts, bool miner_tx, bool pool, bool double_spend_seen, const tx_cache_data &tx_cache_data, std::map<std::pair<uint64_t, uint64_t>, size_t> *output_tracker_cache = NULL);
     void process_new_blockchain_entry(const cryptonote::block& b, const cryptonote::block_complete_entry& bche, const parsed_block &parsed_block, const crypto::hash& bl_id, uint64_t height, const std::vector<tx_cache_data> &tx_cache_data, size_t tx_cache_data_offset, std::map<std::pair<uint64_t, uint64_t>, size_t> *output_tracker_cache = NULL);
-    void detach_blockchain(uint64_t height);
+    void detach_blockchain(uint64_t height, std::map<std::pair<uint64_t, uint64_t>, size_t> *output_tracker_cache = NULL);
     void get_short_chain_history(std::list<crypto::hash>& ids, uint64_t granularity = 1) const;
     bool clear();
     void clear_soft(bool keep_key_images=false);
@@ -1328,6 +1339,7 @@ namespace tools
     bool get_ring(const crypto::chacha_key &key, const crypto::key_image &key_image, std::vector<uint64_t> &outs);
     crypto::chacha_key get_ringdb_key();
     void setup_keys(const epee::wipeable_string &password);
+    size_t get_transfer_details(const crypto::key_image &ki) const;
 
     void register_devices();
     hw::device& lookup_device(const std::string & device_descriptor);
@@ -1482,7 +1494,7 @@ namespace tools
   };
 }
 BOOST_CLASS_VERSION(tools::wallet2, 28)
-BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 11)
+BOOST_CLASS_VERSION(tools::wallet2::transfer_details, 12)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info, 1)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_info::LR, 0)
 BOOST_CLASS_VERSION(tools::wallet2::multisig_tx_set, 1)
@@ -1543,6 +1555,10 @@ namespace boost
         if (ver < 10)
         {
           x.m_key_image_request = false;
+        }
+        if (ver < 12)
+        {
+          x.m_frozen = false;
         }
     }
 
@@ -1632,8 +1648,17 @@ namespace boost
       }
       a & x.m_key_image_request;
       if (ver < 11)
+      {
+        initialize_transfer_details(a, x, ver);
         return;
+      }
       a & x.m_uses;
+      if (ver < 12)
+      {
+        initialize_transfer_details(a, x, ver);
+        return;
+      }
+      a & x.m_frozen;
     }
 
     template <class Archive>

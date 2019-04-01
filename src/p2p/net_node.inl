@@ -493,7 +493,7 @@ namespace nodetool
     else
     {
       memcpy(&m_network_id, &::config::NETWORK_ID, 16);
-      if (m_exclusive_peers.empty())
+      if (m_exclusive_peers.empty() && !m_offline)
       {
       // for each hostname in the seed nodes list, attempt to DNS resolve and
       // add the result addresses as seed nodes
@@ -2231,11 +2231,10 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::set_rate_up_limit(const boost::program_options::variables_map& vm, int64_t limit)
   {
-    this->islimitup=true;
+    this->islimitup=(limit != -1) && (limit != default_limit_up);
 
     if (limit==-1) {
       limit=default_limit_up;
-      this->islimitup=false;
     }
 
     epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_up_limit( limit );
@@ -2246,10 +2245,9 @@ namespace nodetool
   template<class t_payload_net_handler>
   bool node_server<t_payload_net_handler>::set_rate_down_limit(const boost::program_options::variables_map& vm, int64_t limit)
   {
-    this->islimitdown=true;
+    this->islimitdown=(limit != -1) && (limit != default_limit_down);
     if(limit==-1) {
       limit=default_limit_down;
-      this->islimitdown=false;
     }
     epee::net_utils::connection<epee::levin::async_protocol_handler<p2p_connection_context> >::set_rate_down_limit( limit );
     MINFO("Set limit-down to " << limit << " kB/s");
