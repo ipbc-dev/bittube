@@ -385,6 +385,11 @@ struct WalletListener
     virtual void onDeviceButtonRequest(uint64_t code) {}
 
     /**
+     * @brief called by device if the button was pressed
+     */
+    virtual void onDeviceButtonPressed() { }
+
+    /**
      * @brief called by device when PIN is needed
      */
     virtual optional<std::string> onDevicePinRequest() {

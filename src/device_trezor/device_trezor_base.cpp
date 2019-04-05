@@ -43,7 +43,7 @@ namespace trezor {
 
     const uint32_t device_trezor_base::DEFAULT_BIP44_PATH[] = {0x8000002c, 0x80000080};
 
-    device_trezor_base::device_trezor_base(): m_callback(nullptr) {
+    device_trezor_base::device_trezor_base(): m_callback(nullptr), m_last_msg_type(messages::MessageType_Success) {
 #ifdef WITH_TREZOR_DEBUGGING
       m_debug = false;
 #endif
@@ -279,6 +279,12 @@ namespace trezor {
       // Later if needed this generic message handler can be replaced by a pointer to
       // a protocol message handler which by default points to the device class which implements
       // the default handler.
+
+      if (m_last_msg_type == messages::MessageType_ButtonRequest){
+        on_button_pressed();
+      }
+      m_last_msg_type = input.m_type;
+
       switch(input.m_type){
         case messages::MessageType_ButtonRequest:
           on_button_request(input, dynamic_cast<const messages::common::ButtonRequest*>(input.m_msg.get()));
@@ -416,6 +422,11 @@ namespace trezor {
       write_raw(&ack);
 
       resp = read_raw();
+    }
+
+    void device_trezor_base::on_button_pressed()
+    {
+      TREZOR_CALLBACK(on_button_pressed);
     }
 
     void device_trezor_base::on_pin_request(GenericMessage & resp, const messages::common::PinMatrixRequest * msg)
