@@ -91,7 +91,8 @@ namespace wallet_args
     const boost::program_options::positional_options_description& positional_options,
     const std::function<void(const std::string&, bool)> &print,
     const char *default_log_name,
-    bool log_to_console)
+    bool log_to_console,
+    bool srv_util)
   
   {
     namespace bf = boost::filesystem;
@@ -185,7 +186,7 @@ namespace wallet_args
     if (!command_line::is_arg_defaulted(vm, arg_log_file))
       log_path = command_line::get_arg(vm, arg_log_file);
     else
-      log_path = mlog_get_default_log_path(default_log_name);
+      log_path = srv_util ? default_log_name : mlog_get_default_log_path(default_log_name);
     mlog_configure(log_path, log_to_console, command_line::get_arg(vm, arg_max_log_file_size), command_line::get_arg(vm, arg_max_log_files));
     if (!command_line::is_arg_defaulted(vm, arg_log_level))
     {
@@ -196,13 +197,14 @@ namespace wallet_args
       mlog_set_categories("");
     }
 
-    if (notice)
+    if (notice && !srv_util)
       Print(print) << notice << ENDL;
 
     if (!command_line::is_arg_defaulted(vm, arg_max_concurrency))
       tools::set_max_concurrency(command_line::get_arg(vm, arg_max_concurrency));
 
-    Print(print) << "BitTube '" << BITTUBE_RELEASE_NAME << "' (v" << BITTUBE_VERSION_FULL << ")";
+    if (!srv_util)
+      Print(print) << "BitTube '" << BITTUBE_RELEASE_NAME << "' (v" << BITTUBE_VERSION_FULL << ")";
 
     if (!command_line::is_arg_defaulted(vm, arg_log_level))
       MINFO("Setting log level = " << command_line::get_arg(vm, arg_log_level));
@@ -210,10 +212,11 @@ namespace wallet_args
       MINFO("Setting log levels = " << getenv("MONERO_LOGS"));
     MINFO(wallet_args::tr("Logging to: ") << log_path);
 
-    Print(print) << boost::format(wallet_args::tr("Logging to %s")) % log_path;
+    if (!srv_util)
+      Print(print) << boost::format(wallet_args::tr("Logging to %s")) % log_path;
 
     const ssize_t lockable_memory = tools::get_lockable_memory();
-    if (lockable_memory >= 0 && lockable_memory < 256 * 4096) // 256 pages -> at least 256 secret keys and other such small/medium objects
+    if (lockable_memory >= 0 && lockable_memory < 256 * 4096 && !srv_util) // 256 pages -> at least 256 secret keys and other such small/medium objects
       Print(print) << tr("WARNING: You may not have a high enough lockable memory limit")
 #ifdef ELPP_OS_UNIX
         << ", " << tr("see ulimit -l")
