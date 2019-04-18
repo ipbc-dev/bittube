@@ -2273,6 +2273,12 @@ void wallet2::process_outgoing(const crypto::hash &txid, const cryptonote::trans
   add_rings(tx);
 }
 //----------------------------------------------------------------------------------------------------
+bool wallet2::should_skip_block(const cryptonote::block &b, uint64_t height) const
+{
+  // seeking only for blocks that are not older then the wallet creation time plus 1 day. 1 day is for possible user incorrect time setup
+  return !(b.timestamp + 60*60*24 > m_account.get_createtime() && height >= m_refresh_from_block_height);
+}
+//----------------------------------------------------------------------------------------------------
 void wallet2::process_new_blockchain_entry(const cryptonote::block& b, const cryptonote::block_complete_entry& bche, const parsed_block &parsed_block, const crypto::hash& bl_id, uint64_t height, const std::vector<tx_cache_data> &tx_cache_data, size_t tx_cache_data_offset, std::map<std::pair<uint64_t, uint64_t>, size_t> *output_tracker_cache)
 {
   THROW_WALLET_EXCEPTION_IF(bche.txs.size() + 1 != parsed_block.o_indices.indices.size(), error::wallet_internal_error,
@@ -2282,7 +2288,7 @@ void wallet2::process_new_blockchain_entry(const cryptonote::block& b, const cry
   //handle transactions from new block
     
   //optimization: seeking only for blocks that are not older then the wallet creation time plus 1 day. 1 day is for possible user incorrect time setup
-  if(b.timestamp + 60*60*24 > m_account.get_createtime() && height >= m_refresh_from_block_height)
+  if (!should_skip_block(b, height))
   {
     TIME_MEASURE_START(miner_tx_handle_time);
     if (m_refresh_type != RefreshNoCoinbase)
@@ -2412,6 +2418,11 @@ void wallet2::process_parsed_blocks(uint64_t start_height, const std::vector<cry
   {
     THROW_WALLET_EXCEPTION_IF(parsed_blocks[i].txes.size() != parsed_blocks[i].block.tx_hashes.size(),
         error::wallet_internal_error, "Mismatched parsed_blocks[i].txes.size() and parsed_blocks[i].block.tx_hashes.size()");
+    if (should_skip_block(parsed_blocks[i].block, start_height + i))
+    {
+      txidx += 1 + parsed_blocks[i].block.tx_hashes.size();
+      continue;
+    }
     if (m_refresh_type != RefreshNoCoinbase)
       tpool.submit(&waiter, [&, i, txidx](){ cache_tx_data(parsed_blocks[i].block.miner_tx, get_transaction_hash(parsed_blocks[i].block.miner_tx), tx_cache_data[txidx]); });
     ++txidx;
@@ -2440,6 +2451,8 @@ void wallet2::process_parsed_blocks(uint64_t start_height, const std::vector<cry
 
   for (size_t i = 0; i < tx_cache_data.size(); ++i)
   {
+    if (tx_cache_data[i].empty())
+      continue;
     tpool.submit(&waiter, [&hwdev, &gender, &tx_cache_data, i]() {
       auto &slot = tx_cache_data[i];
       boost::unique_lock<hw::device> hwdev_lock(hwdev);
@@ -2458,6 +2471,7 @@ void wallet2::process_parsed_blocks(uint64_t start_height, const std::vector<cry
       if (o.target.type() == typeid(cryptonote::txout_to_key))
       {
         std::vector<crypto::key_derivation> additional_derivations;
+        additional_derivations.reserve(tx_cache_data[txidx].additional.size());
         for (const auto &iod: tx_cache_data[txidx].additional)
           additional_derivations.push_back(iod.derivation);
         const auto &key = boost::get<txout_to_key>(o.target).key;
@@ -2475,6 +2489,12 @@ void wallet2::process_parsed_blocks(uint64_t start_height, const std::vector<cry
   txidx = 0;
   for (size_t i = 0; i < blocks.size(); ++i)
   {
+    if (should_skip_block(parsed_blocks[i].block, start_height + i))
+    {
+      txidx += 1 + parsed_blocks[i].block.tx_hashes.size();
+      continue;
+    }
+
     if (m_refresh_type != RefreshType::RefreshNoCoinbase)
     {
       THROW_WALLET_EXCEPTION_IF(txidx >= tx_cache_data.size(), error::wallet_internal_error, "txidx out of range");
@@ -4129,6 +4149,17 @@ bool wallet2::query_device(hw::device::device_type& device_type, const std::stri
   return true;
 }
 
+void wallet2::init_type(hw::device::device_type device_type)
+{
+  m_account_public_address = m_account.get_keys().m_account_address;
+  m_watch_only = false;
+  m_multisig = false;
+  m_multisig_threshold = 0;
+  m_multisig_signers.clear();
+  m_original_keys_available = false;
+  m_key_device_type = device_type;
+}
+
 /*!
  * \brief  Generates a wallet or restores one.
  * \param  wallet_              Name of wallet file
@@ -4198,17 +4229,14 @@ void wallet2::generate(const std::string& wallet_, const epee::wipeable_string& 
   m_account.make_multisig(view_secret_key, spend_secret_key, spend_public_key, multisig_keys);
   m_account.finalize_multisig(spend_public_key);
 
-  m_account_public_address = m_account.get_keys().m_account_address;
-  m_watch_only = false;
+  // Not possible to restore a multisig wallet that is able to activate the MMS
+  // (because the original keys are not (yet) part of the restore info), so
+  // keep m_original_keys_available to false
+  init_type(hw::device::device_type::SOFTWARE);
   m_multisig = true;
   m_multisig_threshold = threshold;
   m_multisig_signers = multisig_signers;
-  m_key_device_type = hw::device::device_type::SOFTWARE;
   setup_keys(password);
-
-  // Not possible to restore a multisig wallet that is able to activate the MMS
-  // (because the original keys are not (yet) part of the restore info)
-  m_original_keys_available = false;
 
   create_keys_file(wallet_, false, password, m_nettype != MAINNET || create_address_file);
   setup_new_blockchain();
@@ -4242,13 +4270,7 @@ crypto::secret_key wallet2::generate(const std::string& wallet_, const epee::wip
 
   crypto::secret_key retval = m_account.generate(recovery_param, recover, two_random);
 
-  m_account_public_address = m_account.get_keys().m_account_address;
-  m_watch_only = false;
-  m_multisig = false;
-  m_multisig_threshold = 0;
-  m_multisig_signers.clear();
-  m_original_keys_available = false;
-  m_key_device_type = hw::device::device_type::SOFTWARE;
+  init_type(hw::device::device_type::SOFTWARE);
   setup_keys(password);
 
   // calculate a starting refresh height
@@ -4331,13 +4353,9 @@ void wallet2::generate(const std::string& wallet_, const epee::wipeable_string& 
   }
 
   m_account.create_from_viewkey(account_public_address, viewkey);
-  m_account_public_address = account_public_address;
+  init_type(hw::device::device_type::SOFTWARE);
   m_watch_only = true;
-  m_multisig = false;
-  m_multisig_threshold = 0;
-  m_multisig_signers.clear();
-  m_original_keys_available = false;
-  m_key_device_type = hw::device::device_type::SOFTWARE;
+  m_account_public_address = account_public_address;
   setup_keys(password);
 
   create_keys_file(wallet_, true, password, m_nettype != MAINNET || create_address_file);
@@ -4372,13 +4390,8 @@ void wallet2::generate(const std::string& wallet_, const epee::wipeable_string& 
   }
 
   m_account.create_from_keys(account_public_address, spendkey, viewkey);
+  init_type(hw::device::device_type::SOFTWARE);
   m_account_public_address = account_public_address;
-  m_watch_only = false;
-  m_multisig = false;
-  m_multisig_threshold = 0;
-  m_multisig_signers.clear();
-  m_original_keys_available = false;
-  m_key_device_type = hw::device::device_type::SOFTWARE;
   setup_keys(password);
 
   create_keys_file(wallet_, false, password, create_address_file);
@@ -4413,13 +4426,7 @@ void wallet2::restore(const std::string& wallet_, const epee::wipeable_string& p
   hwdev.set_callback(get_device_callback());
 
   m_account.create_from_device(hwdev);
-  m_key_device_type = m_account.get_device().get_type();
-  m_account_public_address = m_account.get_keys().m_account_address;
-  m_watch_only = false;
-  m_multisig = false;
-  m_multisig_threshold = 0;
-  m_multisig_signers.clear();
-  m_original_keys_available = false;
+  init_type(m_account.get_device().get_type());
   setup_keys(password);
   m_device_name = device_name;
 
@@ -4551,10 +4558,9 @@ std::string wallet2::make_multisig(const epee::wipeable_string &password,
       "Failed to create multisig wallet due to bad keys");
   memwipe(&spend_skey, sizeof(rct::key));
 
-  m_account_public_address = m_account.get_keys().m_account_address;
-  m_watch_only = false;
+  init_type(hw::device::device_type::SOFTWARE);
+  m_original_keys_available = true;
   m_multisig = true;
-  m_key_device_type = hw::device::device_type::SOFTWARE;
   m_multisig_threshold = threshold;
   m_multisig_signers = multisig_signers;
   ++m_multisig_rounds_passed;
