@@ -241,6 +241,7 @@ namespace
   const char* USAGE_MMS_AUTO_CONFIG("mms auto_config <auto_config_token>");
   const char* USAGE_PRINT_RING("print_ring <key_image> | <txid>");
   const char* USAGE_SET_RING("set_ring <filename> | ( <key_image> absolute|relative <index> [<index>...] )");
+  const char* USAGE_UNSET_RING("unset_ring <txid> | ( <key_image> [<key_image>...] )");
   const char* USAGE_SAVE_KNOWN_RINGS("save_known_rings");
   const char* USAGE_MARK_OUTPUT_SPENT("mark_output_spent <amount>/<offset> | <filename> [add]");
   const char* USAGE_MARK_OUTPUT_UNSPENT("mark_output_unspent <amount>/<offset>");
@@ -249,6 +250,7 @@ namespace
   const char* USAGE_THAW("thaw <key_image>");
   const char* USAGE_FROZEN("frozen <key_image>");
   const char* USAGE_NET_STATS("net_stats");
+  const char* USAGE_WELCOME("welcome");
   const char* USAGE_VERSION("version");
   const char* USAGE_HELP("help [<command>]");
 
@@ -1877,6 +1879,38 @@ bool simple_wallet::set_ring(const std::vector<std::string> &args)
   return true;
 }
 
+bool simple_wallet::unset_ring(const std::vector<std::string> &args)
+{
+  crypto::hash txid;
+  std::vector<crypto::key_image> key_images;
+
+  if (args.size() < 1)
+  {
+    PRINT_USAGE(USAGE_UNSET_RING);
+    return true;
+  }
+
+  key_images.resize(args.size());
+  for (size_t i = 0; i < args.size(); ++i)
+  {
+    if (!epee::string_tools::hex_to_pod(args[i], key_images[i]))
+    {
+      fail_msg_writer() << tr("Invalid key image or txid");
+      return true;
+    }
+  }
+  static_assert(sizeof(crypto::hash) == sizeof(crypto::key_image), "hash and key_image must have the same size");
+  memcpy(&txid, &key_images[0], sizeof(txid));
+
+  if (!m_wallet->unset_ring(key_images) && !m_wallet->unset_ring(txid))
+  {
+    fail_msg_writer() << tr("failed to unset ring");
+    return true;
+  }
+
+  return true;
+}
+
 bool simple_wallet::blackball(const std::vector<std::string> &args)
 {
   uint64_t amount = std::numeric_limits<uint64_t>::max(), offset, num_offsets;
@@ -2109,6 +2143,24 @@ bool simple_wallet::net_stats(const std::vector<std::string> &args)
 {
   message_writer() << std::to_string(m_wallet->get_bytes_sent()) + tr(" bytes sent");
   message_writer() << std::to_string(m_wallet->get_bytes_received()) + tr(" bytes received");
+  return true;
+}
+
+bool simple_wallet::welcome(const std::vector<std::string> &args)
+{
+  message_writer() << tr("Welcome to Monero, the private cryptocurrency.");
+  message_writer() << "";
+  message_writer() << tr("Monero, like Bitcoin, is a cryptocurrency. That is, it is digital money.");
+  message_writer() << tr("Unlike Bitcoin, your Monero transactions and balance stay private, and not visible to the world by default.");
+  message_writer() << tr("However, you have the option of making those available to select parties, if you choose to.");
+  message_writer() << "";
+  message_writer() << tr("Monero protects your privacy on the blockchain, and while Monero strives to improve all the time,");
+  message_writer() << tr("no privacy technology can be 100% perfect, Monero included.");
+  message_writer() << tr("Monero cannot protect you from malware, and it may not be as effective as we hope against powerful adversaries.");
+  message_writer() << tr("Flaws in Monero may be discovered in the future, and attacks may be developed to peek under some");
+  message_writer() << tr("of the layers of privacy Monero provides. Be safe and practice defense in depth.");
+  message_writer() << "";
+  message_writer() << tr("Welcome to Monero and financial privacy. For more information, see https://getmonero.org/");
   return true;
 }
 
@@ -3080,6 +3132,10 @@ simple_wallet::simple_wallet()
                            boost::bind(&simple_wallet::set_ring, this, _1),
                            tr(USAGE_SET_RING),
                            tr("Set the ring used for a given key image, so it can be reused in a fork"));
+  m_cmd_binder.set_handler("unset_ring",
+                           boost::bind(&simple_wallet::unset_ring, this, _1),
+                           tr(USAGE_UNSET_RING),
+                           tr("Unsets the ring used for a given key image or transaction"));
   m_cmd_binder.set_handler("save_known_rings",
                            boost::bind(&simple_wallet::save_known_rings, this, _1),
                            tr(USAGE_SAVE_KNOWN_RINGS),
@@ -3112,6 +3168,10 @@ simple_wallet::simple_wallet()
                            boost::bind(&simple_wallet::net_stats, this, _1),
                            tr(USAGE_NET_STATS),
                            tr("Prints simple network stats"));
+  m_cmd_binder.set_handler("welcome",
+                           boost::bind(&simple_wallet::welcome, this, _1),
+                           tr(USAGE_WELCOME),
+                           tr("Prints basic info about Monero for first time users"));
   m_cmd_binder.set_handler("version",
                            boost::bind(&simple_wallet::version, this, _1),
                            tr(USAGE_VERSION),
@@ -3580,6 +3640,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       auto r = new_wallet(vm, info.address, boost::none, viewkey);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
       password = *r;
+      
     }
     else if (!m_generate_from_spend_key.empty())
     {
@@ -3600,6 +3661,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       auto r = new_wallet(vm, m_recovery_key, true, false, "");
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
       password = *r;
+      
     }
     else if (!m_generate_from_keys.empty())
     {
@@ -3677,6 +3739,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       auto r = new_wallet(vm, info.address, spendkey, viewkey);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
       password = *r;
+      
     }
     
     // Asks user for all the data required to merge secret keys from multisig wallets into one master wallet, which then gets full control of the multisig wallet. The resulting wallet will be the same as any other regular wallet.
@@ -3810,6 +3873,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       auto r = new_wallet(vm, info.address, spendkey, viewkey);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
       password = *r;
+      
     }
     
     else if (!m_generate_from_json.empty())
@@ -3836,6 +3900,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
       auto r = new_wallet(vm);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
       password = *r;
+      
       // if no block_height is specified, assume its a new account and start it "now"
       if(m_wallet->get_refresh_from_block_height() == 0) {
         {
@@ -3867,6 +3932,7 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
         r = new_wallet(vm, m_recovery_key, m_restore_deterministic_wallet, m_non_deterministic, old_language);
       CHECK_AND_ASSERT_MES(r, false, tr("account creation failed"));
       password = *r;
+      
     }
 
     if (m_restoring && m_generate_from_json.empty() && m_generate_from_device.empty())
@@ -5316,7 +5382,7 @@ bool simple_wallet::print_ring_members(const std::vector<tools::wallet2::pending
       }
       const cryptonote::tx_source_entry& source = *sptr;
 
-      ostr << boost::format(tr("\nInput %llu/%llu: amount=%s")) % (i + 1) % tx.vin.size() % print_money(source.amount);
+      ostr << boost::format(tr("\nInput %llu/%llu (%s): amount=%s")) % (i + 1) % tx.vin.size() % epee::string_tools::pod_to_hex(in_key.k_image) % print_money(source.amount);
       // convert relative offsets of ring member keys into absolute offsets (indices) associated with the amount
       std::vector<uint64_t> absolute_offsets = cryptonote::relative_output_offsets_to_absolute(in_key.key_offsets);
       // get block heights from which those ring member keys originated

@@ -33,6 +33,8 @@ from .rpc import JSONRPC
 class Daemon(object):
 
     def __init__(self, protocol='http', host='127.0.0.1', port=0, idx=0):
+        self.host = host
+        self.port = port
         self.rpc = JSONRPC('{protocol}://{host}:{port}'.format(protocol=protocol, host=host, port=port if port else 18180+idx))
 
     def getblocktemplate(self, address, prev_block = ""):
@@ -312,3 +314,18 @@ class Daemon(object):
             'categories': categories,
         }
         return self.rpc.send_request('/set_log_categories', set_log_categories)
+
+    def get_alt_blocks_hashes(self):
+        get_alt_blocks_hashes = {
+        }
+        return self.rpc.send_request('/get_alt_blocks_hashes', get_alt_blocks_hashes)
+
+    def get_alternate_chains(self):
+        get_alternate_chains = {
+            'method': 'get_alternate_chains',
+            'params': {
+            },
+            'jsonrpc': '2.0',
+            'id': '0'
+        }
+        return self.rpc.send_json_rpc_request(get_alternate_chains)

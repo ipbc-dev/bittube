@@ -235,6 +235,7 @@ namespace cryptonote
     bool mms(const std::vector<std::string>& args);
     bool print_ring(const std::vector<std::string>& args);
     bool set_ring(const std::vector<std::string>& args);
+    bool unset_ring(const std::vector<std::string>& args);
     bool save_known_rings(const std::vector<std::string>& args);
     bool blackball(const std::vector<std::string>& args);
     bool unblackball(const std::vector<std::string>& args);
@@ -243,6 +244,7 @@ namespace cryptonote
     bool thaw(const std::vector<std::string>& args);
     bool frozen(const std::vector<std::string>& args);
     bool net_stats(const std::vector<std::string>& args);
+    bool welcome(const std::vector<std::string>& args);
     bool version(const std::vector<std::string>& args);
 
     bool cold_sign_tx(const std::vector<tools::wallet2::pending_tx>& ptx_vector, tools::wallet2::signed_tx_set &exported_txs, std::vector<cryptonote::address_parse_info> &dsts_info, std::function<bool(const tools::wallet2::signed_tx_set &)> accept_func);
