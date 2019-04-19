@@ -195,6 +195,12 @@ namespace tools
       AskPasswordToDecrypt = 2,
     };
 
+    enum BackgroundMiningSetupType {
+      BackgroundMiningMaybe = 0,
+      BackgroundMiningYes = 1,
+      BackgroundMiningNo = 2,
+    };
+
     static const char* tr(const char* str);
 
     static bool has_testnet_option(const boost::program_options::variables_map& vm);
@@ -690,16 +696,10 @@ namespace tools
       boost::asio::ip::tcp::endpoint proxy = {},
       uint64_t upper_transaction_weight_limit = 0,
       bool trusted_daemon = true,
-      epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect,
-      const std::pair<std::string, std::string> &private_key_and_certificate_path = {},
-      const std::list<std::string> &allowed_certificates = {}, const std::vector<std::vector<uint8_t>> &allowed_fingerprints = {},
-      bool allow_any_cert = false);
+      epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
     bool set_daemon(std::string daemon_address = "http://localhost:8080",
       boost::optional<epee::net_utils::http::login> daemon_login = boost::none, bool trusted_daemon = true,
-      epee::net_utils::ssl_support_t ssl_support = epee::net_utils::ssl_support_t::e_ssl_support_autodetect,
-      const std::pair<std::string, std::string> &private_key_and_certificate_path = {},
-      const std::list<std::string> &allowed_certificates = {}, const std::vector<std::vector<uint8_t>> &allowed_fingerprints = {},
-      bool allow_any_cert = false);
+      epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_autodetect);
 
     void stop() { m_run.store(false, std::memory_order_relaxed); m_message_store.stop(); }
 
@@ -774,13 +774,13 @@ namespace tools
 
     // locked & unlocked balance of given or current subaddress account
     uint64_t balance(uint32_t subaddr_index_major) const;
-    uint64_t unlocked_balance(uint32_t subaddr_index_major) const;
+    uint64_t unlocked_balance(uint32_t subaddr_index_major, uint64_t *blocks_to_unlock = NULL) const;
     // locked & unlocked balance per subaddress of given or current subaddress account
     std::map<uint32_t, uint64_t> balance_per_subaddress(uint32_t subaddr_index_major) const;
-    std::map<uint32_t, uint64_t> unlocked_balance_per_subaddress(uint32_t subaddr_index_major) const;
+    std::map<uint32_t, std::pair<uint64_t, uint64_t>> unlocked_balance_per_subaddress(uint32_t subaddr_index_major) const;
     // all locked & unlocked balances of all subaddress accounts
     uint64_t balance_all() const;
-    uint64_t unlocked_balance_all() const;
+    uint64_t unlocked_balance_all(uint64_t *blocks_to_unlock = NULL) const;
     template<typename T>
     void transfer_selected(const std::vector<cryptonote::tx_destination_entry>& dsts, const std::vector<size_t>& selected_transfers, size_t fake_outputs_count,
       std::vector<std::vector<tools::wallet2::get_outs_entry>> &outs,
@@ -1017,6 +1017,8 @@ namespace tools
     void confirm_non_default_ring_size(bool always) { m_confirm_non_default_ring_size = always; }
     bool track_uses() const { return m_track_uses; }
     void track_uses(bool value) { m_track_uses = value; }
+    BackgroundMiningSetupType setup_background_mining() const { return m_setup_background_mining; }
+    void setup_background_mining(BackgroundMiningSetupType value) { m_setup_background_mining = value; }
     const std::string & device_name() const { return m_device_name; }
     void device_name(const std::string & device_name) { m_device_name = device_name; }
     const std::string & device_derivation_path() const { return m_device_derivation_path; }
@@ -1265,6 +1267,9 @@ namespace tools
     bool frozen(const crypto::key_image &ki) const;
     bool frozen(const transfer_details &td) const;
 
+    uint64_t get_bytes_sent() const;
+    uint64_t get_bytes_received() const;
+
     // MMS -------------------------------------------------------------------------------------------------
     mms::message_store& get_message_store() { return m_message_store; };
     const mms::message_store& get_message_store() const { return m_message_store; };
@@ -1455,6 +1460,7 @@ namespace tools
     uint64_t m_segregation_height;
     bool m_ignore_fractional_outputs;
     bool m_track_uses;
+    BackgroundMiningSetupType m_setup_background_mining;
     bool m_is_initialized;
     NodeRPCProxy m_node_rpc_proxy;
     std::unordered_set<crypto::hash> m_scanned_pool_txs[2];

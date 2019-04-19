@@ -103,11 +103,13 @@ namespace cryptonote
       uint64_t 	 height;
       std::string status;
       bool untrusted;
+      std::string hash;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(height)
         KV_SERIALIZE(status)
         KV_SERIALIZE(untrusted)
+        KV_SERIALIZE(hash)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -529,9 +531,11 @@ namespace cryptonote
     struct request_t
     {
       std::vector<get_outputs_out> outputs;
+      bool get_txid;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(outputs)
+        KV_SERIALIZE(get_txid)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -814,6 +818,9 @@ namespace cryptonote
       uint8_t bg_target;
       uint32_t block_target;
       uint64_t block_reward;
+      uint64_t difficulty;
+      std::string wide_difficulty;
+      uint64_t difficulty_top64;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
@@ -829,6 +836,9 @@ namespace cryptonote
         KV_SERIALIZE(bg_target)
         KV_SERIALIZE(block_target)
         KV_SERIALIZE(block_reward)
+        KV_SERIALIZE(difficulty)
+        KV_SERIALIZE(wide_difficulty)
+        KV_SERIALIZE(difficulty_top64)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
@@ -889,10 +899,12 @@ namespace cryptonote
     {
       uint64_t reserve_size;       //max 255 bytes
       std::string wallet_address;
+      std::string prev_block;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(reserve_size)
         KV_SERIALIZE(wallet_address)
+        KV_SERIALIZE(prev_block)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -945,10 +957,14 @@ namespace cryptonote
     {
       uint64_t amount_of_blocks;
       std::string wallet_address;
+      std::string prev_block;
+      uint32_t starting_nonce;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(amount_of_blocks)
         KV_SERIALIZE(wallet_address)
+        KV_SERIALIZE(prev_block)
+        KV_SERIALIZE_OPT(starting_nonce, (uint32_t)0)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<request_t> request;
@@ -956,10 +972,12 @@ namespace cryptonote
     struct response_t
     {
       uint64_t height;
+      std::vector<std::string> blocks;
       std::string status;
       
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(height)
+        KV_SERIALIZE(blocks)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };

@@ -63,6 +63,9 @@ DISABLE_VS_WARNINGS(4355)
 
 #define BAD_SEMANTICS_TXES_MAX_SIZE 100
 
+// basically at least how many bytes the block itself serializes to without the miner tx
+#define BLOCK_SIZE_SANITY_LEEWAY 100
+
 namespace cryptonote
 {
   const command_line::arg_descriptor<bool, false> arg_testnet_on  = {
@@ -1314,6 +1317,11 @@ namespace cryptonote
     return m_blockchain_storage.create_block_template(b, adr, diffic, height, expected_reward, ex_nonce);
   }
   //-----------------------------------------------------------------------------------------------
+  bool core::get_block_template(block& b, const crypto::hash *prev_block, const account_public_address& adr, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce)
+  {
+    return m_blockchain_storage.create_block_template(b, prev_block, adr, diffic, height, expected_reward, ex_nonce);
+  }
+  //-----------------------------------------------------------------------------------------------
   bool core::find_blockchain_supplement(const std::list<crypto::hash>& qblock_ids, NOTIFY_RESPONSE_CHAIN_ENTRY::request& resp) const
   {
     return m_blockchain_storage.find_blockchain_supplement(qblock_ids, resp);
@@ -1367,9 +1375,9 @@ namespace cryptonote
     return bce;
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::handle_block_found(block& b)
+  bool core::handle_block_found(block& b, block_verification_context &bvc)
   {
-    block_verification_context bvc = boost::value_initialized<block_verification_context>();
+    bvc = boost::value_initialized<block_verification_context>();
     m_miner.pause();
     std::vector<block_complete_entry> blocks;
     try
@@ -1419,7 +1427,7 @@ namespace cryptonote
 
       m_pprotocol->relay_block(arg, exclude_context);
     }
-    return bvc.m_added_to_main_chain;
+    return true;
   }
   //-----------------------------------------------------------------------------------------------
   void core::on_synchronized()
@@ -1466,17 +1474,20 @@ namespace cryptonote
   {
     TRY_ENTRY();
 
-    // load json & DNS checkpoints every 10min/hour respectively,
-    // and verify them with respect to what blocks we already have
-    CHECK_AND_ASSERT_MES(update_checkpoints(), false, "One or more checkpoints loaded from json or dns conflicted with existing checkpoints.");
-
     bvc = boost::value_initialized<block_verification_context>();
-    if(block_blob.size() > get_max_block_size())
+
+    if (!check_incoming_block_size(block_blob))
     {
-      LOG_PRINT_L1("WRONG BLOCK BLOB, too big size " << block_blob.size() << ", rejected");
       bvc.m_verifivation_failed = true;
       return false;
     }
+
+    if (((size_t)-1) <= 0xffffffff && block_blob.size() >= 0x3fffffff)
+      MWARNING("This block's size is " << block_blob.size() << ", closing on the 32 bit limit");
+
+    // load json & DNS checkpoints every 10min/hour respectively,
+    // and verify them with respect to what blocks we already have
+    CHECK_AND_ASSERT_MES(update_checkpoints(), false, "One or more checkpoints loaded from json or dns conflicted with existing checkpoints.");
 
     block lb;
     if (!b)
@@ -1502,9 +1513,13 @@ namespace cryptonote
   // block_blob
   bool core::check_incoming_block_size(const blobdata& block_blob) const
   {
-    if(block_blob.size() > get_max_block_size())
+    // note: we assume block weight is always >= block blob size, so we check incoming
+    // blob size against the block weight limit, which acts as a sanity check without
+    // having to parse/weigh first; in fact, since the block blob is the block header
+    // plus the tx hashes, the weight will typically be much larger than the blob size
+    if(block_blob.size() > m_blockchain_storage.get_current_cumulative_block_weight_limit() + BLOCK_SIZE_SANITY_LEEWAY)
     {
-      LOG_PRINT_L1("WRONG BLOCK BLOB, too big size " << block_blob.size() << ", rejected");
+      LOG_PRINT_L1("WRONG BLOCK BLOB, sanity check failed on size " << block_blob.size() << ", rejected");
       return false;
     }
     return true;

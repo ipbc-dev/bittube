@@ -983,7 +983,7 @@ bool Blockchain::rollback_blockchain_switching(std::list<block>& original_chain,
 //------------------------------------------------------------------
 // This function attempts to switch to an alternate chain, returning
 // boolean based on success therein.
-bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::iterator>& alt_chain, bool discard_disconnected_chain)
+bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::const_iterator>& alt_chain, bool discard_disconnected_chain)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
@@ -1084,7 +1084,7 @@ bool Blockchain::switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::
 //------------------------------------------------------------------
 // This function calculates the difficulty target for the block being added to
 // an alternate chain.
-difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei) const
+difficulty_type Blockchain::get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::const_iterator>& alt_chain, block_extended_info& bei) const
 {
   if (m_fixed_difficulty)
   {
@@ -1345,7 +1345,7 @@ uint64_t Blockchain::get_current_cumulative_block_weight_median() const
 // in a lot of places.  That flag is not referenced in any of the code
 // nor any of the makefiles, howeve.  Need to look into whether or not it's
 // necessary at all.
-bool Blockchain::create_block_template(block& b, const account_public_address& miner_address, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce)
+bool Blockchain::create_block_template(block& b, const crypto::hash *from_block, const account_public_address& miner_address, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce)
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   size_t median_weight;
@@ -1355,8 +1355,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   m_tx_pool.lock();
   const auto unlock_guard = epee::misc_utils::create_scope_leave_handler([&]() { m_tx_pool.unlock(); });
   CRITICAL_REGION_LOCAL(m_blockchain_lock);
-  height = m_db->height();
-  if (m_btc_valid) {
+  if (m_btc_valid && !from_block) {
     // The pool cookie is atomic. The lack of locking is OK, as if it changes
     // just as we compare it, we'll just use a slightly old template, but
     // this would be the case anyway if we'd lock, and the change happened
@@ -1366,15 +1365,75 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
       m_btc.timestamp = time(NULL); // update timestamp unconditionally
       b = m_btc;
       diffic = m_btc_difficulty;
+      height = m_btc_height;
       expected_reward = m_btc_expected_reward;
       return true;
     }
-    MDEBUG("Not using cached template: address " << (!memcmp(&miner_address, &m_btc_address, sizeof(cryptonote::account_public_address))) << ", nonce " << (m_btc_nonce == ex_nonce) << ", cookie " << (m_btc_pool_cookie == m_tx_pool.cookie()));
+    MDEBUG("Not using cached template: address " << (!memcmp(&miner_address, &m_btc_address, sizeof(cryptonote::account_public_address))) << ", nonce " << (m_btc_nonce == ex_nonce) << ", cookie " << (m_btc_pool_cookie == m_tx_pool.cookie()) << ", from_block " << (!!from_block));
     invalidate_block_template_cache();
   }
 
-  b.major_version = m_hardfork->get_current_version();
-  if (b.major_version >= BLOCK_MAJOR_VERSION_2 && b.major_version < BLOCK_MAJOR_VERSION_4) {
+  if (from_block)
+  {
+    //build alternative subchain, front -> mainchain, back -> alternative head
+    //block is not related with head of main chain
+    //first of all - look in alternative chains container
+    auto it_prev = m_alternative_chains.find(*from_block);
+    bool parent_in_main = m_db->block_exists(*from_block);
+    if(it_prev == m_alternative_chains.end() && !parent_in_main)
+    {
+      MERROR("Unknown from block");
+      return false;
+    }
+
+    //we have new block in alternative chain
+    std::list<blocks_ext_by_hash::const_iterator> alt_chain;
+    block_verification_context bvc = boost::value_initialized<block_verification_context>();
+    std::vector<uint64_t> timestamps;
+    if (!build_alt_chain(*from_block, alt_chain, timestamps, bvc))
+      return false;
+
+    if (parent_in_main)
+    {
+      cryptonote::block prev_block;
+      CHECK_AND_ASSERT_MES(get_block_by_hash(*from_block, prev_block), false, "From block not found"); // TODO
+      uint64_t from_block_height = cryptonote::get_block_height(prev_block);
+      height = from_block_height + 1;
+    }
+    else
+    {
+      height = alt_chain.back()->second.height + 1;
+    }
+    b.major_version = m_hardfork->get_ideal_version(height);
+    b.minor_version = m_hardfork->get_ideal_version();
+    b.prev_id = *from_block;
+
+    // cheat and use the weight of the block we start from, virtually certain to be acceptable
+    // and use 1.9 times rather than 2 times so we're even more sure
+    if (parent_in_main)
+    {
+      median_weight = m_db->get_block_weight(height - 1);
+      already_generated_coins = m_db->get_block_already_generated_coins(height - 1);
+    }
+    else
+    {
+      median_weight = it_prev->second.block_cumulative_weight - it_prev->second.block_cumulative_weight / 20;
+      already_generated_coins = alt_chain.back()->second.already_generated_coins;
+    }
+
+    // FIXME: consider moving away from block_extended_info at some point
+    block_extended_info bei = boost::value_initialized<block_extended_info>();
+    bei.bl = b;
+    bei.height = alt_chain.size() ? it_prev->second.height + 1 : m_db->get_block_height(*from_block) + 1;
+
+    diffic = get_next_difficulty_for_alternative_chain(alt_chain, bei);
+  }
+  else
+  {
+    height = m_db->height();
+    b.major_version = m_hardfork->get_current_version();
+    b.minor_version = m_hardfork->get_ideal_version();
+    if (b.major_version >= BLOCK_MAJOR_VERSION_2 && b.major_version < BLOCK_MAJOR_VERSION_4) {
 	  b.minor_version = 0;
 	  b.parent_block.major_version = BLOCK_MAJOR_VERSION_1;
 	  b.parent_block.minor_version = b.major_version >= BLOCK_MAJOR_VERSION_3 ? 1 : 0;
@@ -1390,7 +1449,11 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
   } else {
     b.minor_version = m_hardfork->get_ideal_version();
   }
-  b.prev_id = get_tail_id();
+    b.prev_id = get_tail_id();
+    median_weight = m_current_block_cumul_weight_limit / 2;
+    diffic = get_difficulty_for_next_block();
+    already_generated_coins = m_db->get_block_already_generated_coins(height - 1);
+  }
   b.timestamp = time(NULL);
 
   uint64_t median_ts;
@@ -1399,15 +1462,11 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
     b.timestamp = median_ts;
   }
 
-  diffic = get_difficulty_for_next_block();
   CHECK_AND_ASSERT_MES(diffic, false, "difficulty overhead.");
-
-  median_weight = m_current_block_cumul_weight_limit / 2;
-  already_generated_coins = m_db->get_block_already_generated_coins(height - 1);
 
   size_t txs_weight;
   uint64_t fee;
-  if (!m_tx_pool.fill_block_template(b, median_weight, already_generated_coins, txs_weight, fee, expected_reward, m_hardfork->get_current_version()))
+  if (!m_tx_pool.fill_block_template(b, median_weight, already_generated_coins, txs_weight, fee, expected_reward, b.major_version))
   {
     return false;
   }
@@ -1470,7 +1529,7 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
    block weight, so first miner transaction generated with fake amount of money, and with phase we know think we know expected block weight
    */
   //make blocks coin-base tx looks close to real coinbase tx to get truthful blob weight
-  uint8_t hf_version = m_hardfork->get_current_version();
+  uint8_t hf_version = b.major_version;
   size_t max_outs = hf_version >= BLOCK_MAJOR_VERSION_4 ? 1 : 11;
   bool r = construct_miner_tx(height, median_weight, already_generated_coins, txs_weight, fee, miner_address, b.miner_tx, ex_nonce, max_outs, hf_version, m_nettype);
   CHECK_AND_ASSERT_MES(r, false, "Failed to construct miner tx, first chance");
@@ -1525,16 +1584,22 @@ bool Blockchain::create_block_template(block& b, const account_public_address& m
         ", cumulative weight " << cumulative_weight << " is now good");
 #endif
 
-    cache_block_template(b, miner_address, ex_nonce, diffic, expected_reward, pool_cookie);
+    if (!from_block)
+      cache_block_template(b, miner_address, ex_nonce, diffic, height, expected_reward, pool_cookie);
     return true;
   }
   LOG_ERROR("Failed to create_block_template with " << 10 << " tries");
   return false;
 }
 //------------------------------------------------------------------
+bool Blockchain::create_block_template(block& b, const account_public_address& miner_address, difficulty_type& diffic, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce)
+{
+  return create_block_template(b, NULL, miner_address, diffic, height, expected_reward, ex_nonce);
+}
+//------------------------------------------------------------------
 // for an alternate chain, get the timestamps from the main chain to complete
 // the needed number of timestamps for the BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW.
-bool Blockchain::complete_timestamps_vector(uint64_t start_top_height, std::vector<uint64_t>& timestamps)
+bool Blockchain::complete_timestamps_vector(uint64_t start_top_height, std::vector<uint64_t>& timestamps) const
 {
   LOG_PRINT_L3("Blockchain::" << __func__);
   size_t tmpsize = get_current_hard_fork_version() < BLOCK_MAJOR_VERSION_FUTURE ? BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW : BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
@@ -1552,6 +1617,52 @@ bool Blockchain::complete_timestamps_vector(uint64_t start_top_height, std::vect
     --start_top_height;
   }
   return true;
+}
+//------------------------------------------------------------------
+bool Blockchain::build_alt_chain(const crypto::hash &prev_id, std::list<blocks_ext_by_hash::const_iterator>& alt_chain, std::vector<uint64_t> &timestamps, block_verification_context& bvc) const
+{
+    //build alternative subchain, front -> mainchain, back -> alternative head
+    blocks_ext_by_hash::const_iterator alt_it = m_alternative_chains.find(prev_id);
+    timestamps.clear();
+    while(alt_it != m_alternative_chains.end())
+    {
+      alt_chain.push_front(alt_it);
+      timestamps.push_back(alt_it->second.bl.timestamp);
+      alt_it = m_alternative_chains.find(alt_it->second.bl.prev_id);
+    }
+
+    // if block to be added connects to known blocks that aren't part of the
+    // main chain -- that is, if we're adding on to an alternate chain
+    if(!alt_chain.empty())
+    {
+      // make sure alt chain doesn't somehow start past the end of the main chain
+      CHECK_AND_ASSERT_MES(m_db->height() > alt_chain.front()->second.height, false, "main blockchain wrong height");
+
+      // make sure that the blockchain contains the block that should connect
+      // this alternate chain with it.
+      if (!m_db->block_exists(alt_chain.front()->second.bl.prev_id))
+      {
+        MERROR("alternate chain does not appear to connect to main chain...");
+        return false;
+      }
+
+      // make sure block connects correctly to the main chain
+      auto h = m_db->get_block_hash_from_height(alt_chain.front()->second.height - 1);
+      CHECK_AND_ASSERT_MES(h == alt_chain.front()->second.bl.prev_id, false, "alternative chain has wrong connection to main chain");
+      complete_timestamps_vector(m_db->get_block_height(alt_chain.front()->second.bl.prev_id), timestamps);
+    }
+    // if block not associated with known alternate chain
+    else
+    {
+      // if block parent is not part of main chain or an alternate chain,
+      // we ignore it
+      bool parent_in_main = m_db->block_exists(prev_id);
+      CHECK_AND_ASSERT_MES(parent_in_main, false, "internal error: broken imperative condition: parent_in_main");
+
+      complete_timestamps_vector(m_db->get_block_height(prev_id), timestamps);
+    }
+
+    return true;
 }
 //------------------------------------------------------------------
 // If a block is to be added and its parent block is not the current
@@ -1598,47 +1709,18 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
   if(it_prev != m_alternative_chains.end() || parent_in_main)
   {
     //we have new block in alternative chain
-
-    //build alternative subchain, front -> mainchain, back -> alternative head
-    blocks_ext_by_hash::iterator alt_it = it_prev; //m_alternative_chains.find()
-    std::list<blocks_ext_by_hash::iterator> alt_chain;
+    std::list<blocks_ext_by_hash::const_iterator> alt_chain;
     std::vector<uint64_t> timestamps;
-    while(alt_it != m_alternative_chains.end())
-    {
-      alt_chain.push_front(alt_it);
-      timestamps.push_back(alt_it->second.bl.timestamp);
-      alt_it = m_alternative_chains.find(alt_it->second.bl.prev_id);
-    }
+    if (!build_alt_chain(b.prev_id, alt_chain, timestamps, bvc))
+      return false;
 
-    // if block to be added connects to known blocks that aren't part of the
-    // main chain -- that is, if we're adding on to an alternate chain
-    if(!alt_chain.empty())
-    {
-      // make sure alt chain doesn't somehow start past the end of the main chain
-      CHECK_AND_ASSERT_MES(m_db->height() > alt_chain.front()->second.height, false, "main blockchain wrong height");
-
-      // make sure that the blockchain contains the block that should connect
-      // this alternate chain with it.
-      if (!m_db->block_exists(alt_chain.front()->second.bl.prev_id))
-      {
-        MERROR("alternate chain does not appear to connect to main chain...");
-        return false;
-      }
-
-      // make sure block connects correctly to the main chain
-      auto h = m_db->get_block_hash_from_height(alt_chain.front()->second.height - 1);
-      CHECK_AND_ASSERT_MES(h == alt_chain.front()->second.bl.prev_id, false, "alternative chain has wrong connection to main chain");
-      complete_timestamps_vector(m_db->get_block_height(alt_chain.front()->second.bl.prev_id), timestamps);
-    }
-    // if block not associated with known alternate chain
-    else
-    {
-      // if block parent is not part of main chain or an alternate chain,
-      // we ignore it
-      CHECK_AND_ASSERT_MES(parent_in_main, false, "internal error: broken imperative condition: parent_in_main");
-
-      complete_timestamps_vector(m_db->get_block_height(b.prev_id), timestamps);
-    }
+    // FIXME: consider moving away from block_extended_info at some point
+    block_extended_info bei = boost::value_initialized<block_extended_info>();
+    bei.bl = b;
+    const uint64_t prev_height = alt_chain.size() ? it_prev->second.height : m_db->get_block_height(b.prev_id);
+    bei.height = prev_height + 1;
+    uint64_t block_reward = get_outs_money_amount(b.miner_tx);
+    bei.already_generated_coins = block_reward + (alt_chain.size() ? it_prev->second.already_generated_coins : m_db->get_block_already_generated_coins(prev_height));
 
     // verify that the block's timestamp is within the acceptable range
     // (not earlier than the median of the last X blocks)
@@ -1648,11 +1730,6 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
       bvc.m_verifivation_failed = true;
       return false;
     }
-
-    // FIXME: consider moving away from block_extended_info at some point
-    block_extended_info bei = boost::value_initialized<block_extended_info>();
-    bei.bl = b;
-    bei.height = alt_chain.size() ? it_prev->second.height + 1 : m_db->get_block_height(b.prev_id) + 1;
 
     bool is_a_checkpoint;
     if(!m_checkpoints.check_block(bei.height, id, is_a_checkpoint))
@@ -3723,6 +3800,8 @@ leave:
         //TODO: why is this done?  make sure that keeping invalid blocks makes sense.
         add_block_as_invalid(bl, id);
         MERROR_VER("Block with id " << id << " added as invalid because of wrong inputs in transactions");
+        MERROR_VER("tx_index " << tx_index << ", m_blocks_txs_check " << m_blocks_txs_check.size() << ":");
+        for (const auto &h: m_blocks_txs_check) MERROR_VER("  " << h);
         bvc.m_verifivation_failed = true;
         return_tx_to_pool(txs);
         goto leave;
@@ -3857,12 +3936,6 @@ leave:
 //------------------------------------------------------------------
 bool Blockchain::prune_blockchain(uint32_t pruning_seed)
 {
-  uint8_t hf_version = m_hardfork->get_current_version();
-  if (hf_version < 10)
-  {
-    MERROR("Most of the network will only be ready for pruned blockchains from v10, not pruning");
-    return false;
-  }
   return m_db->prune_blockchain(pruning_seed);
 }
 //------------------------------------------------------------------
@@ -3911,6 +3984,8 @@ bool Blockchain::update_next_cumulative_weight_limit(uint64_t *long_term_effecti
   PERF_TIMER(update_next_cumulative_weight_limit);
 
   LOG_PRINT_L3("Blockchain::" << __func__);
+
+  m_db->block_txn_start(false);
 
   // when we reach this, the last hf version is not yet written to the db
   const uint64_t db_height = m_db->height();
@@ -3973,6 +4048,10 @@ bool Blockchain::update_next_cumulative_weight_limit(uint64_t *long_term_effecti
 
   if (long_term_effective_median_block_weight)
     *long_term_effective_median_block_weight = m_long_term_effective_median_block_weight;
+
+  m_db->add_max_block_size(m_current_block_cumul_weight_limit);
+
+  m_db->block_txn_stop();
 
   return true;
 }
@@ -4940,13 +5019,14 @@ void Blockchain::invalidate_block_template_cache()
   m_btc_valid = false;
 }
 
-void Blockchain::cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t expected_reward, uint64_t pool_cookie)
+void Blockchain::cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t height, uint64_t expected_reward, uint64_t pool_cookie)
 {
   MDEBUG("Setting block template cache");
   m_btc = b;
   m_btc_address = address;
   m_btc_nonce = nonce;
   m_btc_difficulty = diff;
+  m_btc_height = height;
   m_btc_expected_reward = expected_reward;
   m_btc_pool_cookie = pool_cookie;
   m_btc_valid = true;

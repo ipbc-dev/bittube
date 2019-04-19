@@ -69,7 +69,7 @@ namespace
   const command_line::arg_descriptor<std::string> arg_rpc_ssl = {"rpc-ssl", tools::wallet2::tr("Enable SSL on wallet RPC connections: enabled|disabled|autodetect"), "autodetect"};
   const command_line::arg_descriptor<std::string> arg_rpc_ssl_private_key = {"rpc-ssl-private-key", tools::wallet2::tr("Path to a PEM format private key"), ""};
   const command_line::arg_descriptor<std::string> arg_rpc_ssl_certificate = {"rpc-ssl-certificate", tools::wallet2::tr("Path to a PEM format certificate"), ""};
-  const command_line::arg_descriptor<std::vector<std::string>> arg_rpc_ssl_allowed_certificates = {"rpc-ssl-allowed-certificates", tools::wallet2::tr("List of paths to PEM format certificates of allowed RPC servers (all allowed if empty)")};
+  const command_line::arg_descriptor<std::string> arg_rpc_ssl_ca_certificates = {"rpc-ssl-ca-certificates", tools::wallet2::tr("Path to file containing concatenated PEM format certificate(s) to replace system CA(s).")};
   const command_line::arg_descriptor<std::vector<std::string>> arg_rpc_ssl_allowed_fingerprints = {"rpc-ssl-allowed-fingerprints", tools::wallet2::tr("List of certificate fingerprints to allow")};
 
   constexpr const char default_rpc_username[] = "bittube";
@@ -248,38 +248,100 @@ namespace tools
 
     auto rpc_ssl_private_key = command_line::get_arg(vm, arg_rpc_ssl_private_key);
     auto rpc_ssl_certificate = command_line::get_arg(vm, arg_rpc_ssl_certificate);
-    auto rpc_ssl_allowed_certificates = command_line::get_arg(vm, arg_rpc_ssl_allowed_certificates);
+    auto rpc_ssl_ca_file = command_line::get_arg(vm, arg_rpc_ssl_ca_certificates);
     auto rpc_ssl_allowed_fingerprints = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
     auto rpc_ssl = command_line::get_arg(vm, arg_rpc_ssl);
-    epee::net_utils::ssl_support_t rpc_ssl_support;
-    if (!epee::net_utils::ssl_support_from_string(rpc_ssl_support, rpc_ssl))
+    epee::net_utils::ssl_options_t rpc_ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_enabled;
+
+    if (!rpc_ssl_ca_file.empty() || !rpc_ssl_allowed_fingerprints.empty())
     {
-      MERROR("Invalid argument for " << std::string(arg_rpc_ssl.name));
-      return false;
-    }
-    std::list<std::string> allowed_certificates;
-    for (const std::string &path: rpc_ssl_allowed_certificates)
-    {
-        allowed_certificates.push_back({});
-        if (!epee::file_io_utils::load_file_to_string(path, allowed_certificates.back()))
-        {
-          MERROR("Failed to load certificate: " << path);
-          allowed_certificates.back() = std::string();
-        }
+      std::vector<std::vector<uint8_t>> allowed_fingerprints{ rpc_ssl_allowed_fingerprints.size() };
+      std::transform(rpc_ssl_allowed_fingerprints.begin(), rpc_ssl_allowed_fingerprints.end(), allowed_fingerprints.begin(), epee::from_hex::vector);
+
+      rpc_ssl_options = epee::net_utils::ssl_options_t{
+        std::move(allowed_fingerprints), std::move(rpc_ssl_ca_file)
+      };
     }
 
-    std::vector<std::vector<uint8_t>> allowed_fingerprints{ rpc_ssl_allowed_fingerprints.size() };
-    std::transform(rpc_ssl_allowed_fingerprints.begin(), rpc_ssl_allowed_fingerprints.end(), allowed_fingerprints.begin(), epee::from_hex::vector);
+    // user specified CA file or fingeprints implies enabled SSL by default
+    if (rpc_ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
+    {
+      if (!epee::net_utils::ssl_support_from_string(rpc_ssl_options.support, rpc_ssl))
+      {
+        MERROR("Invalid argument for " << std::string(arg_rpc_ssl.name));
+        return false;
+      }
+    }
+
+    rpc_ssl_options.auth = epee::net_utils::ssl_authentication_t{
+      std::move(rpc_ssl_private_key), std::move(rpc_ssl_certificate)
+    };
 
     m_auto_refresh_period = DEFAULT_AUTO_REFRESH_PERIOD;
     m_last_auto_refresh_time = boost::posix_time::min_date_time;
+
+    check_background_mining();
 
     m_net_server.set_threads_prefix("RPC");
     auto rng = [](size_t len, uint8_t *ptr) { return crypto::rand(len, ptr); };
     return epee::http_server_impl_base<wallet_rpc_server, connection_context>::init(
       rng, std::move(bind_port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login),
-      rpc_ssl_support, std::make_pair(rpc_ssl_private_key, rpc_ssl_certificate), std::move(allowed_certificates), std::move(allowed_fingerprints)
+      std::move(rpc_ssl_options)
     );
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  void wallet_rpc_server::check_background_mining()
+  {
+    if (!m_wallet)
+      return;
+
+    tools::wallet2::BackgroundMiningSetupType setup = m_wallet->setup_background_mining();
+    if (setup == tools::wallet2::BackgroundMiningNo)
+    {
+      MLOG_RED(el::Level::Warning, "Background mining not enabled. Run \"set setup-background-mining 1\" in monero-wallet-cli to change.");
+      return;
+    }
+
+    if (!m_wallet->is_trusted_daemon())
+    {
+      MDEBUG("Using an untrusted daemon, skipping background mining check");
+      return;
+    }
+
+    cryptonote::COMMAND_RPC_MINING_STATUS::request req;
+    cryptonote::COMMAND_RPC_MINING_STATUS::response res;
+    bool r = m_wallet->invoke_http_json("/mining_status", req, res);
+    if (!r || res.status != CORE_RPC_STATUS_OK)
+    {
+      MERROR("Failed to query mining status: " << (r ? res.status : "No connection to daemon"));
+      return;
+    }
+    if (res.active || res.is_background_mining_enabled)
+      return;
+
+    if (setup == tools::wallet2::BackgroundMiningMaybe)
+    {
+      MINFO("The daemon is not set up to background mine.");
+      MINFO("With background mining enabled, the daemon will mine when idle and not on batttery.");
+      MINFO("Enabling this supports the network you are using, and makes you eligible for receiving new monero");
+      MINFO("Set setup-background-mining to 1 in monero-wallet-cli to change.");
+      return;
+    }
+
+    cryptonote::COMMAND_RPC_START_MINING::request req2;
+    cryptonote::COMMAND_RPC_START_MINING::response res2;
+    req2.miner_address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
+    req2.threads_count = 1;
+    req2.do_background_mining = true;
+    req2.ignore_battery = false;
+    r = m_wallet->invoke_http_json("/start_mining", req2, res);
+    if (!r || res2.status != CORE_RPC_STATUS_OK)
+    {
+      MERROR("Failed to setup background mining: " << (r ? res.status : "No connection to daemon"));
+      return;
+    }
+
+    MINFO("Background mining enabled. The daemon will mine when idle and not on batttery.");
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::not_open(epee::json_rpc::error& er)
@@ -386,10 +448,10 @@ namespace tools
     try
     {
       res.balance = req.all_accounts ? m_wallet->balance_all() : m_wallet->balance(req.account_index);
-      res.unlocked_balance = req.all_accounts ? m_wallet->unlocked_balance_all() : m_wallet->unlocked_balance(req.account_index);
+      res.unlocked_balance = req.all_accounts ? m_wallet->unlocked_balance_all(&res.blocks_to_unlock) : m_wallet->unlocked_balance(req.account_index, &res.blocks_to_unlock);
       res.multisig_import_needed = m_wallet->multisig() && m_wallet->has_multisig_partial_key_images();
       std::map<uint32_t, std::map<uint32_t, uint64_t>> balance_per_subaddress_per_account;
-      std::map<uint32_t, std::map<uint32_t, uint64_t>> unlocked_balance_per_subaddress_per_account;
+      std::map<uint32_t, std::map<uint32_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress_per_account;
       if (req.all_accounts)
       {
         for (uint32_t account_index = 0; account_index < m_wallet->get_num_subaddress_accounts(); ++account_index)
@@ -409,7 +471,7 @@ namespace tools
       {
         uint32_t account_index = p.first;
         std::map<uint32_t, uint64_t> balance_per_subaddress = p.second;
-        std::map<uint32_t, uint64_t> unlocked_balance_per_subaddress = unlocked_balance_per_subaddress_per_account[account_index];
+        std::map<uint32_t, std::pair<uint64_t, uint64_t>> unlocked_balance_per_subaddress = unlocked_balance_per_subaddress_per_account[account_index];
         std::set<uint32_t> address_indices;
         if (!req.all_accounts && !req.address_indices.empty())
         {
@@ -428,7 +490,8 @@ namespace tools
           cryptonote::subaddress_index index = {info.account_index, info.address_index};
           info.address = m_wallet->get_subaddress_as_str(index);
           info.balance = balance_per_subaddress[i];
-          info.unlocked_balance = unlocked_balance_per_subaddress[i];
+          info.unlocked_balance = unlocked_balance_per_subaddress[i].first;
+          info.blocks_to_unlock = unlocked_balance_per_subaddress[i].second;
           info.label = m_wallet->get_subaddress_label(index);
           info.num_unspent_outputs = std::count_if(transfers.begin(), transfers.end(), [&](const tools::wallet2::transfer_details& td) { return !td.m_spent && td.m_subaddr_index == index; });
           res.per_subaddress.emplace_back(std::move(info));
@@ -4055,13 +4118,7 @@ namespace tools
       er.message = "Command unavailable in restricted mode.";
       return false;
     }
-    epee::net_utils::ssl_support_t ssl_support;
-    if (!epee::net_utils::ssl_support_from_string(ssl_support, req.ssl_support))
-    {
-      er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
-      er.message = std::string("Invalid ssl support mode");
-      return false;
-    }
+   
     std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints;
     ssl_allowed_fingerprints.reserve(req.ssl_allowed_fingerprints.size());
     for (const std::string &fp: req.ssl_allowed_fingerprints)
@@ -4071,7 +4128,31 @@ namespace tools
       for (auto c: fp)
         v.push_back(c);
     }
-    if (!m_wallet->set_daemon(req.address, boost::none, req.trusted, ssl_support, std::make_pair(req.ssl_private_key_path, req.ssl_certificate_path), req.ssl_allowed_certificates, ssl_allowed_fingerprints, req.ssl_allow_any_cert))
+
+    epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_enabled;
+    if (req.ssl_allow_any_cert)
+      ssl_options.verification = epee::net_utils::ssl_verification_t::none;
+    else if (!ssl_allowed_fingerprints.empty() || !req.ssl_ca_file.empty())
+      ssl_options = epee::net_utils::ssl_options_t{std::move(ssl_allowed_fingerprints), std::move(req.ssl_ca_file)};
+
+    if (!epee::net_utils::ssl_support_from_string(ssl_options.support, req.ssl_support))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
+      er.message = std::string("Invalid ssl support mode");
+      return false;
+    }
+
+    ssl_options.auth = epee::net_utils::ssl_authentication_t{
+      std::move(req.ssl_private_key_path), std::move(req.ssl_certificate_path)
+    };
+
+    if (ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled && !ssl_options.has_strong_verification(boost::string_ref{}))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
+      er.message = "SSL is enabled but no user certificate or fingerprints were provided";
+    }
+
+    if (!m_wallet->set_daemon(req.address, boost::none, req.trusted, std::move(ssl_options)))
     {
       er.code = WALLET_RPC_ERROR_CODE_NO_DAEMON_CONNECTION;
       er.message = std::string("Unable to set daemon");
@@ -4279,7 +4360,7 @@ int main(int argc, char** argv) {
   command_line::add_arg(desc_params, arg_rpc_ssl);
   command_line::add_arg(desc_params, arg_rpc_ssl_private_key);
   command_line::add_arg(desc_params, arg_rpc_ssl_certificate);
-  command_line::add_arg(desc_params, arg_rpc_ssl_allowed_certificates);
+  command_line::add_arg(desc_params, arg_rpc_ssl_ca_certificates);
   command_line::add_arg(desc_params, arg_rpc_ssl_allowed_fingerprints);
 
   daemonizer::init_options(hidden_options, desc_params);

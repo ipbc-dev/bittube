@@ -85,7 +85,7 @@ namespace cryptonote
     command_line::add_arg(desc, arg_rpc_ssl);
     command_line::add_arg(desc, arg_rpc_ssl_private_key);
     command_line::add_arg(desc, arg_rpc_ssl_certificate);
-    command_line::add_arg(desc, arg_rpc_ssl_allowed_certificates);
+    command_line::add_arg(desc, arg_rpc_ssl_ca_certificates);
     command_line::add_arg(desc, arg_rpc_ssl_allowed_fingerprints);
     command_line::add_arg(desc, arg_rpc_ssl_allow_any_cert);
     command_line::add_arg(desc, arg_bootstrap_daemon_address);
@@ -143,36 +143,38 @@ namespace cryptonote
     if (rpc_config->login)
       http_login.emplace(std::move(rpc_config->login->username), std::move(rpc_config->login->password).password());
 
-    epee::net_utils::ssl_support_t ssl_support;
-    const std::string ssl = command_line::get_arg(vm, arg_rpc_ssl);
-    if (!epee::net_utils::ssl_support_from_string(ssl_support, ssl))
+    epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_autodetect;
+    if (command_line::get_arg(vm, arg_rpc_ssl_allow_any_cert))
+      ssl_options.verification = epee::net_utils::ssl_verification_t::none;
+    else
     {
-      MFATAL("Invalid RPC SSL support: " << ssl);
-      return false;
+      std::string ssl_ca_path = command_line::get_arg(vm, arg_rpc_ssl_ca_certificates);
+      const std::vector<std::string> ssl_allowed_fingerprint_strings = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
+      std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ ssl_allowed_fingerprint_strings.size() };
+      std::transform(ssl_allowed_fingerprint_strings.begin(), ssl_allowed_fingerprint_strings.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
+
+      if (!ssl_ca_path.empty() || !ssl_allowed_fingerprints.empty())
+        ssl_options = epee::net_utils::ssl_options_t{std::move(ssl_allowed_fingerprints), std::move(ssl_ca_path)};
     }
-    const std::string ssl_private_key = command_line::get_arg(vm, arg_rpc_ssl_private_key);
-    const std::string ssl_certificate = command_line::get_arg(vm, arg_rpc_ssl_certificate);
-    const std::vector<std::string> ssl_allowed_certificate_paths = command_line::get_arg(vm, arg_rpc_ssl_allowed_certificates);
-    std::list<std::string> ssl_allowed_certificates;
-    for (const std::string &path: ssl_allowed_certificate_paths)
+
+    ssl_options.auth = epee::net_utils::ssl_authentication_t{
+      command_line::get_arg(vm, arg_rpc_ssl_private_key), command_line::get_arg(vm, arg_rpc_ssl_certificate)
+    };
+
+    // user specified CA file or fingeprints implies enabled SSL by default
+    if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, arg_rpc_ssl))
     {
-      ssl_allowed_certificates.push_back({});
-      if (!epee::file_io_utils::load_file_to_string(path, ssl_allowed_certificates.back()))
+      const std::string ssl = command_line::get_arg(vm, arg_rpc_ssl);
+      if (!epee::net_utils::ssl_support_from_string(ssl_options.support, ssl))
       {
-        MERROR("Failed to load certificate: " << path);
-        ssl_allowed_certificates.back() = std::string();
+        MFATAL("Invalid RPC SSL support: " << ssl);
+        return false;
       }
     }
 
-    const std::vector<std::string> ssl_allowed_fingerprint_strings = command_line::get_arg(vm, arg_rpc_ssl_allowed_fingerprints);
-    std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ ssl_allowed_fingerprint_strings.size() };
-    std::transform(ssl_allowed_fingerprint_strings.begin(), ssl_allowed_fingerprint_strings.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
-    const bool ssl_allow_any_cert = command_line::get_arg(vm, arg_rpc_ssl_allow_any_cert);
-
     auto rng = [](size_t len, uint8_t *ptr){ return crypto::rand(len, ptr); };
     return epee::http_server_impl_base<core_rpc_server, connection_context>::init(
-      rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login),
-      ssl_support, std::make_pair(ssl_private_key, ssl_certificate), std::move(ssl_allowed_certificates), std::move(ssl_allowed_fingerprints), ssl_allow_any_cert
+      rng, std::move(port), std::move(rpc_config->bind_ip), std::move(rpc_config->access_control_origins), std::move(http_login), std::move(ssl_options)
     );
   }
   //------------------------------------------------------------------------------------------------------------------------------
@@ -194,7 +196,9 @@ namespace cryptonote
     if (use_bootstrap_daemon_if_necessary<COMMAND_RPC_GET_HEIGHT>(invoke_http_mode::JON, "/getheight", req, res, r))
       return r;
 
-    res.height = m_core.get_current_blockchain_height();
+    crypto::hash hash;
+    m_core.get_blockchain_top(res.height, hash);
+    res.hash = string_tools::pod_to_hex(hash);
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -485,6 +489,7 @@ namespace cryptonote
 
     cryptonote::COMMAND_RPC_GET_OUTPUTS_BIN::request req_bin;
     req_bin.outputs = req.outputs;
+    req_bin.get_txid = req.get_txid;
     cryptonote::COMMAND_RPC_GET_OUTPUTS_BIN::response res_bin;
     if(!m_core.get_outs(req_bin, res_bin))
     {
@@ -964,6 +969,7 @@ namespace cryptonote
     const miner& lMiner = m_core.get_miner();
     res.active = lMiner.is_mining();
     res.is_background_mining_enabled = lMiner.get_is_background_mining_enabled();
+    store_difficulty(m_core.get_blockchain_storage().get_difficulty_for_next_block(), res.difficulty, res.wide_difficulty, res.difficulty_top64);
     
     res.block_target = m_core.get_blockchain_storage().get_current_hard_fork_version() < 2 ? DIFFICULTY_TARGET_V1 : DIFFICULTY_TARGET_V2;
     if ( lMiner.is_mining() ) {
@@ -1246,7 +1252,18 @@ namespace cryptonote
     block b;
     cryptonote::blobdata blob_reserve;
     blob_reserve.resize(req.reserve_size, 0);
-    if(!m_core.get_block_template(b, info.address, res.difficulty, res.height, res.expected_reward, blob_reserve))
+    cryptonote::difficulty_type wdiff;
+    crypto::hash prev_block;
+    if (!req.prev_block.empty())
+    {
+      if (!epee::string_tools::hex_to_pod(req.prev_block, prev_block))
+      {
+        error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
+        error_resp.message = "Invalid prev_block";
+        return false;
+      }
+    }
+    if(!m_core.get_block_template(b, req.prev_block.empty() ? NULL : &prev_block, info.address, wdiff, res.height, res.expected_reward, blob_reserve))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Internal error: failed to create block template";
@@ -1331,7 +1348,8 @@ namespace cryptonote
       return false;
     }
 
-    if(!m_core.handle_block_found(b))
+    block_verification_context bvc;
+    if(!m_core.handle_block_found(b, bvc))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_BLOCK_NOT_ACCEPTED;
       error_resp.message = "Block not accepted";
@@ -1363,15 +1381,17 @@ namespace cryptonote
 
     template_req.reserve_size = 1;
     template_req.wallet_address = req.wallet_address;
+    template_req.prev_block = req.prev_block;
     submit_req.push_back(boost::value_initialized<std::string>());
     res.height = m_core.get_blockchain_storage().get_current_blockchain_height();
 
-    bool r;
+    bool r = CORE_RPC_STATUS_OK;
 
     for(size_t i = 0; i < req.amount_of_blocks; i++)
     {
       r = on_getblocktemplate(template_req, template_res, error_resp, ctx);
       res.status = template_res.status;
+      template_req.prev_block.clear();
       
       if (!r) return false;
 
@@ -1389,6 +1409,7 @@ namespace cryptonote
         error_resp.message = "Wrong block blob";
         return false;
       }
+      b.nonce = req.starting_nonce;
       miner::find_nonce_for_given_block(b, template_res.difficulty, template_res.height);
 
       submit_req.front() = string_tools::buff_to_hex_nodelimer(block_to_blob(b));
@@ -1397,6 +1418,8 @@ namespace cryptonote
 
       if (!r) return false;
 
+      res.blocks.push_back(epee::string_tools::pod_to_hex(get_block_hash(b)));
+      template_req.prev_block = res.blocks.back();
       res.height = template_res.height;
     }
 
@@ -2395,9 +2418,9 @@ namespace cryptonote
     , ""
     };
 
-  const command_line::arg_descriptor<std::vector<std::string>> core_rpc_server::arg_rpc_ssl_allowed_certificates = {
-      "rpc-ssl-allowed-certificates"
-    , "List of paths to PEM format certificates of allowed peers (all allowed if empty)"
+  const command_line::arg_descriptor<std::string> core_rpc_server::arg_rpc_ssl_ca_certificates = {
+      "rpc-ssl-ca-certificates"
+    , "Path to file containing concatenated PEM format certificate(s) to replace system CA(s)."
     };
 
   const command_line::arg_descriptor<std::vector<std::string>> core_rpc_server::arg_rpc_ssl_allowed_fingerprints = {
@@ -2407,7 +2430,7 @@ namespace cryptonote
 
   const command_line::arg_descriptor<bool> core_rpc_server::arg_rpc_ssl_allow_any_cert = {
       "rpc-ssl-allow-any-cert"
-    , "Allow any peer certificate, rather than just those on the allowed list"
+    , "Allow any peer certificate"
     , false
     };
 

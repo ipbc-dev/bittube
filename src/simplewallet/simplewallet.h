@@ -103,7 +103,7 @@ namespace cryptonote
     boost::optional<epee::wipeable_string> new_wallet(const boost::program_options::variables_map& vm,
         const epee::wipeable_string &multisig_keys, const std::string &old_language);
     boost::optional<epee::wipeable_string> new_wallet(const boost::program_options::variables_map& vm);
-    bool open_wallet(const boost::program_options::variables_map& vm);
+    boost::optional<epee::wipeable_string> open_wallet(const boost::program_options::variables_map& vm);
     bool close_wallet();
 
     bool viewkey(const std::vector<std::string> &args = std::vector<std::string>());
@@ -144,6 +144,7 @@ namespace cryptonote
     bool set_segregation_height(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_ignore_fractional_outputs(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_track_uses(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_setup_background_mining(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_device_name(const std::vector<std::string> &args = std::vector<std::string>());
     bool help(const std::vector<std::string> &args = std::vector<std::string>());
     bool start_mining(const std::vector<std::string> &args);
@@ -242,6 +243,7 @@ namespace cryptonote
     bool freeze(const std::vector<std::string>& args);
     bool thaw(const std::vector<std::string>& args);
     bool frozen(const std::vector<std::string>& args);
+    bool net_stats(const std::vector<std::string>& args);
     bool version(const std::vector<std::string>& args);
 
     bool cold_sign_tx(const std::vector<tools::wallet2::pending_tx>& ptx_vector, tools::wallet2::signed_tx_set &exported_txs, std::vector<cryptonote::address_parse_info> &dsts_info, std::function<bool(const tools::wallet2::signed_tx_set &)> accept_func);
@@ -297,6 +299,13 @@ namespace cryptonote
      * \param ptx_vector Pending tx(es) created by transfer/sweep_all
      */
     void commit_or_save(std::vector<tools::wallet2::pending_tx>& ptx_vector, bool do_not_relay);
+
+    /*!
+     * \brief checks whether background mining is enabled, and asks to configure it if not
+     */
+    void check_background_mining(const epee::wipeable_string &password);
+    void start_background_mining();
+    void stop_background_mining();
 
     //----------------- i_wallet2_callback ---------------------
     virtual void on_new_block(uint64_t height, const cryptonote::block& block);

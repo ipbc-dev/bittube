@@ -548,6 +548,8 @@ namespace cryptonote
       }
       FIELD(miner_tx)
       FIELD(tx_hashes)
+      if (tx_hashes.size() > CRYPTONOTE_MAX_TX_PER_BLOCK)
+        return false;
     END_SERIALIZE()
   };
 inline serializable_bytecoin_block make_serializable_bytecoin_block(const block& b, bool hashing_serialization, bool header_only)

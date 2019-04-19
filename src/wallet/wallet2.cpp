@@ -244,9 +244,10 @@ struct options {
   const command_line::arg_descriptor<std::string> daemon_ssl = {"daemon-ssl", tools::wallet2::tr("Enable SSL on daemon RPC connections: enabled|disabled|autodetect"), "autodetect"};
   const command_line::arg_descriptor<std::string> daemon_ssl_private_key = {"daemon-ssl-private-key", tools::wallet2::tr("Path to a PEM format private key"), ""};
   const command_line::arg_descriptor<std::string> daemon_ssl_certificate = {"daemon-ssl-certificate", tools::wallet2::tr("Path to a PEM format certificate"), ""};
-  const command_line::arg_descriptor<std::vector<std::string>> daemon_ssl_allowed_certificates = {"daemon-ssl-allowed-certificates", tools::wallet2::tr("List of paths to PEM format certificates of allowed RPC servers")};
+  const command_line::arg_descriptor<std::string> daemon_ssl_ca_certificates = {"daemon-ssl-ca-certificates", tools::wallet2::tr("Path to file containing concatenated PEM format certificate(s) to replace system CA(s).")};
   const command_line::arg_descriptor<std::vector<std::string>> daemon_ssl_allowed_fingerprints = {"daemon-ssl-allowed-fingerprints", tools::wallet2::tr("List of valid fingerprints of allowed RPC servers")};
   const command_line::arg_descriptor<bool> daemon_ssl_allow_any_cert = {"daemon-ssl-allow-any-cert", tools::wallet2::tr("Allow any SSL certificate from the daemon"), false};
+  const command_line::arg_descriptor<bool> daemon_ssl_allow_chained = {"daemon-ssl-allow-chained", tools::wallet2::tr("Allow user (via --daemon-ssl-ca-certificates) chain certificates"), false};
   const command_line::arg_descriptor<bool> testnet = {"testnet", tools::wallet2::tr("For testnet. Daemon must also be launched with --testnet flag"), false};
   const command_line::arg_descriptor<bool> stagenet = {"stagenet", tools::wallet2::tr("For stagenet. Daemon must also be launched with --stagenet flag"), false};
   const command_line::arg_descriptor<std::string, false, true, 2> shared_ringdb_dir = {
@@ -315,6 +316,7 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   const uint64_t kdf_rounds = command_line::get_arg(vm, opts.kdf_rounds);
   THROW_WALLET_EXCEPTION_IF(kdf_rounds == 0, tools::error::wallet_internal_error, "KDF rounds must not be 0");
 
+  const bool use_proxy = command_line::has_arg(vm, opts.proxy);
   auto daemon_address = command_line::get_arg(vm, opts.daemon_address);
   auto daemon_host = command_line::get_arg(vm, opts.daemon_host);
   auto daemon_port = command_line::get_arg(vm, opts.daemon_port);
@@ -322,13 +324,37 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   auto device_derivation_path = command_line::get_arg(vm, opts.hw_device_derivation_path);
   auto daemon_ssl_private_key = command_line::get_arg(vm, opts.daemon_ssl_private_key);
   auto daemon_ssl_certificate = command_line::get_arg(vm, opts.daemon_ssl_certificate);
-  auto daemon_ssl_allowed_certificates = command_line::get_arg(vm, opts.daemon_ssl_allowed_certificates);
+  auto daemon_ssl_ca_file = command_line::get_arg(vm, opts.daemon_ssl_ca_certificates);
   auto daemon_ssl_allowed_fingerprints = command_line::get_arg(vm, opts.daemon_ssl_allowed_fingerprints);
   auto daemon_ssl_allow_any_cert = command_line::get_arg(vm, opts.daemon_ssl_allow_any_cert);
   auto daemon_ssl = command_line::get_arg(vm, opts.daemon_ssl);
-  epee::net_utils::ssl_support_t ssl_support;
-  THROW_WALLET_EXCEPTION_IF(!epee::net_utils::ssl_support_from_string(ssl_support, daemon_ssl), tools::error::wallet_internal_error,
-      tools::wallet2::tr("Invalid argument for ") + std::string(opts.daemon_ssl.name));
+
+  // user specified CA file or fingeprints implies enabled SSL by default
+  epee::net_utils::ssl_options_t ssl_options = epee::net_utils::ssl_support_t::e_ssl_support_enabled;
+  if (command_line::get_arg(vm, opts.daemon_ssl_allow_any_cert))
+    ssl_options.verification = epee::net_utils::ssl_verification_t::none;
+  else if (!daemon_ssl_ca_file.empty() || !daemon_ssl_allowed_fingerprints.empty())
+  {
+    std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ daemon_ssl_allowed_fingerprints.size() };
+    std::transform(daemon_ssl_allowed_fingerprints.begin(), daemon_ssl_allowed_fingerprints.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
+
+    ssl_options = epee::net_utils::ssl_options_t{
+      std::move(ssl_allowed_fingerprints), std::move(daemon_ssl_ca_file)
+    };
+
+    if (command_line::get_arg(vm, opts.daemon_ssl_allow_chained))
+      ssl_options.verification = epee::net_utils::ssl_verification_t::user_ca;
+  }
+
+  if (ssl_options.verification != epee::net_utils::ssl_verification_t::user_certificates || !command_line::is_arg_defaulted(vm, opts.daemon_ssl))
+  {
+    THROW_WALLET_EXCEPTION_IF(!epee::net_utils::ssl_support_from_string(ssl_options.support, daemon_ssl), tools::error::wallet_internal_error,
+       tools::wallet2::tr("Invalid argument for ") + std::string(opts.daemon_ssl.name));
+  }
+
+  ssl_options.auth = epee::net_utils::ssl_authentication_t{
+    std::move(daemon_ssl_private_key), std::move(daemon_ssl_certificate)
+  };
 
   THROW_WALLET_EXCEPTION_IF(!daemon_address.empty() && !daemon_host.empty() && 0 != daemon_port,
       tools::error::wallet_internal_error, tools::wallet2::tr("can't specify daemon host or port more than once"));
@@ -358,22 +384,24 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
   if (daemon_address.empty())
     daemon_address = std::string("http://") + daemon_host + ":" + std::to_string(daemon_port);
 
-  boost::asio::ip::tcp::endpoint proxy{};
-  if (command_line::has_arg(vm, opts.proxy))
   {
-    namespace ip = boost::asio::ip;
     const boost::string_ref real_daemon = boost::string_ref{daemon_address}.substr(0, daemon_address.rfind(':'));
 
-    // onion and i2p addresses contain information about the server cert
-    // which both authenticates and encrypts
-    const bool unencrypted_proxy =
-      !real_daemon.ends_with(".onion") && !real_daemon.ends_with(".i2p") &&
-      daemon_ssl_allowed_certificates.empty() && daemon_ssl_allowed_fingerprints.empty();
+    const bool verification_required =
+      ssl_options.support == epee::net_utils::ssl_support_t::e_ssl_support_enabled || use_proxy;
+
     THROW_WALLET_EXCEPTION_IF(
-      unencrypted_proxy,
+      verification_required && !ssl_options.has_strong_verification(real_daemon),
       tools::error::wallet_internal_error,
-      std::string{"Use of --"} + opts.proxy.name + " requires --" + opts.daemon_ssl_allowed_certificates.name + " or --" + opts.daemon_ssl_allowed_fingerprints.name + " or use of a .onion/.i2p domain"
+      tools::wallet2::tr("Enabling --") + std::string{use_proxy ? opts.proxy.name : opts.daemon_ssl.name} + tools::wallet2::tr(" requires --") +
+        opts.daemon_ssl_ca_certificates.name + tools::wallet2::tr(" or --") + opts.daemon_ssl_allowed_fingerprints.name + tools::wallet2::tr(" or use of a .onion/.i2p domain")
     );
+  }
+
+  boost::asio::ip::tcp::endpoint proxy{};
+  if (use_proxy)
+  {
+    namespace ip = boost::asio::ip;
 
     const auto proxy_address = command_line::get_arg(vm, opts.proxy);
 
@@ -417,22 +445,8 @@ std::unique_ptr<tools::wallet2> make_basic(const boost::program_options::variabl
     catch (const std::exception &e) { }
   }
 
-  std::list<std::string> ssl_allowed_certificates;
-  for (const std::string &path: daemon_ssl_allowed_certificates)
-  {
-      ssl_allowed_certificates.push_back({});
-      if (!epee::file_io_utils::load_file_to_string(path, ssl_allowed_certificates.back()))
-      {
-        MERROR("Failed to load certificate: " << path);
-        ssl_allowed_certificates.back() = std::string();
-      }
-  }
-
-  std::vector<std::vector<uint8_t>> ssl_allowed_fingerprints{ daemon_ssl_allowed_fingerprints.size() };
-  std::transform(daemon_ssl_allowed_fingerprints.begin(), daemon_ssl_allowed_fingerprints.end(), ssl_allowed_fingerprints.begin(), epee::from_hex::vector);
-
   std::unique_ptr<tools::wallet2> wallet(new tools::wallet2(nettype, kdf_rounds, unattended));
-  wallet->init(std::move(daemon_address), std::move(login), std::move(proxy), 0, *trusted_daemon, ssl_support, std::make_pair(daemon_ssl_private_key, daemon_ssl_certificate), ssl_allowed_certificates, ssl_allowed_fingerprints, daemon_ssl_allow_any_cert);
+  wallet->init(std::move(daemon_address), std::move(login), std::move(proxy), 0, *trusted_daemon, std::move(ssl_options));
   boost::filesystem::path ringdb_path = command_line::get_arg(vm, opts.shared_ringdb_dir);
   wallet->set_ring_database(ringdb_path.string());
   wallet->get_message_store().set_options(vm);
@@ -1028,6 +1042,7 @@ wallet2::wallet2(network_type nettype, uint64_t kdf_rounds, bool unattended):
   m_segregation_height(0),
   m_ignore_fractional_outputs(true),
   m_track_uses(false),
+  m_setup_background_mining(BackgroundMiningMaybe),
   m_is_initialized(false),
   m_kdf_rounds(kdf_rounds),
   is_old_file_format(false),
@@ -1096,9 +1111,10 @@ void wallet2::init_options(boost::program_options::options_description& desc_par
   command_line::add_arg(desc_params, opts.daemon_ssl);
   command_line::add_arg(desc_params, opts.daemon_ssl_private_key);
   command_line::add_arg(desc_params, opts.daemon_ssl_certificate);
-  command_line::add_arg(desc_params, opts.daemon_ssl_allowed_certificates);
+  command_line::add_arg(desc_params, opts.daemon_ssl_ca_certificates);
   command_line::add_arg(desc_params, opts.daemon_ssl_allowed_fingerprints);
   command_line::add_arg(desc_params, opts.daemon_ssl_allow_any_cert);
+  command_line::add_arg(desc_params, opts.daemon_ssl_allow_chained);
   command_line::add_arg(desc_params, opts.testnet);
   command_line::add_arg(desc_params, opts.stagenet);
   command_line::add_arg(desc_params, opts.shared_ringdb_dir);
@@ -1150,10 +1166,7 @@ std::unique_ptr<wallet2> wallet2::make_dummy(const boost::program_options::varia
 }
 
 //----------------------------------------------------------------------------------------------------
-bool wallet2::set_daemon(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, bool trusted_daemon,
-    epee::net_utils::ssl_support_t ssl_support, const std::pair<std::string, std::string> &private_key_and_certificate_path,
-    const std::list<std::string> &allowed_certificates, const std::vector<std::vector<uint8_t>> &allowed_fingerprints,
-    bool allow_any_cert)
+bool wallet2::set_daemon(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, bool trusted_daemon, epee::net_utils::ssl_options_t ssl_options)
 {
   if(m_http_client.is_connected())
     m_http_client.disconnect();
@@ -1162,17 +1175,17 @@ bool wallet2::set_daemon(std::string daemon_address, boost::optional<epee::net_u
   m_trusted_daemon = trusted_daemon;
 
   MINFO("setting daemon to " << get_daemon_address());
-  return m_http_client.set_server(get_daemon_address(), get_daemon_login(), ssl_support, private_key_and_certificate_path, allowed_certificates, allowed_fingerprints, allow_any_cert);
+  return m_http_client.set_server(get_daemon_address(), get_daemon_login(), std::move(ssl_options));
 }
 //----------------------------------------------------------------------------------------------------
-bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, boost::asio::ip::tcp::endpoint proxy, uint64_t upper_transaction_weight_limit, bool trusted_daemon, epee::net_utils::ssl_support_t ssl_support, const std::pair<std::string, std::string> &private_key_and_certificate_path, const std::list<std::string> &allowed_certificates, const std::vector<std::vector<uint8_t>> &allowed_fingerprints, bool allow_any_cert)
+bool wallet2::init(std::string daemon_address, boost::optional<epee::net_utils::http::login> daemon_login, boost::asio::ip::tcp::endpoint proxy, uint64_t upper_transaction_weight_limit, bool trusted_daemon, epee::net_utils::ssl_options_t ssl_options)
 {
   m_checkpoints.init_default_checkpoints(m_nettype);
   m_is_initialized = true;
   m_upper_transaction_weight_limit = upper_transaction_weight_limit;
   if (proxy != boost::asio::ip::tcp::endpoint{})
     m_http_client.set_connector(net::socks::connector{std::move(proxy)});
-  return set_daemon(daemon_address, daemon_login, trusted_daemon, ssl_support, private_key_and_certificate_path, allowed_certificates, allowed_fingerprints, allow_any_cert);
+  return set_daemon(daemon_address, daemon_login, trusted_daemon, std::move(ssl_options));
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::is_deterministic() const
@@ -3543,6 +3556,9 @@ bool wallet2::store_keys(const std::string& keys_file_name, const epee::wipeable
   value2.SetInt(m_track_uses ? 1 : 0);
   json.AddMember("track_uses", value2, json.GetAllocator());
 
+  value2.SetInt(m_setup_background_mining);
+  json.AddMember("setup_background_mining", value2, json.GetAllocator());
+
   value2.SetUint(m_subaddress_lookahead_major);
   json.AddMember("subaddress_lookahead_major", value2, json.GetAllocator());
 
@@ -3694,6 +3710,7 @@ bool wallet2::load_keys(const std::string& keys_file_name, const epee::wipeable_
     m_segregation_height = 0;
     m_ignore_fractional_outputs = true;
     m_track_uses = false;
+    m_setup_background_mining = BackgroundMiningMaybe;
     m_subaddress_lookahead_major = SUBADDRESS_LOOKAHEAD_MAJOR;
     m_subaddress_lookahead_minor = SUBADDRESS_LOOKAHEAD_MINOR;
     m_original_keys_available = false;
@@ -3848,6 +3865,8 @@ bool wallet2::load_keys(const std::string& keys_file_name, const epee::wipeable_
     m_ignore_fractional_outputs = field_ignore_fractional_outputs;
     GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, track_uses, int, Int, false, false);
     m_track_uses = field_track_uses;
+    GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, setup_background_mining, BackgroundMiningSetupType, Int, false, BackgroundMiningMaybe);
+    m_setup_background_mining = field_setup_background_mining;
     GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, subaddress_lookahead_major, uint32_t, Uint, false, SUBADDRESS_LOOKAHEAD_MAJOR);
     m_subaddress_lookahead_major = field_subaddress_lookahead_major;
     GET_FIELD_FROM_JSON_RETURN_ON_ERROR(json, subaddress_lookahead_minor, uint32_t, Uint, false, SUBADDRESS_LOOKAHEAD_MINOR);
@@ -5448,13 +5467,19 @@ uint64_t wallet2::balance(uint32_t index_major) const
   return amount;
 }
 //----------------------------------------------------------------------------------------------------
-uint64_t wallet2::unlocked_balance(uint32_t index_major) const
+uint64_t wallet2::unlocked_balance(uint32_t index_major, uint64_t *blocks_to_unlock) const
 {
   uint64_t amount = 0;
+  if (blocks_to_unlock)
+    *blocks_to_unlock = 0;
   if(m_light_wallet)
     return m_light_wallet_balance;
   for (const auto& i : unlocked_balance_per_subaddress(index_major))
-    amount += i.second;
+  {
+    amount += i.second.first;
+    if (blocks_to_unlock && i.second.second > *blocks_to_unlock)
+      *blocks_to_unlock = i.second.second;
+  }
   return amount;
 }
 //----------------------------------------------------------------------------------------------------
@@ -5487,18 +5512,36 @@ std::map<uint32_t, uint64_t> wallet2::balance_per_subaddress(uint32_t index_majo
   return amount_per_subaddr;
 }
 //----------------------------------------------------------------------------------------------------
-std::map<uint32_t, uint64_t> wallet2::unlocked_balance_per_subaddress(uint32_t index_major) const
+std::map<uint32_t, std::pair<uint64_t, uint64_t>> wallet2::unlocked_balance_per_subaddress(uint32_t index_major) const
 {
-  std::map<uint32_t, uint64_t> amount_per_subaddr;
+  std::map<uint32_t, std::pair<uint64_t, uint64_t>> amount_per_subaddr;
+  const uint64_t blockchain_height = get_blockchain_current_height();
   for(const transfer_details& td: m_transfers)
   {
-    if(td.m_subaddr_index.major == index_major && !td.m_spent && !td.m_frozen && is_transfer_unlocked(td))
+    if(td.m_subaddr_index.major == index_major && !td.m_spent && !td.m_frozen)
     {
+      uint64_t amount = 0, blocks_to_unlock = 0;
+      if (is_transfer_unlocked(td))
+      {
+        amount = td.amount();
+        blocks_to_unlock = 0;
+      }
+      else
+      {
+        uint64_t unlock_height = td.m_block_height + std::max<uint64_t>(CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE, CRYPTONOTE_LOCKED_TX_ALLOWED_DELTA_BLOCKS);
+        if (td.m_tx.unlock_time < CRYPTONOTE_MAX_BLOCK_NUMBER && td.m_tx.unlock_time > unlock_height)
+          unlock_height = td.m_tx.unlock_time;
+        blocks_to_unlock = unlock_height > blockchain_height ? unlock_height - blockchain_height : 0;
+        amount = 0;
+      }
       auto found = amount_per_subaddr.find(td.m_subaddr_index.minor);
       if (found == amount_per_subaddr.end())
-        amount_per_subaddr[td.m_subaddr_index.minor] = td.amount();
+        amount_per_subaddr[td.m_subaddr_index.minor] = std::make_pair(amount, blocks_to_unlock);
       else
-        found->second += td.amount();
+      {
+        found->second.first += amount;
+        found->second.second = std::max(found->second.second, blocks_to_unlock);
+      }
     }
   }
   return amount_per_subaddr;
@@ -5512,11 +5555,18 @@ uint64_t wallet2::balance_all() const
   return r;
 }
 //----------------------------------------------------------------------------------------------------
-uint64_t wallet2::unlocked_balance_all() const
+uint64_t wallet2::unlocked_balance_all(uint64_t *blocks_to_unlock) const
 {
   uint64_t r = 0;
+  if (blocks_to_unlock)
+    *blocks_to_unlock = 0;
   for (uint32_t index_major = 0; index_major < get_num_subaddress_accounts(); ++index_major)
-    r += unlocked_balance(index_major);
+  {
+    uint64_t local_blocks_to_unlock;
+    r += unlocked_balance(index_major, blocks_to_unlock ? &local_blocks_to_unlock : NULL);
+    if (blocks_to_unlock)
+      *blocks_to_unlock = std::max(*blocks_to_unlock, local_blocks_to_unlock);
+  }
   return r;
 }
 //----------------------------------------------------------------------------------------------------
@@ -9063,7 +9113,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   // throw if attempting a transaction with no money
   THROW_WALLET_EXCEPTION_IF(needed_money == 0, error::zero_destination);
 
-  std::map<uint32_t, uint64_t> unlocked_balance_per_subaddr = unlocked_balance_per_subaddress(subaddr_account);
+  std::map<uint32_t, std::pair<uint64_t, uint64_t>> unlocked_balance_per_subaddr = unlocked_balance_per_subaddress(subaddr_account);
   std::map<uint32_t, uint64_t> balance_per_subaddr = balance_per_subaddress(subaddr_account);
 
   if (subaddr_indices.empty()) // "index=<N1>[,<N2>,...]" wasn't specified -> use all the indices with non-zero unlocked balance
@@ -9081,7 +9131,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   for (uint32_t index_minor : subaddr_indices)
   {
     balance_subtotal += balance_per_subaddr[index_minor];
-    unlocked_balance_subtotal += unlocked_balance_per_subaddr[index_minor];
+    unlocked_balance_subtotal += unlocked_balance_per_subaddr[index_minor].first;
   }
   THROW_WALLET_EXCEPTION_IF(needed_money + min_fee > balance_subtotal, error::not_enough_money,
     balance_subtotal, needed_money, 0);
@@ -9147,7 +9197,7 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_2(std::vector<cryp
   {
     auto sort_predicate = [&unlocked_balance_per_subaddr] (const std::pair<uint32_t, std::vector<size_t>>& x, const std::pair<uint32_t, std::vector<size_t>>& y)
     {
-      return unlocked_balance_per_subaddr[x.first] > unlocked_balance_per_subaddr[y.first];
+      return unlocked_balance_per_subaddr[x.first].first > unlocked_balance_per_subaddr[y.first].first;
     };
     std::sort(unused_transfers_indices_per_subaddr.begin(), unused_transfers_indices_per_subaddr.end(), sort_predicate);
     std::sort(unused_dust_indices_per_subaddr.begin(), unused_dust_indices_per_subaddr.end(), sort_predicate);
@@ -12958,5 +13008,15 @@ void wallet2::finish_rescan_bc_keep_key_images(uint64_t transfer_height, const c
     m_transfers[it->second].m_key_image = it->first;
     m_transfers[it->second].m_key_image_known = true;
   }
+}
+//----------------------------------------------------------------------------------------------------
+uint64_t wallet2::get_bytes_sent() const
+{
+  return m_http_client.get_bytes_sent();
+}
+//----------------------------------------------------------------------------------------------------
+uint64_t wallet2::get_bytes_received() const
+{
+  return m_http_client.get_bytes_received();
 }
 }

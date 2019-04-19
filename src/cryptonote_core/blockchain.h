@@ -337,6 +337,7 @@ namespace cryptonote
      * @brief creates a new block to mine against
      *
      * @param b return-by-reference block to be filled in
+     * @param from_block optional block hash to start mining from (main chain tip if NULL)
      * @param miner_address address new coins for the block will go to
      * @param di return-by-reference tells the miner what the difficulty target is
      * @param height return-by-reference tells the miner what height it's mining against
@@ -346,6 +347,7 @@ namespace cryptonote
      * @return true if block template filled in successfully, else false
      */
     bool create_block_template(block& b, const account_public_address& miner_address, difficulty_type& di, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce);
+    bool create_block_template(block& b, const crypto::hash *from_block, const account_public_address& miner_address, difficulty_type& di, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce);
 
     /**
      * @brief checks if a block is known about with a given hash
@@ -1095,6 +1097,7 @@ namespace cryptonote
     account_public_address m_btc_address;
     blobdata m_btc_nonce;
     difficulty_type m_btc_difficulty;
+    uint64_t m_btc_height;
     uint64_t m_btc_pool_cookie;
     uint64_t m_btc_expected_reward;
     bool m_btc_valid;
@@ -1180,7 +1183,7 @@ namespace cryptonote
      *
      * @return false if the reorganization fails, otherwise true
      */
-    bool switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::iterator>& alt_chain, bool discard_disconnected_chain);
+    bool switch_to_alternative_blockchain(std::list<blocks_ext_by_hash::const_iterator>& alt_chain, bool discard_disconnected_chain);
 
     /**
      * @brief removes the most recent block from the blockchain
@@ -1234,6 +1237,18 @@ namespace cryptonote
     bool handle_alternative_block(const block& b, const crypto::hash& id, block_verification_context& bvc);
 
     /**
+     * @brief builds a list of blocks connecting a block to the main chain
+     *
+     * @param prev_id the block hash of the tip of the alt chain
+     * @param alt_chain the chain to be added to
+     * @param timestamps returns the timestamps of previous blocks
+     * @param bvc the block verification context for error return
+     *
+     * @return true on success, false otherwise
+     */
+    bool build_alt_chain(const crypto::hash &prev_id, std::list<blocks_ext_by_hash::const_iterator>& alt_chain, std::vector<uint64_t> &timestamps, block_verification_context& bvc) const;
+
+    /**
      * @brief gets the difficulty requirement for a new block on an alternate chain
      *
      * @param alt_chain the chain to be added to
@@ -1241,7 +1256,7 @@ namespace cryptonote
      *
      * @return the difficulty requirement
      */
-    difficulty_type get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::iterator>& alt_chain, block_extended_info& bei) const;
+    difficulty_type get_next_difficulty_for_alternative_chain(const std::list<blocks_ext_by_hash::const_iterator>& alt_chain, block_extended_info& bei) const;
 
     /**
      * @brief sanity checks a miner transaction before validating an entire block
@@ -1401,7 +1416,7 @@ namespace cryptonote
      *
      * @return true unless start_height is greater than the current blockchain height
      */
-    bool complete_timestamps_vector(uint64_t start_height, std::vector<uint64_t>& timestamps);
+    bool complete_timestamps_vector(uint64_t start_height, std::vector<uint64_t>& timestamps) const;
 
     /**
      * @brief calculate the block weight limit for the next block to be added
@@ -1465,6 +1480,6 @@ namespace cryptonote
      *
      * At some point, may be used to push an update to miners
      */
-    void cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t expected_reward, uint64_t pool_cookie);
+    void cache_block_template(const block &b, const cryptonote::account_public_address &address, const blobdata &nonce, const difficulty_type &diff, uint64_t height, uint64_t expected_reward, uint64_t pool_cookie);
   };
 }  // namespace cryptonote
