@@ -1805,7 +1805,7 @@ namespace cryptonote
     }
     res.database_size = restricted ? 0 : m_core.get_blockchain_storage().get_db().get_database_size();
     res.update_available = restricted ? false : m_core.is_update_available();
-    res.version = restricted ? "" : MONERO_VERSION;
+    res.version = restricted ? "" : BITTUBE_VERSION;
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
