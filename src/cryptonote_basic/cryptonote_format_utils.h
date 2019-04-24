@@ -119,7 +119,7 @@ namespace cryptonote
   blobdata get_block_hashing_blob(const block& b);
   bool get_block_hashing_blob(const block& b, blobdata& blob);
   bool get_bytecoin_block_hashing_blob(const block& b, blobdata& blob);
-  bool calculate_block_hash(const block& b, crypto::hash& res, const blobdata *blob = NULL);
+  bool calculate_block_hash(const block& b, crypto::hash& res);
   bool get_block_hash(const block& b, crypto::hash& res);
   bool get_block_header_hash(const block& b, crypto::hash& res);
   crypto::hash get_block_hash(const block& b);
@@ -127,9 +127,7 @@ namespace cryptonote
   bool get_bytecoin_block_longhash(const block& blk, crypto::hash& res);
   crypto::hash get_block_longhash(const block& b, uint64_t height);
   bool get_genesis_block_hash(crypto::hash& h);
-  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash *block_hash);
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b);
-  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash &block_hash);
   bool get_inputs_money_amount(const transaction& tx, uint64_t& money);
   uint64_t get_outs_money_amount(const transaction& tx);
   bool check_inputs_types_supported(const transaction& tx);

@@ -1492,8 +1492,7 @@ namespace cryptonote
     block lb;
     if (!b)
     {
-      crypto::hash block_hash;
-      if(!parse_and_validate_block_from_blob(block_blob, lb, block_hash))
+      if(!parse_and_validate_block_from_blob(block_blob, lb))
       {
         LOG_PRINT_L1("Failed to parse and validate new block");
         bvc.m_verifivation_failed = true;
