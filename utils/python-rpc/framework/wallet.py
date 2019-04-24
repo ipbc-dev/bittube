@@ -183,6 +183,27 @@ class Wallet(object):
         }
         return self.rpc.send_json_rpc_request(sweep_all)
 
+    def sweep_single(self, address = '', priority = 0, ring_size = 0, outputs = 1, unlock_time = 0, payment_id = '', get_tx_keys = False, key_image = "", do_not_relay = False, get_tx_hex = False, get_tx_metadata = False):
+        sweep_single = {
+            'method': 'sweep_single',
+            'params' : {
+                'address' : address,
+                'priority' : priority,
+                'ring_size' : ring_size,
+                'outputs' : outputs,
+                'unlock_time' : unlock_time,
+                'payment_id' : payment_id,
+                'get_tx_keys' : get_tx_keys,
+                'key_image' : key_image,
+                'do_not_relay' : do_not_relay,
+                'get_tx_hex' : get_tx_hex,
+                'get_tx_metadata' : get_tx_metadata,
+            },
+            'jsonrpc': '2.0',
+            'id': '0'
+        }
+        return self.rpc.send_json_rpc_request(sweep_single)
+
     def get_address(self, account_index = 0, subaddresses = []):
         get_address = {
             'method': 'get_address',
@@ -264,7 +285,7 @@ class Wallet(object):
         }
         return self.rpc.send_json_rpc_request(query_key)
 
-    def restore_deterministic_wallet(self, seed = '', seed_offset = '', filename = '', restore_height = 0, password = '', language = ''):
+    def restore_deterministic_wallet(self, seed = '', seed_offset = '', filename = '', restore_height = 0, password = '', language = '', autosave_current = True):
         restore_deterministic_wallet = {
             'method': 'restore_deterministic_wallet',
             'params' : {
@@ -273,14 +294,15 @@ class Wallet(object):
                 'seed': seed,
                 'seed_offset': seed_offset,
                 'password': password,
-                'language': language
+                'language': language,
+                'autosave_current': autosave_current,
             },
             'jsonrpc': '2.0', 
             'id': '0'
         }
         return self.rpc.send_json_rpc_request(restore_deterministic_wallet)
 
-    def generate_from_keys(self, restore_height = 0, filename = "", password = "", address = "", spendkey = "", viewkey = ""):
+    def generate_from_keys(self, restore_height = 0, filename = "", password = "", address = "", spendkey = "", viewkey = "", autosave_current = True):
         generate_from_keys = {
             'method': 'generate_from_keys',
             'params' : {
@@ -290,16 +312,31 @@ class Wallet(object):
                 'spendkey': spendkey,
                 'viewkey': viewkey,
                 'password': password,
+                'autosave_current': autosave_current,
             },
             'jsonrpc': '2.0', 
             'id': '0'
         }
         return self.rpc.send_json_rpc_request(generate_from_keys)
 
-    def close_wallet(self):
+    def open_wallet(self, filename, password='', autosave_current = True):
+        open_wallet = {
+            'method': 'open_wallet',
+            'params' : {
+                'filename': filename,
+                'password': password,
+                'autosave_current': autosave_current,
+            },
+            'jsonrpc': '2.0', 
+            'id': '0'
+        }
+        return self.rpc.send_json_rpc_request(open_wallet)
+
+    def close_wallet(self, autosave_current = True):
         close_wallet = {
             'method': 'close_wallet',
             'params' : {
+                'autosave_current': autosave_current
             },
             'jsonrpc': '2.0', 
             'id': '0'
@@ -689,6 +726,28 @@ class Wallet(object):
             'id': '0'
         }
         return self.rpc.send_json_rpc_request(import_key_images)
+
+    def set_log_level(self, level):
+        set_log_level = {
+            'method': 'set_log_level',
+            'params': {
+                'level': level,
+            },
+            'jsonrpc': '2.0',
+            'id': '0'
+        }
+        return self.rpc.send_json_rpc_request(set_log_level)
+
+    def set_log_categories(self, categories):
+        set_log_categories = {
+            'method': 'set_log_categories',
+            'params': {
+                'categories': categories,
+            },
+            'jsonrpc': '2.0',
+            'id': '0'
+        }
+        return self.rpc.send_json_rpc_request(set_log_categories)
 
     def get_version(self):
         get_version = {

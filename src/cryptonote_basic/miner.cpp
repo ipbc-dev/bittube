@@ -529,6 +529,8 @@ namespace cryptonote
     difficulty_type local_diff = 0;
     uint32_t local_template_ver = 0;
     block b;
+    slow_hash_allocate_state();
+    ++m_threads_active;
     while(!m_stop)
     {
       if(m_pausers_count)//anti split workaround
