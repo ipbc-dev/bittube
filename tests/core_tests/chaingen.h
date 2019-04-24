@@ -644,7 +644,15 @@ public:
     log_event("cryptonote::block");
 
     cryptonote::block_verification_context bvc = AUTO_VAL_INIT(bvc);
-    m_c.handle_incoming_block(t_serializable_object_to_blob(b), &b, bvc);
+    cryptonote::blobdata bd = t_serializable_object_to_blob(b);
+    std::vector<cryptonote::block> pblocks;
+    if (m_c.prepare_handle_incoming_blocks(std::vector<cryptonote::block_complete_entry>(1, {bd, {}}), pblocks))
+    {
+      m_c.handle_incoming_block(bd, &b, bvc);
+      m_c.cleanup_handle_incoming_blocks();
+    }
+    else
+      bvc.m_verifivation_failed = true;
     bool r = check_block_verification_context(bvc, m_ev_index, b, m_validator);
     CHECK_AND_NO_ASSERT_MES(r, false, "block verification context check failed");
     return r;
@@ -667,7 +675,14 @@ public:
     log_event("serialized_block");
 
     cryptonote::block_verification_context bvc = AUTO_VAL_INIT(bvc);
-    m_c.handle_incoming_block(sr_block.data, NULL, bvc);
+    std::vector<cryptonote::block> pblocks;
+    if (m_c.prepare_handle_incoming_blocks(std::vector<cryptonote::block_complete_entry>(1, {sr_block.data, {}}), pblocks))
+    {
+      m_c.handle_incoming_block(sr_block.data, NULL, bvc);
+      m_c.cleanup_handle_incoming_blocks();
+    }
+    else
+      bvc.m_verifivation_failed = true;
 
     cryptonote::block blk;
     std::stringstream ss;
@@ -749,7 +764,7 @@ template<typename t_test_class>
 struct get_test_options {
   const std::pair<uint8_t, uint64_t> hard_forks[2];
   const cryptonote::test_options test_options = {
-    hard_forks
+    hard_forks, 0
   };
   get_test_options():hard_forks{std::make_pair((uint8_t)1, (uint64_t)0), std::make_pair((uint8_t)0, (uint64_t)0)}{}
 };
@@ -777,7 +792,7 @@ inline bool do_replay_events_get_core(std::vector<test_event_entry>& events, cry
 
   // Hardforks can be specified in events.
   v_hardforks_t hardforks;
-  cryptonote::test_options test_options_tmp{};
+  cryptonote::test_options test_options_tmp{nullptr, 0};
   const cryptonote::test_options * test_options_ = &gto.test_options;
   if (extract_hard_forks(events, hardforks)){
     hardforks.push_back(std::make_pair((uint8_t)0, (uint64_t)0));  // terminator
