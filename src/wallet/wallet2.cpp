@@ -7733,7 +7733,7 @@ void wallet2::get_outs(std::vector<std::vector<tools::wallet2::get_outs_entry>> 
         }
       }
 
-      if (num_outs <= requested_outputs_count && !existing_ring_found)
+      if (num_outs <= requested_outputs_count)
       {
         for (uint64_t i = 0; i < num_outs; i++)
           req.outputs.push_back({amount, i});
