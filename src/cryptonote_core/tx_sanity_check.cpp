@@ -54,6 +54,7 @@ bool tx_sanity_check(Blockchain &blockchain, const cryptonote::blobdata &tx_blob
     MERROR("Transaction is coinbase");
     return false;
   }
+  /*
   std::set<uint64_t> rct_indices;
   size_t n_indices = 0;
 
@@ -93,7 +94,7 @@ bool tx_sanity_check(Blockchain &blockchain, const cryptonote::blobdata &tx_blob
     MERROR("median is " << median << "/" << n_available);
     return false;
   }
-
+*/
   return true;
 }
 
