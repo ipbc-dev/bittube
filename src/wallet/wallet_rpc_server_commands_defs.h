@@ -78,8 +78,6 @@ namespace wallet_rpc
       uint32_t account_index;
       uint32_t address_index;
       std::string address;
-      uint64_t locked_amount;
-      uint64_t available_balance;
       uint64_t balance;
       uint64_t unlocked_balance;
       std::string label;
@@ -90,8 +88,6 @@ namespace wallet_rpc
         KV_SERIALIZE(account_index)
         KV_SERIALIZE(address_index)
         KV_SERIALIZE(address)
-        KV_SERIALIZE(locked_amount)
-        KV_SERIALIZE(available_balance)
         KV_SERIALIZE(balance)
         KV_SERIALIZE(unlocked_balance)
         KV_SERIALIZE(label)
@@ -102,8 +98,6 @@ namespace wallet_rpc
 
     struct response_t
     {
-      uint64_t locked_amount;
-      uint64_t available_balance;
       uint64_t 	 balance;
       uint64_t 	 unlocked_balance;
       bool       multisig_import_needed;
@@ -111,8 +105,6 @@ namespace wallet_rpc
       uint64_t   blocks_to_unlock;
 
       BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(locked_amount)
-        KV_SERIALIZE(available_balance)
         KV_SERIALIZE(balance)
         KV_SERIALIZE(unlocked_balance)
         KV_SERIALIZE(multisig_import_needed)
