@@ -5016,7 +5016,12 @@ void wallet2::load(const std::string& wallet_, const epee::wipeable_string& pass
     MERROR("Failed to save rings, will try again next time");
   }
   
-  m_message_store.read_from_file(get_multisig_wallet_state(), m_mms_file);
+  try {
+    m_message_store.read_from_file(get_multisig_wallet_state(), m_mms_file);
+  } catch (const std::exception &e) {
+    MERROR("Disabling MMS because of Error: " << e.what());
+    m_message_store.set_active(false);
+  }
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::trim_hashchain()
@@ -9315,6 +9320,27 @@ std::vector<wallet2::pending_tx> wallet2::create_transactions_all(uint64_t below
     }
   }
 
+  return create_transactions_from(address, is_subaddress, outputs, unused_transfers_indices, unused_dust_indices, fake_outs_count, unlock_time, priority, extra);
+}
+
+std::vector<wallet2::pending_tx> wallet2::create_transactions_hashes(const wallet2::tx_hash_set &txset, const cryptonote::account_public_address &address, bool is_subaddress, const size_t outputs, const size_t fake_outs_count, const uint64_t unlock_time, uint32_t priority, const std::vector<uint8_t>& extra)
+{
+  std::vector<size_t> unused_transfers_indices;
+  std::vector<size_t> unused_dust_indices;
+  const bool use_rct = use_fork_rules(HF_VERSION_ENFORCE_RCT, 0);
+  // find output with the given key image
+  for (size_t i = 0; i < m_transfers.size(); ++i)
+  {
+    const transfer_details& td = m_transfers[i];
+    if (txset.find(td.m_txid) != txset.end() && !td.m_spent && (use_rct ? true : !td.is_rct()) && is_transfer_unlocked(td))
+    // if (td.m_key_image_known && td.m_key_image == ki && !td.m_spent && (use_rct ? true : !td.is_rct()) && is_transfer_unlocked(td))
+    {
+      if (td.is_rct() || is_valid_decomposed_amount(td.amount()))
+        unused_transfers_indices.push_back(i);
+      else
+        unused_dust_indices.push_back(i);
+    }
+  }
   return create_transactions_from(address, is_subaddress, outputs, unused_transfers_indices, unused_dust_indices, fake_outs_count, unlock_time, priority, extra);
 }
 

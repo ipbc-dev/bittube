@@ -830,6 +830,76 @@ namespace wallet_rpc
     };
   };
 
+  struct COMMAND_RPC_SWEEP_TRANSFERS
+  {
+    struct request
+    {
+      std::string address;
+      uint32_t account_index;
+      std::set<uint32_t> subaddr_indices;
+      uint32_t priority;
+      uint64_t mixin;
+      uint64_t ring_size;
+      uint64_t outputs;
+      uint64_t unlock_time;
+      std::string payment_id;
+      bool get_tx_keys;
+      std::list<std::string> txids;
+      bool do_not_relay;
+      bool get_tx_hex;
+      bool get_tx_metadata;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(address)
+        KV_SERIALIZE(account_index)
+        KV_SERIALIZE(subaddr_indices)
+        KV_SERIALIZE(priority)
+        KV_SERIALIZE_OPT(mixin, (uint64_t)0)
+        KV_SERIALIZE_OPT(ring_size, (uint64_t)0)
+        KV_SERIALIZE_OPT(outputs, (uint64_t)1)
+        KV_SERIALIZE(unlock_time)
+        KV_SERIALIZE(payment_id)
+        KV_SERIALIZE(get_tx_keys)
+        KV_SERIALIZE(txids)
+        KV_SERIALIZE_OPT(do_not_relay, false)
+        KV_SERIALIZE_OPT(get_tx_hex, false)
+        KV_SERIALIZE_OPT(get_tx_metadata, false)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct key_list
+    {
+      std::list<std::string> keys;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(keys)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      std::list<std::string> tx_hash_list;
+      std::list<std::string> tx_key_list;
+      std::list<uint64_t> amount_list;
+      std::list<uint64_t> fee_list;
+      std::list<std::string> tx_blob_list;
+      std::list<std::string> tx_metadata_list;
+      std::string multisig_txset;
+      std::string unsigned_txset;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(tx_hash_list)
+        KV_SERIALIZE(tx_key_list)
+        KV_SERIALIZE(amount_list)
+        KV_SERIALIZE(fee_list)
+        KV_SERIALIZE(tx_blob_list)
+        KV_SERIALIZE(tx_metadata_list)
+        KV_SERIALIZE(multisig_txset)
+        KV_SERIALIZE(unsigned_txset)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
   struct COMMAND_RPC_RELAY_TX
   {
     struct request
@@ -1979,7 +2049,44 @@ namespace wallet_rpc
       END_KV_SERIALIZE_MAP()
     };
   };
-  
+
+  struct COMMAND_RPC_RESTORE_MULTISIG_WALLET
+  {
+    struct request
+    {
+      uint64_t restore_height;
+      std::string filename;
+      std::string seed;
+      std::string seed_offset;
+      std::string password;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(restore_height, (uint64_t)0)
+        KV_SERIALIZE(filename)
+        KV_SERIALIZE(seed)
+        KV_SERIALIZE(seed_offset)
+        KV_SERIALIZE(password)
+      END_KV_SERIALIZE_MAP()
+    };
+
+    struct response
+    {
+      std::string address;
+      std::string seed;
+      std::string info;
+      uint32_t threshold;
+      uint32_t total;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(address)
+        KV_SERIALIZE(seed)
+        KV_SERIALIZE(info)
+        KV_SERIALIZE(threshold)
+        KV_SERIALIZE(total)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
   struct COMMAND_RPC_IS_MULTISIG
   {
     struct request
@@ -2194,6 +2301,61 @@ namespace wallet_rpc
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(version)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
+  struct COMMAND_RPC_GET_DAEMON
+  {
+    struct request
+    {
+      BEGIN_KV_SERIALIZE_MAP()
+      END_KV_SERIALIZE_MAP()
+    };
+    struct response
+    {
+      std::string daemon_address;
+      uint32_t daemon_version;
+      bool is_trusted_daemon;
+      bool is_connected;
+      uint64_t blockchain_height;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(daemon_address)
+        KV_SERIALIZE(daemon_version)
+        KV_SERIALIZE(is_trusted_daemon)
+        KV_SERIALIZE(is_connected)
+        KV_SERIALIZE(blockchain_height)
+      END_KV_SERIALIZE_MAP()
+    };
+  };
+
+  struct COMMAND_RPC_SET_DAEMON
+  {
+    struct request
+    {
+      std::string daemon_address;
+      std::string username;
+      std::string password;
+      bool is_trusted_daemon;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(daemon_address)
+        KV_SERIALIZE(username)
+        KV_SERIALIZE(password)
+        KV_SERIALIZE(is_trusted_daemon)
+      END_KV_SERIALIZE_MAP()
+    };
+    struct response
+    {
+      uint32_t daemon_version;
+      bool is_connected;
+      uint64_t blockchain_height;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(daemon_version)
+        KV_SERIALIZE(is_connected)
+        KV_SERIALIZE(blockchain_height)
       END_KV_SERIALIZE_MAP()
     };
   };
