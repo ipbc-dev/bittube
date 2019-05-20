@@ -81,6 +81,7 @@ namespace epee
         LOG_ERROR("Failed to bind server");
         return false;
       }
+      MGINFO("Bound on " << bind_ip << ":" << m_net_server.get_binded_port());
       return true;
     }
 
