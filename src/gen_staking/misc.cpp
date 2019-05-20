@@ -171,3 +171,54 @@ std::string file_to_b64(const std::string &file) {
   if (in.gcount() != len) throw std::runtime_error("Unable to read the whole file");
   return epee::string_encoding::base64_encode(std::string(buf.begin(), buf.end()));
 }
+
+std::string wallet_info_json(boost::shared_ptr<tools::wallet2> &wallet, const epee::wipeable_string &pwd) {
+  wallet_keys keys = get_wallet_keys(wallet, pwd);
+  // TODO: actual json output with rapidjson etc instead of this hack
+  std::stringstream json;
+  json << "{" << std::endl;
+  json << "  \"address\": \"" << get_wallet_address(wallet) << "\"," << std::endl;
+  json << "  \"seed\": \"" << get_wallet_seed(wallet, pwd) << "\"," << std::endl;
+  json << "  \"view\": {" << std::endl;
+  json << "    \"pub\": \"" << keys.view.pub << "\"," << std::endl;
+  json << "    \"sec\": \"" << keys.view.sec << "\"" << std::endl;
+  json << "  }," << std::endl;
+  json << "  \"spend\": {" << std::endl;
+  json << "    \"pub\": \"" << keys.spend.pub << "\"," << std::endl;
+  json << "    \"sec\": \"" << keys.spend.sec << "\"" << std::endl;
+  json << "  }," << std::endl;
+  json << "  \"msig\": \"" << get_wallet_multisig_info(wallet, pwd) << "\"," << std::endl;
+  json << "  \"height\": " << wallet->estimate_blockchain_height() << std::endl;
+  json << "}";
+  return json.str();
+}
+
+std::string multisig_info_json(boost::shared_ptr<tools::wallet2> &wallet, const epee::wipeable_string &pwd) {
+  wallet_keys keys = get_wallet_keys(wallet, pwd);
+  // TODO: actual json output with rapidjson etc instead of this hack
+  std::stringstream json;
+  json << "{" << std::endl;
+  json << "  \"address\": \"" << get_wallet_address(wallet) << "\"," << std::endl;
+  json << "  \"seed\": \"" << get_wallet_seed(wallet, pwd) << "\"," << std::endl;
+  json << "  \"view\": {" << std::endl;
+  json << "    \"pub\": \"" << keys.view.pub << "\"," << std::endl;
+  json << "    \"sec\": \"" << keys.view.sec << "\"" << std::endl;
+  json << "  }" << std::endl;
+  json << "}";
+  return json.str();
+}
+
+std::string random_string(size_t length) {
+  std::srand(std::time(0));
+  auto randchar = []() -> char {
+    const char charset[] =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+    const size_t max_index = (sizeof(charset) - 1);
+    return charset[rand() % max_index];
+  };
+  std::string str(length, 0);
+  std::generate_n(str.begin(), length, randchar);
+  return str;
+}
