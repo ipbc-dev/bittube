@@ -3734,7 +3734,8 @@ namespace tools
       er.message = "Failed to encode seed";
       return false;
     }
-    res.seed = multisig_seed.data();
+    const char *p = multisig_seed.data();
+    res.seed = std::string(p, p + multisig_seed.size());
 
     bool ready = false; // TODO: can restored multisig be in any other state than ready?
     wal->multisig(&ready, &res.threshold, &res.total);
