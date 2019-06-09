@@ -143,37 +143,37 @@ private:
 	void* base_ptr;
 };
 
-template<size_t MEMORY, size_t ITER, size_t VERSION> class cn_slow_hash;
-using cn_pow_hash_v1 = cn_slow_hash<2*1024*1024, 0x80000, 0>; // standard
-using cn_pow_hash_v2 = cn_slow_hash<1*1024*1024, 0x40000, 1>; // ipbc lite
-using cn_pow_hash_v3 = cn_slow_hash<4*1024*1024, 0x40000, 2>; // sumo + ipbc
+template<size_t MEMORY, size_t ITER, size_t VERSION> class cn_heavy_hash;
+using cn_heavy_hash_v1 = cn_heavy_hash<2*1024*1024, 0x80000, 0>; // standard
+using cn_heavy_hash_v2 = cn_heavy_hash<1*1024*1024, 0x40000, 1>; // ipbc lite
+using cn_heavy_hash_v3 = cn_heavy_hash<4*1024*1024, 0x40000, 2>; // sumo + ipbc
 
 template<size_t MEMORY, size_t ITER, size_t VERSION>
-class cn_slow_hash
+class cn_heavy_hash
 {
 public:
-	cn_slow_hash() : borrowed_pad(false)
+	cn_heavy_hash() : borrowed_pad(false)
 	{
 		lpad.set(boost::alignment::aligned_alloc(4096, MEMORY));
 		spad.set(boost::alignment::aligned_alloc(4096, 4096));
 	}
 
-	cn_slow_hash (cn_slow_hash&& other) noexcept : lpad(other.lpad.as_byte()), spad(other.spad.as_byte()), borrowed_pad(other.borrowed_pad)
+	cn_heavy_hash (cn_heavy_hash&& other) noexcept : lpad(other.lpad.as_byte()), spad(other.spad.as_byte()), borrowed_pad(other.borrowed_pad)
 	{
 		other.lpad.set(nullptr);
 		other.spad.set(nullptr);
 	}
 
-	// Factory function enabling to temporarily turn one cn_slow_hash object into another
+	// Factory function enabling to temporarily turn one cn_heavy_hash object into another
 	// It is caller's responsibility to ensure that only one object is hashing at the same time!!
   template <size_t OM, size_t OI, size_t OV>
-	static cn_slow_hash make_borrowed(cn_slow_hash<OM, OI, OV> &o)
+	static cn_heavy_hash make_borrowed(cn_heavy_hash<OM, OI, OV> &o)
 	{
     static_assert(MEMORY <= OM, "Borrowed scratch pad is smaller than required.");
-		return cn_slow_hash(o.lpad.as_void(), o.spad.as_void());
+		return cn_heavy_hash(o.lpad.as_void(), o.spad.as_void());
 	}
 
-	cn_slow_hash& operator= (cn_slow_hash&& other) noexcept
+	cn_heavy_hash& operator= (cn_heavy_hash&& other) noexcept
     {
 		if(this == &other)
 			return *this;
@@ -186,10 +186,10 @@ public:
 	}
 
 	// Copying is going to be really inefficient
-	cn_slow_hash(const cn_slow_hash& other) = delete;
-	cn_slow_hash& operator= (const cn_slow_hash& other) = delete;
+	cn_heavy_hash(const cn_heavy_hash& other) = delete;
+	cn_heavy_hash& operator= (const cn_heavy_hash& other) = delete;
 
-	~cn_slow_hash()
+	~cn_heavy_hash()
 	{
 		free_mem();
 	}
@@ -212,12 +212,12 @@ public:
 
 private:
 	static constexpr size_t MASK = ((MEMORY-1) >> 4) << 4;
-	friend cn_pow_hash_v1;
-	friend cn_pow_hash_v2;
-  friend cn_pow_hash_v3;
+	friend cn_heavy_hash_v1;
+	friend cn_heavy_hash_v2;
+  friend cn_heavy_hash_v3;
 
 	// Constructor enabling v1 hash to borrow v2's buffer
-	cn_slow_hash(void* lptr, void* sptr)
+	cn_heavy_hash(void* lptr, void* sptr)
 	{
 		lpad.set(lptr);
 		spad.set(sptr);
@@ -270,6 +270,6 @@ private:
 	bool borrowed_pad;
 };
 
-extern template class cn_slow_hash<2*1024*1024, 0x80000, 0>;
-extern template class cn_slow_hash<1*1024*1024, 0x40000, 1>;
-extern template class cn_slow_hash<4*1024*1024, 0x40000, 2>;
+extern template class cn_heavy_hash<2*1024*1024, 0x80000, 0>;
+extern template class cn_heavy_hash<1*1024*1024, 0x40000, 1>;
+extern template class cn_heavy_hash<4*1024*1024, 0x40000, 2>;

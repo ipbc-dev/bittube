@@ -158,6 +158,7 @@
 #define HF_VERSION_COMMUNITY_REF                6
 #define HF_VERSION_POW_VARIANT1                 3
 #define HF_VERSION_POW_VARIANT2                 4
+#define HF_VERSION_POW_VARIANT4                 8 //TODO v8?
 #define HF_VERSION_MIN_MIXIN_2                  4
 #define HF_VERSION_ENFORCE_RCT                  4
 #define HF_VERSION_BULLETPROOF                  5

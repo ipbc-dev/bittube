@@ -39,13 +39,14 @@
 #include "generic-ops.h"
 #include "hex.h"
 #include "span.h"
-#include "crypto/cn_slow_hash.hpp"
+#include "crypto/cn_heavy_hash.hpp"
+
 
 namespace crypto {
 
   extern "C" {
 #include "hash-ops.h"
-  }
+}
 
 #pragma pack(push, 1)
   POD_CLASS hash {
@@ -73,29 +74,40 @@ namespace crypto {
     return h;
   }
 
-  inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    static thread_local cn_pow_hash_v3 ctx3;
-    static thread_local cn_pow_hash_v2 ctx2 = cn_pow_hash_v2::make_borrowed(ctx3);
-    static thread_local cn_pow_hash_v1 ctx1 = cn_pow_hash_v1::make_borrowed(ctx3);
-    if (variant == 0) {
-      ctx1.hash(data, length, hash.data);
-    } else if (variant == 1) {
-      ctx2.hash(data, length, hash.data);
-    } else {
-      ctx3.hash(data, length, hash.data);
-    }
-  }
+  enum struct cn_slow_hash_type
+  {
+    heavy_v1,
+    heavy_v2,
+    heavy_v3,
+    cn_r,
+  };
 
-  inline void cn_slow_hash_prehashed(const void *data, std::size_t length, hash &hash, int variant = 0) {
-    static thread_local cn_pow_hash_v3 ctx3;
-    static thread_local cn_pow_hash_v2 ctx2 = cn_pow_hash_v2::make_borrowed(ctx3);
-    static thread_local cn_pow_hash_v1 ctx1 = cn_pow_hash_v1::make_borrowed(ctx3);
-    if (variant == 0) {
-      ctx1.hash(data, length, hash.data, true);
-    } else if (variant == 1) {
-      ctx2.hash(data, length, hash.data, true);
-    } else {
-      ctx3.hash(data, length, hash.data, true);
+  inline void cn_slow_hash(const void *data, std::size_t length, hash &hash, int variant = 0, uint64_t height = 0, cn_slow_hash_type type = cn_slow_hash_type::cn_r) {
+    switch (type)
+    {
+      case cn_slow_hash_type::heavy_v1:
+      case cn_slow_hash_type::heavy_v2:
+      case cn_slow_hash_type::heavy_v3:
+      {
+        static thread_local cn_heavy_hash_v3 v3;
+        static thread_local cn_heavy_hash_v2 v2 = cn_heavy_hash_v2::make_borrowed(v3);
+        static thread_local cn_heavy_hash_v1 v1 = cn_heavy_hash_v1::make_borrowed(v3);
+
+        if (type == cn_slow_hash_type::heavy_v1) 
+          v1.hash(data, length, hash.data);
+        else if (type == cn_slow_hash_type::heavy_v2) 
+          v2.hash(data, length, hash.data);
+        else 
+          v3.hash(data, length, hash.data);
+      }
+      break;
+      
+      case cn_slow_hash_type::cn_r:
+      default:
+      {
+        cn_monero_slow_hash(data, length, reinterpret_cast<char *>(&hash), variant, 0/*prehashed*/, height);
+      }
+      break;
     }
   }
 
