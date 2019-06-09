@@ -15,7 +15,9 @@ You do not need anything from Qt in order to use the final translations.
 
 To update ts files after changing source code:
 
-    ./utils/translations/update-translations.sh
+```bash
+./utils/translations/update-translations.sh
+```
 
 To add a new language, eg Spanish (ISO code es):
 
@@ -27,7 +29,9 @@ To edit translations for Spanish:
 
 To build translations after modifying them:
 
-    ./utils/translations/build-translations.sh
+```bash
+./utils/translations/build-translations.sh
+```
 
 To test a translation:
 
@@ -39,6 +43,8 @@ Use the `tr(string)` function if possible. If the code is in a class, and this c
 
 If you're getting messages of the form:
 
-    Class 'cryptonote::simple_wallet' lacks Q_OBJECT macro
+```
+Class 'cryptonote::simple_wallet' lacks Q_OBJECT macro
+```
 
 all is fine, we don't actually need that here.

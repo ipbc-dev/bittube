@@ -28,11 +28,10 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
-
 """Test cold tx signing
 """
 
+from __future__ import print_function
 from framework.daemon import Daemon
 from framework.wallet import Wallet
 
@@ -44,13 +43,13 @@ class ColdSigningTest():
         self.transfer()
 
     def reset(self):
-        print 'Resetting blockchain'
+        print('Resetting blockchain')
         daemon = Daemon()
         daemon.pop_blocks(1000)
         daemon.flush_txpool()
 
     def create(self, idx):
-        print 'Creating hot and cold wallet'
+        print('Creating hot and cold wallet')
 
         self.hot_wallet = Wallet(idx = 0)
         # close the wallet if any, will throw if none is loaded
@@ -116,7 +115,23 @@ class ColdSigningTest():
         assert len(res.unsigned_txset) > 0
         unsigned_txset = res.unsigned_txset
 
-        print 'Signing transaction with cold wallet'
+        print('Signing transaction with cold wallet')
+        res = self.cold_wallet.describe_transfer(unsigned_txset = unsigned_txset)
+        assert len(res.desc) == 1
+        desc = res.desc[0]
+        assert desc.amount_in >= amount + fee
+        assert desc.amount_out == desc.amount_in - fee
+        assert desc.ring_size == 11
+        assert desc.unlock_time == 0
+        assert desc.payment_id == payment_id
+        assert desc.change_amount == desc.amount_in - 1000000000000 - fee
+        assert desc.change_address == '42ey1afDFnn4886T7196doS9GPMzexD9gXpsZJDwVjeRVdFCSoHnv7KPbBeGpzJBzHRCAs9UxqeoyFQMYbqSWYTfJJQAWDm'
+        assert desc.fee == fee
+        assert len(desc.recipients) == 1
+        rec = desc.recipients[0]
+        assert rec.address == '42ey1afDFnn4886T7196doS9GPMzexD9gXpsZJDwVjeRVdFCSoHnv7KPbBeGpzJBzHRCAs9UxqeoyFQMYbqSWYTfJJQAWDm'
+        assert rec.amount == 1000000000000
+
         res = self.cold_wallet.sign_transfer(unsigned_txset)
         assert len(res.signed_txset) > 0
         signed_txset = res.signed_txset
@@ -124,7 +139,7 @@ class ColdSigningTest():
         txid = res.tx_hash_list[0]
         assert len(txid) == 64
 
-        print 'Submitting transaction with hot wallet'
+        print('Submitting transaction with hot wallet')
         res = self.hot_wallet.submit_transfer(signed_txset)
         assert len(res.tx_hash_list) > 0
         assert res.tx_hash_list[0] == txid
