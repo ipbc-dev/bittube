@@ -10,7 +10,7 @@ import string
 import os
 
 USAGE = 'usage: functional_tests_rpc.py <python> <srcdir> <builddir> [<tests-to-run> | all]'
-DEFAULT_TESTS = ['daemon_info', 'blockchain', 'wallet_address', 'integrated_address', 'mining', 'transfer', 'txpool', 'multisig', 'cold_signing', 'sign_message', 'proofs']
+DEFAULT_TESTS = ['daemon_info', 'blockchain', 'wallet_address', 'integrated_address', 'mining', 'transfer', 'txpool', 'multisig', 'cold_signing', 'sign_message', 'proofs', 'get_output_distribution']
 try:
   python = sys.argv[1]
   srcdir = sys.argv[2]
@@ -98,6 +98,7 @@ FAIL = []
 for test in tests:
   try:
     print('[TEST STARTED] ' + test)
+    sys.stdout.flush()
     cmd = [python, srcdir + '/' + test + ".py"]
     subprocess.check_call(cmd)
     PASS.append(test)
