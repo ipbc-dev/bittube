@@ -51,8 +51,7 @@ set(crypto_sources
   CryptonightR_JIT.c
   cn_heavy_hash_soft.cpp
   cn_heavy_hash_hard_intel.cpp
-  cn_heavy_hash_hard_arm.cpp
-  tree-hash.c)
+  cn_heavy_hash_hard_arm.cpp)
 
 if(ARCH_ID STREQUAL "x86_64" OR ARCH_ID STREQUAL "x86-64")
 list(APPEND crypto_sources CryptonightR_template.S)
