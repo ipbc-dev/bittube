@@ -1309,7 +1309,7 @@ namespace cryptonote
     else if (hf_version >= HF_VERSION_POW_VARIANT2)
       cn_type = crypto::cn_slow_hash_type::heavy_v3;
     
-    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT2 ? 2 : 1;
+    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT4 ? 4 : b.major_version >= HF_VERSION_POW_VARIANT2 ? 2 : 1;
     crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, height, cn_type);  
    }
    else
