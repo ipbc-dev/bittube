@@ -74,6 +74,8 @@ using namespace crypto;
 
 using namespace cryptonote;
 using epee::string_tools::pod_to_hex;
+extern "C" void slow_hash_allocate_state();
+extern "C" void slow_hash_free_state();
 
 DISABLE_VS_WARNINGS(4267)
 
@@ -120,7 +122,11 @@ static const struct {
   //{ 2, 5, 0, 1520036614, 100 }, // Skipped because of conflicts on mainet
   //{ 3, 10, 0, 1523885225, 100 }, // Skipped because of conflicts on mainet
   //{ 4, 5, 0, 1527817979, 100 },
-  { 5, 5, 0, 1527817999, 100 },
+  { 7, 5, 0, 1527817999, 100 },
+  // version 8 starts from block 268000 around 02/07/2019.
+  { 8, 15, 0, 1556537316, 100 },
+ // version 9 starts from block 268000 around 02/07/2019.
+  { 9, 30, 0, 1556557316, 100 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 4;
 
@@ -4175,6 +4181,7 @@ void Blockchain::set_enforce_dns_checkpoints(bool enforce_checkpoints)
 void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const block> &blocks, std::unordered_map<crypto::hash, crypto::hash> &map) const
 {
   TIME_MEASURE_START(t);
+  slow_hash_allocate_state();
 
   for (const auto & block : blocks)
   {
@@ -4196,7 +4203,7 @@ void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const b
       }
     }
   }
-
+  slow_hash_free_state();
   TIME_MEASURE_FINISH(t);
 }
 
