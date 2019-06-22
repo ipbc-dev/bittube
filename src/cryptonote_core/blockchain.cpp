@@ -4190,7 +4190,7 @@ void Blockchain::block_longhash_worker(uint64_t height, const epee::span<const b
     crypto::hash id = get_block_hash(block);
     crypto::hash pow;
     if (block.major_version == BLOCK_MAJOR_VERSION_1 || block.major_version >= BLOCK_MAJOR_VERSION_4) {
-      if (!get_block_longhash(block, pow, 0)) {
+      if (!get_block_longhash(block, pow, height++)) {
         MERROR("Block longhash worker: failed to get block longhash");
       } else {
         map.emplace(id, pow);
