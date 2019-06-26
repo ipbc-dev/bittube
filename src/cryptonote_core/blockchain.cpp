@@ -1758,7 +1758,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     difficulty_type current_diff = get_next_difficulty_for_alternative_chain(alt_chain, bei);
     CHECK_AND_ASSERT_MES(current_diff, false, "!!!!!!! DIFFICULTY OVERHEAD !!!!!!!");
     crypto::hash proof_of_work = null_hash;
-   if (!check_proof_of_work(bei.bl, current_diff, proof_of_work))
+   if (!check_proof_of_work(bei.bl, current_diff, proof_of_work, bei.height))
 	{
 		MERROR_VER("Block with id: " << id << std::endl << " for alternative chain, does not have enough proof of work: " << proof_of_work << std::endl << "unexpected difficulty: " << current_diff);
 		MDEBUG("Block info - ts " << bei.bl.timestamp << " nonce " << bei.bl.nonce);
@@ -3684,7 +3684,7 @@ leave:
     }
     else
     {
-      if (!check_proof_of_work(bl, current_diffic, proof_of_work)) 
+      if (!check_proof_of_work(bl, current_diffic, proof_of_work, blockchain_height)) 
       {
        MERROR_VER("Block with id: " << id << std::endl << "does not have enough proof of work: " << proof_of_work << " at height " << blockchain_height << ", unexpected difficulty: " << current_diffic);
        bvc.m_verifivation_failed = true;
