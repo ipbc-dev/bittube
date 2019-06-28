@@ -53,12 +53,9 @@ set(unit_tests_sources
   json_serialization.cpp
   get_xtype_from_string.cpp
   hashchain.cpp
-  hmac_keccak.cpp
   http.cpp
   keccak.cpp
   logging.cpp
-  long_term_block_weight.cpp
-  lmdb.cpp
   main.cpp
   memwipe.cpp
   mlocker.cpp
@@ -66,13 +63,10 @@ set(unit_tests_sources
   mul_div.cpp
   multiexp.cpp
   multisig.cpp
-  net.cpp
   notify.cpp
   output_distribution.cpp
   parse_amount.cpp
-  pruning.cpp
   random.cpp
-  rolling_median.cpp
   serialization.cpp
   sha256.cpp
   slow_memmem.cpp
@@ -105,9 +99,7 @@ target_link_libraries(unit_tests
     cryptonote_protocol
     cryptonote_core
     blockchain_db
-    lmdb_lib
     rpc
-    net
     serialization
     wallet
     p2p

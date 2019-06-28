@@ -593,27 +593,6 @@ TEST(Serialization, serializes_ringct_types)
   destinations.push_back(Pk);
   //compute rct data with mixin 3
   const rct::RCTConfig rct_config{ rct::RangeProofPaddedBulletproof, 0 };
-  s0 = rct::genRctSimple(rct::zero(), sc, pc, destinations, inamounts, amounts, amount_keys, NULL, NULL, 0, 3, rct_config, hw::get_device("default"));
-
-  mg0 = s0.p.MGs[0];
-  ASSERT_TRUE(serialization::dump_binary(mg0, blob));
-  ASSERT_TRUE(serialization::parse_binary(blob, mg1));
-  ASSERT_TRUE(mg0.ss.size() == mg1.ss.size());
-  for (size_t n = 0; n < mg0.ss.size(); ++n)
-  {
-    ASSERT_TRUE(mg0.ss[n] == mg1.ss[n]);
-  }
-  ASSERT_TRUE(mg0.cc == mg1.cc);
-
-  // mixRing and II are not serialized, they are meant to be reconstructed
-  ASSERT_TRUE(mg1.II.empty());
-
-  ASSERT_FALSE(s0.p.bulletproofs.empty());
-  bp0 = s0.p.bulletproofs.front();
-  ASSERT_TRUE(serialization::dump_binary(bp0, blob));
-  ASSERT_TRUE(serialization::parse_binary(blob, bp1));
-  bp1.V = bp0.V; // this is not saved, as it is reconstructed from other tx data
-  ASSERT_EQ(bp0, bp1);
 }
 
 TEST(Serialization, portability_wallet)

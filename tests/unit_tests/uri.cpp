@@ -49,7 +49,7 @@ TEST(uri, empty_string)
 
 TEST(uri, no_scheme)
 {
-  PARSE_URI("monero", false);
+  PARSE_URI("italo", false);
 }
 
 TEST(uri, bad_scheme)
@@ -145,7 +145,9 @@ TEST(uri, bad_payment_id)
 
 TEST(uri, short_payment_id)
 {
-  PARSE_URI("monero:" TEST_ADDRESS"?tx_payment_id=1234567890123456", false);
+  PARSE_URI("italo:" TEST_ADDRESS"?tx_payment_id=1234567890123456", true);
+  ASSERT_EQ(address, TEST_ADDRESS);
+  ASSERT_EQ(payment_id, "1234567890123456");
 }
 
 TEST(uri, long_payment_id)
