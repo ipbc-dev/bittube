@@ -1,5 +1,5 @@
 ---
-name: "monero-linux-0.14"
+name: "bittube-linux-2.1.0.1"
 enable_cache: true
 suites:
 - "bionic"
@@ -43,8 +43,8 @@ packages:
 - "libprotobuf-dev"
 - "python3-zmq"
 remotes:
-- "url": "https://github.com/monero-project/monero.git"
-  "dir": "monero"
+- "url": "https://github.com/ipbc-dev/bittube.git"
+  "dir": "bittube"
 files: []
 script: |
 
@@ -130,7 +130,7 @@ script: |
   done
 
   git config --global core.abbrev 9
-  cd monero
+  cd bittube
   BASEPREFIX=`pwd`/contrib/depends
   # Build dependencies for each host
   for i in $HOSTS; do
@@ -155,7 +155,7 @@ script: |
     mkdir build && cd build
     cmake .. -DCMAKE_TOOLCHAIN_FILE=${BASEPREFIX}/${i}/share/toolchain.cmake -DBACKCOMPAT=ON
     make ${MAKEOPTS}
-    DISTNAME=monero-${i}
+    DISTNAME=bittube-${i}
     mv bin ${DISTNAME}
     find ${DISTNAME}/ | sort | tar --no-recursion --mode='u+rw,go+r-w,a+X' --owner=0 --group=0 -c -T - | gzip -9n > ${OUTDIR}/${DISTNAME}.tar.gz
     cd ..

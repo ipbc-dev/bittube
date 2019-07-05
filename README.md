@@ -1,6 +1,6 @@
 # BitTube
 
-Based on [Monero](https://github.com/bittube-project/monero)
+Based on [Monero](https://github.com/monero-project/monero)
 
 ## Introduction
 
@@ -12,7 +12,7 @@ BitTube is a private, secure, untraceable, decentralised digital currency. You a
 
 **Untraceability:** By taking advantage of ring signatures, a special property of a certain type of cryptography, BitTube is able to ensure that transactions are not only untraceable, but have an optional measure of ambiguity that ensures that transactions cannot easily be tied back to an individual user or computer.
 
-**Decentralization:** The utility of monero depends on its decentralised peer-to-peer consensus network - anyone should be able to run the monero software, validate the integrity of the blockchain, and participate in all aspects of the monero network using consumer-grade commodity hardware. Decentralization of the monero network is maintained by software development that minimizes the costs of running the monero software and inhibits the proliferation of specialized, non-commodity hardware.  
+**Decentralization:** The utility of BitTube depends on its decentralised peer-to-peer consensus network - anyone should be able to run the BitTube software, validate the integrity of the blockchain, and participate in all aspects of the BitTube network using consumer-grade commodity hardware. Decentralization of the BitTube network is maintained by software development that minimizes the costs of running the BitTube software and inhibits the proliferation of specialized, non-commodity hardware.
 
 ## About this project
 
@@ -414,9 +414,9 @@ You will need to add a few packages to your system. `pkg_add cmake gmake zeromq 
 
 The doxygen and graphviz packages are optional and require the xbase set.
 
-Build monero: `env DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/usr/local gmake release-static`
+Build BitTube: `env DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/usr/local gmake release-static`
 
-Note: you may encounter the following error, when compiling the latest version of monero as a normal user:
+Note: you may encounter the following error, when compiling the latest version of BitTube as a normal user:
 
 ```
 LLVM ERROR: out of memory
@@ -481,52 +481,9 @@ You can also cross-compile static binaries on Linux for Windows and macOS with t
 
 The required packages are the names for each toolchain on apt. Depending on your distro, they may have different names.
 
-Using `depends` might also be easier to compile Monero on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distro (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as depicted above.
+Using `depends` might also be easier to compile BitTube on Windows than using MSYS. Activate Windows Subsystem for Linux (WSL) with a distro (for example Ubuntu), install the apt build-essentials and follow the `depends` steps as depicted above.
 
 The produced binaries still link libc dynamically. If the binary is compiled on a current distribution, it might not run on an older distribution with an older installation of libc. Passing `-DBACKCOMPAT=ON` to cmake will make sure that the binary will run on systems having at least libc version 2.17.
-
-## Installing Monero from a package
-
-**DISCLAIMER: These packages are not part of this repository or maintained by this project's contributors, and as such, do not go through the same review process to ensure their trustworthiness and security.**
-
-Packages are available for
-
-* Ubuntu and [snap supported](https://snapcraft.io/docs/core/install) systems, via a community contributed build.
-
-	snap install bittube --beta
-
-Installing a snap is very quick. Snaps are secure. They are isolated with all of their dependencies. Snaps also auto update when a new version is released.
-
-* Arch Linux (via [AUR](https://aur.archlinux.org/)):
-  - Stable release: [`bittube`](https://aur.archlinux.org/packages/bittube)
-  - Bleeding edge: [`bittube-git`](https://aur.archlinux.org/packages/bittube-git)
-
-* Void Linux:
-
-        xbps-install -S bittube
-
-* GuixSD
-
-        guix package -i bittube
-
-* Docker
-
-        # Build using all available cores
-        docker build -t bittube .
-
-        # or build using a specific number of cores (reduce RAM requirement)
-        docker build --build-arg NPROC=1 -t bittube .
-
-        # either run in foreground
-        docker run -it -v /bittube/chain:/root/.bitbittube -v /bittube/wallet:/wallet -p 18080:18080 bittube
-
-        # or in background
-        docker run -it -d -v /bittube/chain:/root/.bitbittube -v /bittube/wallet:/wallet -p 18080:18080 bittube
-
-* The build needs 3 GB space.
-* Wait one  hour or more
-
-Packaging for your favorite distribution would be a welcome contribution!
 
 ## Running bittubed
 
@@ -654,7 +611,7 @@ There are two tools available:
 
 #### ASAN
 
-Configure Monero with the -D SANITIZE=ON cmake flag, eg:
+Configure BitTube with the -D SANITIZE=ON cmake flag, eg:
 
 ```bash
 cd build/debug && cmake -D SANITIZE=ON -D CMAKE_BUILD_TYPE=Debug ../..

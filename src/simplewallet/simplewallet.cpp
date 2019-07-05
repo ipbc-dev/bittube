@@ -2148,19 +2148,19 @@ bool simple_wallet::net_stats(const std::vector<std::string> &args)
 
 bool simple_wallet::welcome(const std::vector<std::string> &args)
 {
-  message_writer() << tr("Welcome to Monero, the private cryptocurrency.");
+  message_writer() << tr("Welcome to BitTube, the private cryptocurrency.");
   message_writer() << "";
-  message_writer() << tr("Monero, like Bitcoin, is a cryptocurrency. That is, it is digital money.");
-  message_writer() << tr("Unlike Bitcoin, your Monero transactions and balance stay private, and not visible to the world by default.");
+  message_writer() << tr("BitTube, like Bitcoin, is a cryptocurrency. That is, it is digital money.");
+  message_writer() << tr("Unlike Bitcoin, your BitTube transactions and balance stay private, and not visible to the world by default.");
   message_writer() << tr("However, you have the option of making those available to select parties, if you choose to.");
   message_writer() << "";
-  message_writer() << tr("Monero protects your privacy on the blockchain, and while Monero strives to improve all the time,");
-  message_writer() << tr("no privacy technology can be 100% perfect, Monero included.");
-  message_writer() << tr("Monero cannot protect you from malware, and it may not be as effective as we hope against powerful adversaries.");
-  message_writer() << tr("Flaws in Monero may be discovered in the future, and attacks may be developed to peek under some");
-  message_writer() << tr("of the layers of privacy Monero provides. Be safe and practice defense in depth.");
+  message_writer() << tr("BitTube protects your privacy on the blockchain, and while BitTube strives to improve all the time,");
+  message_writer() << tr("no privacy technology can be 100% perfect, BitTube included.");
+  message_writer() << tr("BitTube cannot protect you from malware, and it may not be as effective as we hope against powerful adversaries.");
+  message_writer() << tr("Flaws in BitTube may be discovered in the future, and attacks may be developed to peek under some");
+  message_writer() << tr("of the layers of privacy BitTube provides. Be safe and practice defense in depth.");
   message_writer() << "";
-  message_writer() << tr("Welcome to Monero and financial privacy. For more information, see https://getmonero.org/");
+  message_writer() << tr("Welcome to BitTube and financial privacy. For more information, see https://getmonero.org/");
   return true;
 }
 
