@@ -42,6 +42,8 @@
 #include <type_traits>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include "misc_log_ex.h"
+#include "storages/parserse_base_utils.h"
 #include "hex.h"
 #include "memwipe.h"
 #include "mlocker.h"
@@ -126,7 +128,7 @@ DISABLE_GCC_WARNING(maybe-uninitialized)
     {
       for (char c : str_id)
       {
-        if (!std::isdigit(c))
+        if (!epee::misc_utils::parse::isdigit(c))
           return false;
       }
     }
@@ -204,6 +206,15 @@ POP_WARNINGS
 		i64toa_s(val, buff, sizeof(buff)-1, 10);
 		return buff;*/
 		return boost::lexical_cast<std::string>(val);
+	}
+	//----------------------------------------------------------------------------
+	inline std::string to_string_hex(uint32_t val)
+	{
+		std::stringstream ss;
+		ss << std::hex << val;
+		std::string s;
+		ss >> s;
+		return s;
 	}
 	//----------------------------------------------------------------------------
 	

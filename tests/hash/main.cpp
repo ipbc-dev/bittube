@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018, The Monero Project
+// Copyright (c) 2014-2018, The Monero And Italo Project
 // 
 // All rights reserved.
 // 
@@ -53,12 +53,12 @@ extern "C" {
     }
     tree_hash((const char (*)[crypto::HASH_SIZE]) data, length >> 5, hash);
   }
-  static void cn_slow_hash_0(const void *data, size_t length, char *hash) {
-    cn_pow_hash_v1 ctx;
+  static void cn_heavy_hash_0(const void *data, size_t length, char *hash) {
+    cn_heavy_hash_v1 ctx;
     return ctx.hash(data, length, hash);
   }
-  static void cn_slow_hash_1(const void *data, size_t length, char *hash) {
-    cn_pow_hash_v2 ctx;
+  static void cn_heavy_hash_1(const void *data, size_t length, char *hash) {
+    cn_heavy_hash_v2 ctx;
     return ctx.hash(data, length, hash);
   }
 }
@@ -68,10 +68,10 @@ extern "C" typedef void hash_f(const void *, size_t, char *);
 struct hash_func {
   const string name;
   hash_f &f;
-} hashes[] = {{"fast", cn_fast_hash}, {"slow", cn_slow_hash_0}, {"tree", hash_tree},
+} hashes[] = {{"fast", cn_fast_hash}, {"slow", cn_heavy_hash_0}, {"tree", hash_tree},
   {"extra-blake", hash_extra_blake}, {"extra-groestl", hash_extra_groestl},
   {"extra-jh", hash_extra_jh}, {"extra-skein", hash_extra_skein},
-  {"slow-1", cn_slow_hash_1}};
+  {"slow-1", cn_heavy_hash_1}};
 
 int test_variant2_int_sqrt();
 int test_variant2_int_sqrt_ref();

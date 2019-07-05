@@ -642,6 +642,7 @@ static void inc_per_amount_outputs(MDB_txn *txn, uint64_t amount, uint64_t total
   v.mv_size = 2 * sizeof(uint64_t);
   v.mv_data = (void*)data;
   dbr = mdb_cursor_put(cur, &k, &v, 0);
+  CHECK_AND_ASSERT_THROW_MES(!dbr, "Failed to write record for per amount outputs: " + std::string(mdb_strerror(dbr)));
   mdb_cursor_close(cur);
 }
 
@@ -1136,7 +1137,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  mlog_configure(mlog_get_default_log_path("bittube-blockchain-find-spent-outputs.log"), true);
+  mlog_configure(mlog_get_default_log_path("bittube-blockchain-mark-spent-outputs.log"), true);
   if (!command_line::is_arg_defaulted(vm, arg_log_level))
     mlog_set_log(command_line::get_arg(vm, arg_log_level).c_str());
   else

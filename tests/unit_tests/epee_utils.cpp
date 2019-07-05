@@ -390,6 +390,25 @@ TEST(ToHex, String)
 
 }
 
+TEST(FromHex, String)
+{
+    // the source data to encode and decode
+    std::vector<uint8_t> source{{ 0x00, 0xFF, 0x0F, 0xF0 }};
+
+    // encode and decode the data
+    auto hex = epee::to_hex::string({ source.data(), source.size() });
+    auto decoded = epee::from_hex::vector(hex);
+
+    // encoded should be twice the size and should decode to the exact same data
+    EXPECT_EQ(source.size() * 2, hex.size());
+    EXPECT_EQ(source, decoded);
+
+    // we will now create a padded hex string, we want to explicitly allow
+    // decoding it this way also, ignoring spaces and colons between the numbers
+    hex.assign("00:ff 0f:f0");
+    EXPECT_EQ(source, epee::from_hex::vector(hex));
+}
+
 TEST(ToHex, Array)
 {
   EXPECT_EQ(
@@ -546,6 +565,8 @@ TEST(StringTools, GetIpInt32)
 
 TEST(NetUtils, IPv4NetworkAddress)
 {
+  static_assert(epee::net_utils::ipv4_network_address::get_type_id() == epee::net_utils::address_type::ipv4, "bad ipv4 type id");
+
   const auto ip1 = boost::endian::native_to_big(0x330012FFu);
   const auto ip_loopback = boost::endian::native_to_big(0x7F000001u);
   const auto ip_local = boost::endian::native_to_big(0x0A000000u);
@@ -556,7 +577,7 @@ TEST(NetUtils, IPv4NetworkAddress)
   EXPECT_STREQ("51.0.18.255", address1.host_str().c_str());
   EXPECT_FALSE(address1.is_loopback());
   EXPECT_FALSE(address1.is_local());
-  EXPECT_EQ(epee::net_utils::ipv4_network_address::ID, address1.get_type_id());
+  EXPECT_EQ(epee::net_utils::ipv4_network_address::get_type_id(), address1.get_type_id());
   EXPECT_EQ(ip1, address1.ip());
   EXPECT_EQ(65535, address1.port());
   EXPECT_TRUE(epee::net_utils::ipv4_network_address{std::move(address1)} == address1);
@@ -569,7 +590,7 @@ TEST(NetUtils, IPv4NetworkAddress)
   EXPECT_STREQ("127.0.0.1", loopback.host_str().c_str());
   EXPECT_TRUE(loopback.is_loopback());
   EXPECT_FALSE(loopback.is_local());
-  EXPECT_EQ(epee::net_utils::ipv4_network_address::ID, address1.get_type_id());
+  EXPECT_EQ(epee::net_utils::ipv4_network_address::get_type_id(), address1.get_type_id());
   EXPECT_EQ(ip_loopback, loopback.ip());
   EXPECT_EQ(0, loopback.port());
 
@@ -625,7 +646,9 @@ TEST(NetUtils, NetworkAddress)
     constexpr static bool is_local() noexcept { return false; }
     static std::string str() { return {}; }
     static std::string host_str() { return {}; }
-    constexpr static uint8_t get_type_id() noexcept { return uint8_t(-1); }
+    constexpr static epee::net_utils::address_type get_type_id() noexcept { return epee::net_utils::address_type(-1); }
+    constexpr static epee::net_utils::zone get_zone() noexcept { return epee::net_utils::zone::invalid; }
+    constexpr static bool is_blockable() noexcept { return false; }
   };
 
   const epee::net_utils::network_address empty;
@@ -635,7 +658,9 @@ TEST(NetUtils, NetworkAddress)
   EXPECT_STREQ("<none>", empty.host_str().c_str());
   EXPECT_FALSE(empty.is_loopback());
   EXPECT_FALSE(empty.is_local());
-  EXPECT_EQ(0, empty.get_type_id());
+  EXPECT_EQ(epee::net_utils::address_type::invalid, empty.get_type_id());
+  EXPECT_EQ(epee::net_utils::zone::invalid, empty.get_zone());
+  EXPECT_FALSE(empty.is_blockable());
   EXPECT_THROW(empty.as<custom_address>(), std::bad_cast);
 
   epee::net_utils::network_address address1{
@@ -651,7 +676,9 @@ TEST(NetUtils, NetworkAddress)
   EXPECT_STREQ("51.0.18.255", address1.host_str().c_str());
   EXPECT_FALSE(address1.is_loopback());
   EXPECT_FALSE(address1.is_local());
-  EXPECT_EQ(epee::net_utils::ipv4_network_address::ID, address1.get_type_id());
+  EXPECT_EQ(epee::net_utils::ipv4_network_address::get_type_id(), address1.get_type_id());
+  EXPECT_EQ(epee::net_utils::zone::public_, address1.get_zone());
+  EXPECT_TRUE(address1.is_blockable());
   EXPECT_NO_THROW(address1.as<epee::net_utils::ipv4_network_address>());
   EXPECT_THROW(address1.as<custom_address>(), std::bad_cast);
 
@@ -668,7 +695,9 @@ TEST(NetUtils, NetworkAddress)
   EXPECT_STREQ("127.0.0.1", loopback.host_str().c_str());
   EXPECT_TRUE(loopback.is_loopback());
   EXPECT_FALSE(loopback.is_local());
-  EXPECT_EQ(epee::net_utils::ipv4_network_address::ID, address1.get_type_id());
+  EXPECT_EQ(epee::net_utils::ipv4_network_address::get_type_id(), address1.get_type_id());
+  EXPECT_EQ(epee::net_utils::zone::public_, address1.get_zone());
+  EXPECT_EQ(epee::net_utils::ipv4_network_address::get_type_id(), address1.get_type_id());
 
   const epee::net_utils::network_address local{
     epee::net_utils::ipv4_network_address{ip_local, 8080}

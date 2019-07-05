@@ -41,6 +41,7 @@
 
 #include "daemon/rpc_command_executor.h"
 #include "common/common_fwd.h"
+#include "net/net_fwd.h"
 #include "rpc/core_rpc_server.h"
 
 namespace daemonize {
@@ -54,6 +55,7 @@ public:
       uint32_t ip
     , uint16_t port
     , const boost::optional<tools::login>& login
+    , const epee::net_utils::ssl_options_t& ssl_options
     , bool is_rpc
     , cryptonote::core_rpc_server* rpc_server = NULL
     );
@@ -97,6 +99,8 @@ public:
   bool start_mining(const std::vector<std::string>& args);
 
   bool stop_mining(const std::vector<std::string>& args);
+
+  bool mining_status(const std::vector<std::string>& args);
 
   bool stop_daemon(const std::vector<std::string>& args);
 
@@ -143,6 +147,12 @@ public:
   bool pop_blocks(const std::vector<std::string>& args);
 
   bool version(const std::vector<std::string>& args);
+
+  bool prune_blockchain(const std::vector<std::string>& args);
+
+  bool check_blockchain_pruning(const std::vector<std::string>& args);
+
+  bool print_net_stats(const std::vector<std::string>& args);
 };
 
 } // namespace daemonize

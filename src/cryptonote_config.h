@@ -38,9 +38,9 @@
 #define CRYPTONOTE_DNS_TIMEOUT_MS                       20000
 
 #define CRYPTONOTE_MAX_BLOCK_NUMBER                     500000000
-#define CRYPTONOTE_MAX_BLOCK_SIZE                       500000000  // block header blob limit, never used!
 #define CRYPTONOTE_GETBLOCKTEMPLATE_MAX_BLOCK_SIZE	196608 //size of block (bytes) that is the maximum that miners will produce
-#define CRYPTONOTE_MAX_TX_SIZE                          1000000000
+#define CRYPTONOTE_MAX_TX_SIZE                          1000000
+#define CRYPTONOTE_MAX_TX_PER_BLOCK                     0x10000000
 #define CRYPTONOTE_PUBLIC_ADDRESS_TEXTBLOB_VER          0
 #define CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW            10
 #define CURRENT_TRANSACTION_VERSION                     2 
@@ -68,6 +68,8 @@
 #define CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V2    1000000 //size of block (bytes) after which reward for block calculated using block size
 #define CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V1    100000 //size of block (bytes) after which reward for block calculated using block size - before first fork
 #define CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE_V5    1000000 //size of block (bytes) after which reward for block calculated using block size - second change, from v5
+#define CRYPTONOTE_LONG_TERM_BLOCK_WEIGHT_WINDOW_SIZE   100000 // size in blocks of the long term block weight median window
+#define CRYPTONOTE_SHORT_TERM_BLOCK_WEIGHT_SURGE_FACTOR 50
 #define CRYPTONOTE_COINBASE_BLOB_RESERVED_SIZE          600
 #define CRYPTONOTE_DISPLAY_DECIMAL_POINT                8
 // COIN - number of smallest units in one coin
@@ -119,11 +121,13 @@
 #define P2P_DEFAULT_PACKET_MAX_SIZE                     50000000     //50000000 bytes maximum packet size
 #define P2P_DEFAULT_PEERS_IN_HANDSHAKE                  250
 #define P2P_DEFAULT_CONNECTION_TIMEOUT                  5000       //5 seconds
+#define P2P_DEFAULT_SOCKS_CONNECT_TIMEOUT               45         // seconds
 #define P2P_DEFAULT_PING_CONNECTION_TIMEOUT             2000       //2 seconds
 #define P2P_DEFAULT_INVOKE_TIMEOUT                      60*2*1000  //2 minutes
 #define P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT            5000       //5 seconds
 #define P2P_DEFAULT_WHITELIST_CONNECTIONS_PERCENT       70
 #define P2P_DEFAULT_ANCHOR_CONNECTIONS_COUNT            2
+#define P2P_DEFAULT_SYNC_SEARCH_CONNECTIONS_COUNT       2
 #define P2P_DEFAULT_LIMIT_RATE_UP                       2048       // kB/s
 #define P2P_DEFAULT_LIMIT_RATE_DOWN                     8192       // kB/s
 
@@ -154,11 +158,14 @@
 #define HF_VERSION_COMMUNITY_REF                6
 #define HF_VERSION_POW_VARIANT1                 3
 #define HF_VERSION_POW_VARIANT2                 4
+#define HF_VERSION_POW_VARIANT4                 8 //TODO v8?
 #define HF_VERSION_MIN_MIXIN_2                  4
 #define HF_VERSION_ENFORCE_RCT                  4
 #define HF_VERSION_BULLETPROOF                  5
-#define HF_VERSION_PER_BYTE_FEE                 6 //TODO
-#define HF_VERSION_PADDED_BULLETS               6 //TODO
+#define HF_VERSION_PER_BYTE_FEE                 6
+#define HF_VERSION_PADDED_BULLETS               6
+#define HF_VERSION_SMALLER_BP                   8 //TODO v8?
+#define HF_VERSION_LONG_TERM_BLOCK_WEIGHT       8 //TODO v8?
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
@@ -167,6 +174,11 @@
 #define DEFAULT_TXPOOL_MAX_WEIGHT               648000000ull // 3 days at 300000, in bytes
 
 #define BULLETPROOF_MAX_OUTPUTS                 16
+
+#define CRYPTONOTE_PRUNING_STRIPE_SIZE          4096 // the smaller, the smoother the increase
+#define CRYPTONOTE_PRUNING_LOG_STRIPES          3 // the higher, the more space saved
+#define CRYPTONOTE_PRUNING_TIP_BLOCKS           5500 // the smaller, the more space saved
+//#define CRYPTONOTE_PRUNING_DEBUG_SPOOF_SEED
 
 // New constants are intended to go here
 namespace config

@@ -1,4 +1,4 @@
-# Copyright (c) 2018 The Monero Project
+# Copyright (c) 2018 The Monero And Italo Project
 # 
 # All rights reserved.
 # 
