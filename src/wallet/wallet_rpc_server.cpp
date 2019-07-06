@@ -1318,8 +1318,8 @@ namespace tools
       }
     }
 
-    return describe_transfer([&exported_txs](){return exported_txs.txes.size();}, [&exported_txs](size_t n)->const tools::wallet2::tx_construction_data&{return exported_txs.txes[n];}, res, er);
-    /*
+    // TODO: remove custom describe_multisig
+    // return describe_transfer([&exported_txs](){return exported_txs.txes.size();}, [&exported_txs](size_t n)->const tools::wallet2::tx_construction_data&{return exported_txs.txes[n];}, res, er);
     std::vector<tools::wallet2::pending_tx> ptx;
     try
     {
@@ -1437,7 +1437,6 @@ namespace tools
     }
 
     return true;
-    */
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_submit_transfer(const wallet_rpc::COMMAND_RPC_SUBMIT_TRANSFER::request& req, wallet_rpc::COMMAND_RPC_SUBMIT_TRANSFER::response& res, epee::json_rpc::error& er, const connection_context *ctx)
@@ -3706,7 +3705,7 @@ namespace tools
       er.message = "Invalid filename";
       return false;
     }
-    std::string wallet_file = req.filename.empty() ? "" : m_wallet_any_path ? req.filename : m_wallet_dir + "/" + req.filename);
+    std::string wallet_file = req.filename.empty() ? "" : (m_wallet_any_path ? req.filename : m_wallet_dir + "/" + req.filename);
     // check if wallet file already exists
     if (!wallet_file.empty())
     {
