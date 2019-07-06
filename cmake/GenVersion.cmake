@@ -39,7 +39,7 @@ if(RET)
     set(VERSIONTAG "unknown")
     configure_file("src/version.cpp.in" "${TO}")
 else()
-	string(SUBSTRING ${COMMIT} 0 9 COMMIT)
+	string(SUBSTRING ${COMMIT} 0 8 COMMIT)
 	message(STATUS "You are currently on commit ${COMMIT}")
 	
 	# Get all the tags
