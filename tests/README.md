@@ -63,7 +63,7 @@ Next, restore a mainnet wallet with the following seed and restore height 0 (the
 velvet lymph giddy number token physics poetry unquoted nibs useful sabotage limits benches lifestyle eden nitrogen anvil fewest avoid batch vials washing fences goat unquoted
 ```
 
-Open the wallet file with `italo-wallet-rpc` with RPC port 18083. Finally, start tests by invoking ./blockchain.py or ./speed.py
+Open the wallet file with `bittube-wallet-rpc` with RPC port 18083. Finally, start tests by invoking ./blockchain.py or ./speed.py
 
 # Fuzz tests
 

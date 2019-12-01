@@ -83,6 +83,6 @@ public:
 private:
   rct::keyV sk;
   rct::keyM P;
-  size_t ind;
+  size_t ind{};
   rct::mgSig IIccss;
 };

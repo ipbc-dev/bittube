@@ -232,6 +232,7 @@ namespace nodetool
       : m_payload_handler(payload_handler),
         m_external_port(0),
         m_rpc_port(0),
+        m_rpc_credits_per_hash(0),
         m_allow_local_ip(false),
         m_hide_my_port(false),
         m_igd(no_igd),
@@ -343,7 +344,7 @@ namespace nodetool
     virtual void request_callback(const epee::net_utils::connection_context_base& context);
     virtual void for_each_connection(std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
     virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
-    virtual bool add_host_fail(const epee::net_utils::network_address &address);
+    virtual bool add_host_fail(const epee::net_utils::network_address &address, unsigned int score = 1);
     //----------------- i_connection_filter  --------------------------------------------------------
     virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address, time_t *t = NULL);
     //-----------------------------------------------------------------------------------------------
@@ -432,6 +433,11 @@ namespace nodetool
       m_rpc_port = rpc_port;
     }
 
+    void set_rpc_credits_per_hash(uint32_t rpc_credits_per_hash)
+    {
+      m_rpc_credits_per_hash = rpc_credits_per_hash;
+    }
+
   private:
     std::string m_config_folder;
 
@@ -441,6 +447,7 @@ namespace nodetool
     uint32_t m_listening_port_ipv6;
     uint32_t m_external_port;
     uint16_t m_rpc_port;
+    uint32_t m_rpc_credits_per_hash;
     bool m_allow_local_ip;
     bool m_hide_my_port;
     igd_t m_igd;
@@ -511,14 +518,14 @@ namespace nodetool
     extern const command_line::arg_descriptor<std::string, false, true, 2> arg_p2p_bind_port;
     extern const command_line::arg_descriptor<std::string, false, true, 2> arg_p2p_bind_port_ipv6;
     extern const command_line::arg_descriptor<bool>        arg_p2p_use_ipv6;
-    extern const command_line::arg_descriptor<bool>        arg_p2p_require_ipv4;
+    extern const command_line::arg_descriptor<bool>        arg_p2p_ignore_ipv4;
     extern const command_line::arg_descriptor<uint32_t>    arg_p2p_external_port;
     extern const command_line::arg_descriptor<bool>        arg_p2p_allow_local_ip;
     extern const command_line::arg_descriptor<std::vector<std::string> > arg_p2p_add_peer;
     extern const command_line::arg_descriptor<std::vector<std::string> > arg_p2p_add_priority_node;
     extern const command_line::arg_descriptor<std::vector<std::string> > arg_p2p_add_exclusive_node;
     extern const command_line::arg_descriptor<std::vector<std::string> > arg_p2p_seed_node;
-    extern const command_line::arg_descriptor<std::vector<std::string> > arg_proxy;
+    extern const command_line::arg_descriptor<std::vector<std::string> > arg_tx_proxy;
     extern const command_line::arg_descriptor<std::vector<std::string> > arg_anonymous_inbound;
     extern const command_line::arg_descriptor<bool> arg_p2p_hide_my_port;
     extern const command_line::arg_descriptor<bool> arg_no_sync;

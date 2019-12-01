@@ -52,7 +52,10 @@ set(crypto_sources
   CryptonightR_JIT.c
   cn_heavy_hash_soft.cpp
   cn_heavy_hash_hard_intel.cpp
-  cn_heavy_hash_hard_arm.cpp)
+  cn_heavy_hash_hard_arm.cpp
+  rx-slow-hash.c)
+
+include_directories(${RANDOMX_INCLUDE})
 
 if(ARCH_ID STREQUAL "x86_64" OR ARCH_ID STREQUAL "x86-64")
 list(APPEND crypto_sources CryptonightR_template.S)

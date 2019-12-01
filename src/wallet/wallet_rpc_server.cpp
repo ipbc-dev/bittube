@@ -316,9 +316,9 @@ namespace tools
     if (setup == tools::wallet2::BackgroundMiningMaybe)
     {
       MINFO("The daemon is not set up to background mine.");
-      MINFO("With background mining enabled, the daemon will mine when idle and not on batttery.");
-      MINFO("Enabling this supports the network you are using, and makes you eligible for receiving new monero");
-      MINFO("Set setup-background-mining to 1 in monero-wallet-cli to change.");
+      MINFO("With background mining enabled, the daemon will mine when idle and not on battery.");
+      MINFO("Enabling this supports the network you are using, and makes you eligible for receiving new Bittube");
+      MINFO("Set setup-background-mining to 1 in Bittube-wallet-cli to change.");
       return;
     }
 
@@ -335,7 +335,7 @@ namespace tools
       return;
     }
 
-    MINFO("Background mining enabled. The daemon will mine when idle and not on batttery.");
+    MINFO("Background mining enabled. The daemon will mine when idle and not on battery.");
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::not_open(epee::json_rpc::error& er)
@@ -823,30 +823,9 @@ namespace tools
 
     if (!payment_id.empty())
     {
-
-      /* Just to clarify */
-      const std::string& payment_id_str = payment_id;
-
-      crypto::hash long_payment_id;
-      crypto::hash8 short_payment_id;
-
-      /* Parse payment ID */
-      if (wallet2::parse_long_payment_id(payment_id_str, long_payment_id)) {
-        cryptonote::set_payment_id_to_tx_extra_nonce(extra_nonce, long_payment_id);
-      }
-      else {
-        er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
-        er.message = "Payment id has invalid format: \"" + payment_id_str + "\", expected 64 character string";
-        return false;
-      }
-
-      /* Append Payment ID data into extra */
-      if (!cryptonote::add_extra_nonce_to_tx_extra(extra, extra_nonce)) {
-        er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
-        er.message = "Something went wrong with payment_id. Please check its format: \"" + payment_id_str + "\", expected 64-character string";
-        return false;
-      }
-
+      er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
+      er.message = "Standalone payment IDs are obsolete. Use subaddresses or integrated addresses instead";
+      return false;
     }
     return true;
   }
@@ -1032,6 +1011,13 @@ namespace tools
       LOG_PRINT_L2("on_transfer_split calling create_transactions_2");
       std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_2(dsts, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices);
       LOG_PRINT_L2("on_transfer_split called create_transactions_2");
+
+      if (ptx_vector.empty())
+      {
+        er.code = WALLET_RPC_ERROR_CODE_TX_NOT_POSSIBLE;
+        er.message = "No transaction created";
+        return false;
+      }
 
       return fill_response(ptx_vector, req.get_tx_keys, res.tx_key_list, res.amount_list, res.fee_list, res.multisig_txset, res.unsigned_txset, req.do_not_relay,
           res.tx_hash_list, req.get_tx_hex, res.tx_blob_list, req.get_tx_metadata, res.tx_metadata_list, er);
@@ -1405,8 +1391,11 @@ namespace tools
             crypto::hash payment_id;
             if(cryptonote::get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce.nonce, payment_id8))
             {
-              desc.payment_id = epee::string_tools::pod_to_hex(payment_id8);
-              has_encrypted_payment_id = true;
+              if (payment_id8 != crypto::null_hash8)
+              {
+                desc.payment_id = epee::string_tools::pod_to_hex(payment_id8);
+                has_encrypted_payment_id = true;
+              }
             }
             else if (cryptonote::get_payment_id_from_tx_extra_nonce(extra_nonce.nonce, payment_id))
             {
@@ -2736,7 +2725,10 @@ namespace tools
 
     if (req.pool)
     {
-      m_wallet->update_pool_state();
+      std::vector<std::pair<cryptonote::transaction, bool>> process_txs;
+      m_wallet->update_pool_state(process_txs);
+      if (!process_txs.empty())
+        m_wallet->process_pool_state(process_txs);
 
       std::list<std::pair<crypto::hash, tools::wallet2::pool_payment_details>> payments;
       m_wallet->get_unconfirmed_payments(payments, account_index, subaddr_indices);
@@ -2816,7 +2808,10 @@ namespace tools
       }
     }
 
-    m_wallet->update_pool_state();
+    std::vector<std::pair<cryptonote::transaction, bool>> process_txs;
+    m_wallet->update_pool_state(process_txs);
+    if (!process_txs.empty())
+      m_wallet->process_pool_state(process_txs);
 
     std::list<std::pair<crypto::hash, tools::wallet2::pool_payment_details>> pool_payments;
     m_wallet->get_unconfirmed_payments(pool_payments, req.account_index);
@@ -3112,6 +3107,108 @@ namespace tools
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_edit_address_book(const wallet_rpc::COMMAND_RPC_EDIT_ADDRESS_BOOK_ENTRY::request& req, wallet_rpc::COMMAND_RPC_EDIT_ADDRESS_BOOK_ENTRY::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    if (!m_wallet) return not_open(er);
+    if (m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Command unavailable in restricted mode.";
+      return false;
+    }
+
+    const auto ab = m_wallet->get_address_book();
+    if (req.index >= ab.size())
+    {
+      er.code = WALLET_RPC_ERROR_CODE_WRONG_INDEX;
+      er.message = "Index out of range: " + std::to_string(req.index);
+      return false;
+    }
+
+    tools::wallet2::address_book_row entry = ab[req.index];
+
+    cryptonote::address_parse_info info;
+    crypto::hash payment_id = crypto::null_hash;
+    if (req.set_address)
+    {
+      er.message = "";
+      if(!get_account_address_from_str_or_url(info, m_wallet->nettype(), req.address,
+        [&er](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid)->std::string {
+          if (!dnssec_valid)
+          {
+            er.message = std::string("Invalid DNSSEC for ") + url;
+            return {};
+          }
+          if (addresses.empty())
+          {
+            er.message = std::string("No Bittube address found at ") + url;
+            return {};
+          }
+          return addresses[0];
+        }))
+      {
+        er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
+        if (er.message.empty())
+          er.message = std::string("WALLET_RPC_ERROR_CODE_WRONG_ADDRESS: ") + req.address;
+        return false;
+      }
+      entry.m_address = info.address;
+      entry.m_is_subaddress = info.is_subaddress;
+      if (info.has_payment_id)
+      {
+        memcpy(entry.m_payment_id.data, info.payment_id.data, 8);
+        memset(entry.m_payment_id.data + 8, 0, 24);
+      }
+    }
+
+    if (req.set_payment_id)
+    {
+      if (req.payment_id.empty())
+      {
+        payment_id = crypto::null_hash;
+      }
+      else
+      {
+        if (req.set_address && info.has_payment_id)
+        {
+          er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
+          er.message = "Separate payment ID given with integrated address";
+          return false;
+        }
+
+        if (!wallet2::parse_long_payment_id(req.payment_id, payment_id))
+        {
+          crypto::hash8 spid;
+          if (!wallet2::parse_short_payment_id(req.payment_id, spid))
+          {
+            er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
+            er.message = "Payment id has invalid format: \"" + req.payment_id + "\", expected 64 character string";
+            return false;
+          }
+          else
+          {
+            er.code = WALLET_RPC_ERROR_CODE_WRONG_PAYMENT_ID;
+            er.message = "Payment id has invalid format: standalone short payment IDs are forbidden, they must be part of an integrated address";
+            return false;
+          }
+        }
+      }
+
+      entry.m_payment_id = payment_id;
+    }
+
+    if (req.set_description)
+      entry.m_description = req.description;
+
+    if (!m_wallet->set_address_book_row(req.index, entry.m_address, entry.m_payment_id, entry.m_description, entry.m_is_subaddress))
+    {
+      er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
+      er.message = "Failed to edit address book entry";
+      return false;
+    }
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool wallet_rpc_server::on_delete_address_book(const wallet_rpc::COMMAND_RPC_DELETE_ADDRESS_BOOK_ENTRY::request& req, wallet_rpc::COMMAND_RPC_DELETE_ADDRESS_BOOK_ENTRY::response& res, epee::json_rpc::error& er, const connection_context *ctx)
   {
     if (!m_wallet) return not_open(er);
     if (m_restricted)
@@ -4889,6 +4986,7 @@ public:
 
       const auto arg_wallet_file = wallet_args::arg_wallet_file();
       const auto arg_from_json = wallet_args::arg_generate_from_json();
+      const auto arg_rpc_client_secret_key = wallet_args::arg_rpc_client_secret_key();
 
       const auto wallet_file = command_line::get_arg(vm, arg_wallet_file);
       const auto from_json = command_line::get_arg(vm, arg_from_json);
@@ -4938,6 +5036,17 @@ public:
       if (!wal)
       {
         return false;
+      }
+
+      if (!command_line::is_arg_defaulted(vm, arg_rpc_client_secret_key))
+      {
+        crypto::secret_key client_secret_key;
+        if (!epee::string_tools::hex_to_pod(command_line::get_arg(vm, arg_rpc_client_secret_key), client_secret_key))
+        {
+          MERROR(arg_rpc_client_secret_key.name << ": RPC client secret key should be 32 byte in hex format");
+          return false;
+        }
+        wal->set_rpc_client_secret_key(client_secret_key);
       }
 
       bool quit = false;
@@ -5040,6 +5149,7 @@ int main(int argc, char** argv) {
 
   const auto arg_wallet_file = wallet_args::arg_wallet_file();
   const auto arg_from_json = wallet_args::arg_generate_from_json();
+  const auto arg_rpc_client_secret_key = wallet_args::arg_rpc_client_secret_key();
 
   po::options_description hidden_options("Hidden");
 
@@ -5053,10 +5163,7 @@ int main(int argc, char** argv) {
   command_line::add_arg(desc_params, arg_from_json);
   command_line::add_arg(desc_params, arg_wallet_dir);
   command_line::add_arg(desc_params, arg_prompt_for_password);
-  command_line::add_arg(desc_params, arg_print_progress);
-  command_line::add_arg(desc_params, arg_wallet_any_path);
-  command_line::add_arg(desc_params, arg_print_login);
-  command_line::add_arg(desc_params, arg_allow_daemon_control);
+  command_line::add_arg(desc_params, arg_rpc_client_secret_key);
 
   daemonizer::init_options(hidden_options, desc_params);
   desc_params.add(hidden_options);

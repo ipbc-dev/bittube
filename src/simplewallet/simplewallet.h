@@ -145,11 +145,16 @@ namespace cryptonote
     bool set_subaddress_lookahead(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_segregation_height(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_ignore_fractional_outputs(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_ignore_outputs_above(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_ignore_outputs_below(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_track_uses(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_inactivity_lock_timeout(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_setup_background_mining(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_device_name(const std::vector<std::string> &args = std::vector<std::string>());
     bool set_export_format(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_persistent_rpc_client_id(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_auto_mine_for_rpc_payment_threshold(const std::vector<std::string> &args = std::vector<std::string>());
+    bool set_credits_target(const std::vector<std::string> &args = std::vector<std::string>());
     bool help(const std::vector<std::string> &args = std::vector<std::string>());
     bool start_mining(const std::vector<std::string> &args);
     bool stop_mining(const std::vector<std::string> &args);
@@ -249,7 +254,11 @@ namespace cryptonote
     bool thaw(const std::vector<std::string>& args);
     bool frozen(const std::vector<std::string>& args);
     bool lock(const std::vector<std::string>& args);
+    bool rpc_payment_info(const std::vector<std::string> &args);
+    bool start_mining_for_rpc(const std::vector<std::string> &args);
+    bool stop_mining_for_rpc(const std::vector<std::string> &args);
     bool net_stats(const std::vector<std::string>& args);
+    bool public_nodes(const std::vector<std::string>& args);
     bool welcome(const std::vector<std::string>& args);
     bool version(const std::vector<std::string>& args);
     bool on_unknown_command(const std::vector<std::string>& args);
@@ -324,6 +333,11 @@ namespace cryptonote
     bool check_inactivity();
     bool check_refresh();
     bool check_mms();
+    bool check_rpc_payment();
+
+    void handle_transfer_exception(const std::exception_ptr &e, bool trusted_daemon);
+
+    bool check_daemon_rpc_prices(const std::string &daemon_url, uint32_t &actual_cph, uint32_t &claimed_cph);
 
     //----------------- i_wallet2_callback ---------------------
     virtual void on_new_block(uint64_t height, const cryptonote::block& block);
@@ -431,16 +445,26 @@ namespace cryptonote
     std::atomic<bool> m_in_manual_refresh;
     uint32_t m_current_subaddress_account;
 
-    bool m_long_payment_id_support;
-
     std::atomic<time_t> m_last_activity_time;
     std::atomic<bool> m_locked;
     std::atomic<bool> m_in_command;
 
+    template<uint64_t mini, uint64_t maxi> struct get_random_interval { public: uint64_t operator()() const { return crypto::rand_range(mini, maxi); } };
+
     epee::math_helper::once_a_time_seconds<1> m_inactivity_checker;
-    epee::math_helper::once_a_time_seconds<90> m_refresh_checker;
-    epee::math_helper::once_a_time_seconds<90> m_mms_checker;
+    epee::math_helper::once_a_time_seconds_range<get_random_interval<80 * 1000000, 100 * 1000000>> m_refresh_checker;
+    epee::math_helper::once_a_time_seconds_range<get_random_interval<90 * 1000000, 110 * 1000000>> m_mms_checker;
+    epee::math_helper::once_a_time_seconds_range<get_random_interval<90 * 1000000, 115 * 1000000>> m_rpc_payment_checker;
     
+    std::atomic<bool> m_need_payment;
+    boost::posix_time::ptime m_last_rpc_payment_mining_time;
+    bool m_rpc_payment_mining_requested;
+    bool m_daemon_rpc_payment_message_displayed;
+    float m_rpc_payment_hash_rate;
+    std::atomic<bool> m_suspend_rpc_payment_mining;
+
+    std::unordered_map<std::string, uint32_t> m_claimed_cph;
+
     // MMS
     mms::message_store& get_message_store() const { return m_wallet->get_message_store(); };
     mms::multisig_wallet_state get_multisig_wallet_state() const { return m_wallet->get_multisig_wallet_state(); };

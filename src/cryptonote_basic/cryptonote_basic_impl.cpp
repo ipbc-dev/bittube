@@ -142,6 +142,19 @@ namespace cryptonote {
     {
       base_reward = FINAL_SUBSIDY_PER_MINUTE*target_minutes;
     }
+    uint64_t product_hi;
+    // BUGFIX: 32-bit saturation bug (e.g. ARM7), the result was being
+    // treated as 32-bit by default.
+    uint64_t multiplicand = 2 * median_weight - current_block_weight;
+    multiplicand *= current_block_weight;
+    uint64_t product_lo = mul128(base_reward, multiplicand, &product_hi);
+
+    uint64_t reward_hi;
+    uint64_t reward_lo;
+    div128_64(product_hi, product_lo, median_weight, &reward_hi, &reward_lo, NULL, NULL);
+    div128_64(reward_hi, reward_lo, median_weight, &reward_hi, &reward_lo, NULL, NULL);
+    assert(0 == reward_hi);
+    assert(reward_lo < base_reward);
 
     reward = get_penalized_amount(base_reward, median_weight, current_block_weight);
     reward += version < BLOCK_MAJOR_VERSION_4 ? get_penalized_amount(fee, median_weight, current_block_weight) : fee;

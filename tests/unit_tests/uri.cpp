@@ -49,7 +49,7 @@ TEST(uri, empty_string)
 
 TEST(uri, no_scheme)
 {
-  PARSE_URI("italo", false);
+  PARSE_URI("bittube", false);
 }
 
 TEST(uri, bad_scheme)
@@ -145,7 +145,7 @@ TEST(uri, bad_payment_id)
 
 TEST(uri, short_payment_id)
 {
-  PARSE_URI("italo:" TEST_ADDRESS"?tx_payment_id=1234567890123456", true);
+  PARSE_URI("bittube:" TEST_ADDRESS"?tx_payment_id=1234567890123456", true);
   ASSERT_EQ(address, TEST_ADDRESS);
   ASSERT_EQ(payment_id, "1234567890123456");
 }

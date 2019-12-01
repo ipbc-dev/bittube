@@ -98,14 +98,14 @@ namespace nodetool
     command_line::add_arg(desc, arg_p2p_bind_port, false);
     command_line::add_arg(desc, arg_p2p_bind_port_ipv6, false);
     command_line::add_arg(desc, arg_p2p_use_ipv6);
-    command_line::add_arg(desc, arg_p2p_require_ipv4);
+    command_line::add_arg(desc, arg_p2p_ignore_ipv4);
     command_line::add_arg(desc, arg_p2p_external_port);
     command_line::add_arg(desc, arg_p2p_allow_local_ip);
     command_line::add_arg(desc, arg_p2p_add_peer);
     command_line::add_arg(desc, arg_p2p_add_priority_node);
     command_line::add_arg(desc, arg_p2p_add_exclusive_node);
     command_line::add_arg(desc, arg_p2p_seed_node);
-    command_line::add_arg(desc, arg_proxy);
+    command_line::add_arg(desc, arg_tx_proxy);
     command_line::add_arg(desc, arg_anonymous_inbound);
     command_line::add_arg(desc, arg_p2p_hide_my_port);
     command_line::add_arg(desc, arg_no_sync);
@@ -316,13 +316,13 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::add_host_fail(const epee::net_utils::network_address &address)
+  bool node_server<t_payload_net_handler>::add_host_fail(const epee::net_utils::network_address &address, unsigned int score)
   {
     if(!address.is_blockable())
       return false;
 
     CRITICAL_REGION_LOCAL(m_host_fails_score_lock);
-    uint64_t fails = ++m_host_fails_score[address.host_str()];
+    uint64_t fails = m_host_fails_score[address.host_str()] += score;
     MDEBUG("Host " << address.host_str() << " fail score=" << fails);
     if(fails > P2P_IP_FAILS_BEFORE_BLOCK)
     {
@@ -383,9 +383,9 @@ namespace nodetool
     }
     m_offline = command_line::get_arg(vm, cryptonote::arg_offline);
     m_use_ipv6 = command_line::get_arg(vm, arg_p2p_use_ipv6);
-    m_require_ipv4 = command_line::get_arg(vm, arg_p2p_require_ipv4);
+    m_require_ipv4 = !command_line::get_arg(vm, arg_p2p_ignore_ipv4);
     public_zone.m_notifier = cryptonote::levin::notify{
-      public_zone.m_net_server.get_io_service(), public_zone.m_net_server.get_config_shared(), nullptr
+      public_zone.m_net_server.get_io_service(), public_zone.m_net_server.get_config_shared(), nullptr, true
     };
 
     if (command_line::has_arg(vm, arg_p2p_add_peer))
@@ -476,7 +476,7 @@ namespace nodetool
       network_zone& zone = add_zone(proxy.zone);
       if (zone.m_connect != nullptr)
       {
-        MERROR("Listed --" << arg_proxy.name << " twice with " << epee::net_utils::zone_to_string(proxy.zone));
+        MERROR("Listed --" << arg_tx_proxy.name << " twice with " << epee::net_utils::zone_to_string(proxy.zone));
         return false;
       }
       zone.m_connect = &socks_connect;
@@ -496,7 +496,7 @@ namespace nodetool
       }
 
       zone.m_notifier = cryptonote::levin::notify{
-        zone.m_net_server.get_io_service(), zone.m_net_server.get_config_shared(), std::move(this_noise)
+        zone.m_net_server.get_io_service(), zone.m_net_server.get_config_shared(), std::move(this_noise), false
       };
     }
 
@@ -504,7 +504,7 @@ namespace nodetool
     {
       if (zone.second.m_connect == nullptr)
       {
-        MERROR("Set outgoing peer for " << epee::net_utils::zone_to_string(zone.first) << " but did not set --" << arg_proxy.name);
+        MERROR("Set outgoing peer for " << epee::net_utils::zone_to_string(zone.first) << " but did not set --" << arg_tx_proxy.name);
         return false;
       }
     }
@@ -526,7 +526,7 @@ namespace nodetool
 
       if (zone.m_connect == nullptr && tx_relay_zones <= 1)
       {
-        MERROR("Listed --" << arg_anonymous_inbound.name << " without listing any --" << arg_proxy.name << ". The latter is necessary for sending origin txes over anonymity networks");
+        MERROR("Listed --" << arg_anonymous_inbound.name << " without listing any --" << arg_tx_proxy.name << ". The latter is necessary for sending local txes over anonymity networks");
         return false;
       }
 
@@ -661,11 +661,18 @@ namespace nodetool
       std::vector<std::vector<std::string>> dns_results;
       dns_results.resize(m_seed_nodes_list.size());
 
+      // some libc implementation provide only a very small stack
+      // for threads, e.g. musl only gives +- 80kb, which is not
+      // enough to do a resolve with unbound. we request a stack
+      // of 1 mb, which should be plenty
+      boost::thread::attributes thread_attributes;
+      thread_attributes.set_stack_size(1024*1024);
+
       std::list<boost::thread> dns_threads;
       uint64_t result_index = 0;
       for (const std::string& addr_str : m_seed_nodes_list)
       {
-        boost::thread th = boost::thread([=, &dns_results, &addr_str]
+        boost::thread th = boost::thread(thread_attributes, [=, &dns_results, &addr_str]
         {
           MDEBUG("dns_threads[" << result_index << "] created for: " << addr_str);
           // TODO: care about dnssec avail/valid
@@ -1038,7 +1045,8 @@ namespace nodetool
 
         pi = context.peer_id = rsp.node_data.peer_id;
         context.m_rpc_port = rsp.node_data.rpc_port;
-        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port);
+        context.m_rpc_credits_per_hash = rsp.node_data.rpc_credits_per_hash;
+        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(rsp.node_data.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
 
         // move
         for (auto const& zone : m_network_zones)
@@ -1106,7 +1114,7 @@ namespace nodetool
         add_host_fail(context.m_remote_address);
       }
       if(!context.m_is_income)
-        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(context.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port);
+        m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.set_peer_just_seen(context.peer_id, context.m_remote_address, context.m_pruning_seed, context.m_rpc_port, context.m_rpc_credits_per_hash);
       if (!m_payload_handler.process_payload_sync_data(rsp.payload_data, context, false))
       {
         m_network_zones.at(context.m_remote_address.get_zone()).m_net_server.get_config_object().close(context.m_connection_id );
@@ -1275,6 +1283,7 @@ namespace nodetool
     pe_local.last_seen = static_cast<int64_t>(last_seen);
     pe_local.pruning_seed = con->m_pruning_seed;
     pe_local.rpc_port = con->m_rpc_port;
+    pe_local.rpc_credits_per_hash = con->m_rpc_credits_per_hash;
     zone.m_peerlist.append_with_peer_white(pe_local);
     //update last seen and push it to peerlist manager
 
@@ -1850,7 +1859,11 @@ namespace nodetool
         const epee::net_utils::ipv4_network_address &ipv4 = na.as<const epee::net_utils::ipv4_network_address>();
         if (ipv4.ip() == 0)
           ignore = true;
+        else if (ipv4.port() == be.rpc_port)
+          ignore = true;
       }
+      if (be.pruning_seed && (be.pruning_seed < tools::make_pruning_seed(1, CRYPTONOTE_PRUNING_LOG_STRIPES) || be.pruning_seed > tools::make_pruning_seed(1ul << CRYPTONOTE_PRUNING_LOG_STRIPES, CRYPTONOTE_PRUNING_LOG_STRIPES)))
+        ignore = true;
       if (ignore)
       {
         MDEBUG("Ignoring " << be.adr.str());
@@ -1901,6 +1914,7 @@ namespace nodetool
     else
       node_data.my_port = 0;
     node_data.rpc_port = zone.m_can_pingback ? m_rpc_port : 0;
+    node_data.rpc_credits_per_hash = zone.m_can_pingback ? m_rpc_credits_per_hash : 0;
     node_data.network_id = m_network_id;
     return true;
   }
@@ -2345,6 +2359,7 @@ namespace nodetool
     context.peer_id = arg.node_data.peer_id;
     context.m_in_timedsync = false;
     context.m_rpc_port = arg.node_data.rpc_port;
+    context.m_rpc_credits_per_hash = arg.node_data.rpc_credits_per_hash;
 
     if(arg.node_data.my_port && zone.m_can_pingback)
     {
@@ -2372,6 +2387,7 @@ namespace nodetool
         pe.id = peer_id_l;
         pe.pruning_seed = context.m_pruning_seed;
         pe.rpc_port = context.m_rpc_port;
+        pe.rpc_credits_per_hash = context.m_rpc_credits_per_hash;
         this->m_network_zones.at(context.m_remote_address.get_zone()).m_peerlist.append_with_peer_white(pe);
         LOG_DEBUG_CC(context, "PING SUCCESS " << context.m_remote_address.host_str() << ":" << port_l);
       });
@@ -2691,7 +2707,7 @@ namespace nodetool
       }
       else
       {
-        zone.second.m_peerlist.set_peer_just_seen(pe.id, pe.adr, pe.pruning_seed, pe.rpc_port);
+        zone.second.m_peerlist.set_peer_just_seen(pe.id, pe.adr, pe.pruning_seed, pe.rpc_port, pe.rpc_credits_per_hash);
         LOG_PRINT_L2("PEER PROMOTED TO WHITE PEER LIST IP address: " << pe.adr.host_str() << " Peer ID: " << peerid_type(pe.id));
       }
     }

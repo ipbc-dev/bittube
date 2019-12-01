@@ -503,7 +503,11 @@ namespace tx {
     tsx_data.set_num_inputs(static_cast<google::protobuf::uint32>(tx.sources.size()));
     tsx_data.set_mixin(static_cast<google::protobuf::uint32>(tx.sources[0].outputs.size() - 1));
     tsx_data.set_account(tx.subaddr_account);
+<<<<<<< HEAD
     tsx_data.set_monero_version(std::string(BITTUBE_VERSION) + "|" + BITTUBE_VERSION_TAG);
+=======
+    tsx_data.set_monero_version(std::string(BITTUBE_VERSION) + "|" + BITTUBE_VERSION_TAG);
+>>>>>>> d20cf9a48... RandomX Upgrades
     tsx_data.set_hard_fork(m_aux_data->hard_fork ? m_aux_data->hard_fork.get() : 0);
     assign_to_repeatable(tsx_data.mutable_minor_indices(), tx.subaddr_indices.begin(), tx.subaddr_indices.end());
 

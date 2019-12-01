@@ -108,6 +108,26 @@ namespace cryptonote
       ge_p1p1_to_p3(&A2, &tmp3);
       ge_p3_tobytes(&AB, &A2);
   }
+
+  uint64_t get_transaction_weight_clawback(const transaction &tx, size_t n_padded_outputs)
+  {
+    const rct::rctSig &rv = tx.rct_signatures;
+    const uint64_t bp_base = 368;
+    const size_t n_outputs = tx.vout.size();
+    if (n_padded_outputs <= 2)
+      return 0;
+    size_t nlr = 0;
+    while ((1u << nlr) < n_padded_outputs)
+      ++nlr;
+    nlr += 6;
+    const size_t bp_size = 32 * (9 + 2 * nlr);
+    CHECK_AND_ASSERT_THROW_MES_L1(n_outputs <= BULLETPROOF_MAX_OUTPUTS, "maximum number of outputs is " + std::to_string(BULLETPROOF_MAX_OUTPUTS) + " per transaction");
+    CHECK_AND_ASSERT_THROW_MES_L1(bp_base * n_padded_outputs >= bp_size, "Invalid bulletproof clawback: bp_base " + std::to_string(bp_base) + ", n_padded_outputs "
+        + std::to_string(n_padded_outputs) + ", bp_size " + std::to_string(bp_size));
+    const uint64_t bp_clawback = (bp_base * n_padded_outputs - bp_size) * 4 / 5;
+    return bp_clawback;
+  }
+  //---------------------------------------------------------------
 }
 
 namespace cryptonote
@@ -412,27 +432,59 @@ namespace cryptonote
   //---------------------------------------------------------------
   uint64_t get_transaction_weight(const transaction &tx, size_t blob_size)
   {
+    CHECK_AND_ASSERT_MES(!tx.pruned, std::numeric_limits<uint64_t>::max(), "get_transaction_weight does not support pruned txes");
     if (tx.version < 2)
       return blob_size;
     const rct::rctSig &rv = tx.rct_signatures;
-    if (!rct::is_rct_bulletproof(rv.type))
-      return blob_size;
-    const size_t n_outputs = tx.vout.size();
-    if (n_outputs <= 2)
-      return blob_size;
     if (rv.type != rct::RCTTypeBulletproof && rv.type != rct::RCTTypeBulletproof2)
-      return blob_size;  
-    const uint64_t bp_base = 368;
+      return blob_size;
     const size_t n_padded_outputs = rct::n_bulletproof_max_amounts(rv.p.bulletproofs);
-    size_t nlr = 0;
-    for (const auto &bp: rv.p.bulletproofs)
-      nlr += bp.L.size() * 2;
-    const size_t bp_size = 32 * (9 + nlr);
-    CHECK_AND_ASSERT_THROW_MES_L1(n_outputs <= BULLETPROOF_MAX_OUTPUTS, "maximum number of outputs is " + std::to_string(BULLETPROOF_MAX_OUTPUTS) + " per transaction");
-    CHECK_AND_ASSERT_THROW_MES_L1(bp_base * n_padded_outputs >= bp_size, "Invalid bulletproof clawback");
-    const uint64_t bp_clawback = (bp_base * n_padded_outputs - bp_size) * 4 / 5;
+    uint64_t bp_clawback = get_transaction_weight_clawback(tx, n_padded_outputs);
     CHECK_AND_ASSERT_THROW_MES_L1(bp_clawback <= std::numeric_limits<uint64_t>::max() - blob_size, "Weight overflow");
     return blob_size + bp_clawback;
+  }
+  //---------------------------------------------------------------
+  uint64_t get_pruned_transaction_weight(const transaction &tx)
+  {
+    CHECK_AND_ASSERT_MES(tx.pruned, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support non pruned txes");
+    CHECK_AND_ASSERT_MES(tx.version >= 2, std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support v1 txes");
+    CHECK_AND_ASSERT_MES(tx.rct_signatures.type >= rct::RCTTypeBulletproof2,
+        std::numeric_limits<uint64_t>::max(), "get_pruned_transaction_weight does not support older range proof types");
+    CHECK_AND_ASSERT_MES(!tx.vin.empty(), std::numeric_limits<uint64_t>::max(), "empty vin");
+    CHECK_AND_ASSERT_MES(tx.vin[0].type() == typeid(cryptonote::txin_to_key), std::numeric_limits<uint64_t>::max(), "empty vin");
+
+    // get pruned data size
+    std::ostringstream s;
+    binary_archive<true> a(s);
+    ::serialization::serialize(a, const_cast<transaction&>(tx));
+    uint64_t weight = s.str().size(), extra;
+
+    // nbps (technically varint)
+    weight += 1;
+
+    // calculate deterministic bulletproofs size (assumes canonical BP format)
+    size_t nrl = 0, n_padded_outputs;
+    while ((n_padded_outputs = (1u << nrl)) < tx.vout.size())
+      ++nrl;
+    nrl += 6;
+    extra = 32 * (9 + 2 * nrl) + 2;
+    weight += extra;
+
+    // calculate deterministic MLSAG data size
+    const size_t ring_size = boost::get<cryptonote::txin_to_key>(tx.vin[0]).key_offsets.size();
+    extra = tx.vin.size() * (ring_size * (1 + 1) * 32 + 32 /* cc */);
+    weight += extra;
+
+    // calculate deterministic pseudoOuts size
+    extra =  32 * (tx.vin.size());
+    weight += extra;
+
+    // clawback
+    uint64_t bp_clawback = get_transaction_weight_clawback(tx, n_padded_outputs);
+    CHECK_AND_ASSERT_THROW_MES_L1(bp_clawback <= std::numeric_limits<uint64_t>::max() - weight, "Weight overflow");
+    weight += bp_clawback;
+
+    return weight;
   }
   //---------------------------------------------------------------
   uint64_t get_transaction_weight(const transaction &tx)
@@ -725,6 +777,42 @@ namespace cryptonote
 	tx_extra.push_back(TX_EXTRA_MERGE_MINING_TAG);
 	std::copy(reinterpret_cast<const uint8_t*>(blob.data()), reinterpret_cast<const uint8_t*>(blob.data() + blob.size()), std::back_inserter(tx_extra));
 	return true;
+  }
+  //---------------------------------------------------------------
+  bool get_genesis_block_hash(crypto::hash& h)
+  {
+	  static std::atomic<bool> cached(false);
+	  static crypto::hash genesis_block_hash;
+	  if (!cached)
+	  {
+		  static boost::mutex m;
+		  boost::unique_lock<boost::mutex> lock(m);
+		  if (!cached)
+		  {
+			  block genesis_block;
+        blobdata tx_bl;
+        bool r = string_tools::parse_hexstr_to_binbuff(config::GENESIS_TX, tx_bl);
+        CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
+        r = parse_and_validate_tx_from_blob(tx_bl, genesis_block.miner_tx);
+        CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
+        genesis_block.major_version = CURRENT_BLOCK_MAJOR_VERSION;
+        genesis_block.minor_version = CURRENT_BLOCK_MINOR_VERSION;
+        genesis_block.timestamp = 0;
+        genesis_block.nonce = config::GENESIS_NONCE;
+        miner::find_nonce_for_given_block[this](const cryptonote::block &genesis_block, uint64_t 1, unsigned int 0, crypto::hash &genesis_block_hash);
+        
+        
+        genesis_block.invalidate_hashes();
+
+			  if (!get_block_hash(genesis_block, genesis_block_hash))
+				  return false;
+
+			  cached = true;
+		  }
+	  }
+
+	  h = genesis_block_hash;
+	  return true;
   }
   //---------------------------------------------------------------
   bool get_mm_tag_from_extra(const std::vector<uint8_t>& tx_extra, tx_extra_merge_mining_tag& mm_tag)
@@ -1053,7 +1141,19 @@ namespace cryptonote
   crypto::hash get_transaction_prunable_hash(const transaction& t, const cryptonote::blobdata *blobdata)
   {
     crypto::hash res;
+    if (t.is_prunable_hash_valid())
+    {
+#ifdef ENABLE_HASH_CASH_INTEGRITY_CHECK
+      CHECK_AND_ASSERT_THROW_MES(!calculate_transaction_prunable_hash(t, blobdata, res) || t.hash == res, "tx hash cash integrity failure");
+#endif
+      res = t.prunable_hash;
+      ++tx_hashes_cached_count;
+      return res;
+    }
+
+    ++tx_hashes_calculated_count;
     CHECK_AND_ASSERT_THROW_MES(calculate_transaction_prunable_hash(t, blobdata, res), "Failed to calculate tx prunable hash");
+    t.set_prunable_hash(res);
     return res;
   }
   //---------------------------------------------------------------
@@ -1089,11 +1189,14 @@ namespace cryptonote
 
     // the tx hash is the hash of the 3 hashes
     crypto::hash res = cn_fast_hash(hashes, sizeof(hashes));
+    t.set_hash(res);
     return res;
   }
   //---------------------------------------------------------------
   bool calculate_transaction_hash(const transaction& t, crypto::hash& res, size_t* blob_size)
   {
+    CHECK_AND_ASSERT_MES(!t.pruned, false, "Cannot calculate the hash of a pruned transaction");
+
     // v1 transactions hash the entire blob
     if (t.version <= 1)
     {
@@ -1133,8 +1236,7 @@ namespace cryptonote
     {
       if (!t.is_blob_size_valid())
       {
-        t.blob_size = blob.size();
-        t.set_blob_size_valid(true);
+        t.set_blob_size(blob.size());
       }
       *blob_size = t.blob_size;
     }
@@ -1154,8 +1256,7 @@ namespace cryptonote
       {
         if (!t.is_blob_size_valid())
         {
-          t.blob_size = get_object_blobsize(t);
-          t.set_blob_size_valid(true);
+          t.set_blob_size(get_object_blobsize(t));
         }
         *blob_size = t.blob_size;
       }
@@ -1166,12 +1267,10 @@ namespace cryptonote
     bool ret = calculate_transaction_hash(t, res, blob_size);
     if (!ret)
       return false;
-    t.hash = res;
-    t.set_hash_valid(true);
+    t.set_hash(res);
     if (blob_size)
     {
-      t.blob_size = *blob_size;
-      t.set_blob_size_valid(true);
+      t.set_blob_size(*blob_size);
     }
     return true;
   }
@@ -1206,10 +1305,19 @@ namespace cryptonote
 	return t_serializable_object_to_blob(sbb, blob);
   }
   //---------------------------------------------------------------
- bool calculate_block_hash(const block& b, crypto::hash& res)
+ bool calculate_block_hash(const block& b, crypto::hash& res, const blobdata *blob)
   {
-    get_blob_hash(block_to_blob(b));
+    blobdata bd;
+    if (!blob)
+    {
+      bd = block_to_blob(b);
+      blob = &bd;
+    }
+
     bool hash_result = get_object_hash(get_block_hashing_blob(b), res);
+    if (!hash_result)
+      return false;
+      
     return hash_result;
   }
   //---------------------------------------------------------------
@@ -1242,44 +1350,10 @@ namespace cryptonote
     bool ret = get_object_hash(blob, res);
     if (!ret)
       return false;
-    b.hash = res;
-    b.set_hash_valid(true);
+    b.set_hash(res);
     return true;
   }
-  //---------------------------------------------------------------
-  bool get_genesis_block_hash(crypto::hash& h)
-  {
-	  static std::atomic<bool> cached(false);
-	  static crypto::hash genesis_block_hash;
-	  if (!cached)
-	  {
-		  static boost::mutex m;
-		  boost::unique_lock<boost::mutex> lock(m);
-		  if (!cached)
-		  {
-			  block genesis_block;
-        blobdata tx_bl;
-        bool r = string_tools::parse_hexstr_to_binbuff(config::GENESIS_TX, tx_bl);
-        CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
-        r = parse_and_validate_tx_from_blob(tx_bl, genesis_block.miner_tx);
-        CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
-        genesis_block.major_version = CURRENT_BLOCK_MAJOR_VERSION;
-        genesis_block.minor_version = CURRENT_BLOCK_MINOR_VERSION;
-        genesis_block.timestamp = 0;
-        genesis_block.nonce = config::GENESIS_NONCE;
-        miner::find_nonce_for_given_block(genesis_block, 1, 0);
-        genesis_block.invalidate_hashes();
-
-			  if (!get_block_hash(genesis_block, genesis_block_hash))
-				  return false;
-
-			  cached = true;
-		  }
-	  }
-
-	  h = genesis_block_hash;
-	  return true;
-  }
+  
   //---------------------------------------------------------------
   bool get_block_header_hash(const block& b, crypto::hash& res)
   {
@@ -1297,127 +1371,6 @@ namespace cryptonote
     return p;
   }
   //---------------------------------------------------------------
-<<<<<<< HEAD
-  bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
-  {
-    const blobdata bd                 = get_block_hashing_blob(b);
-    const int hf_version              = b.major_version; 
-   if (b.major_version >= BLOCK_MAJOR_VERSION_4){
-    crypto::cn_slow_hash_type cn_type = cn_slow_hash_type::heavy_v2;
-
-    if (hf_version >= HF_VERSION_POW_VARIANT4)
-      cn_type = cn_slow_hash_type::cn_r;
-    else if (hf_version >= HF_VERSION_POW_VARIANT2)
-      cn_type = crypto::cn_slow_hash_type::heavy_v3;
-    
-    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT4 ? 4 : b.major_version >= HF_VERSION_POW_VARIANT2 ? 2 : 1;
-    crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, height, cn_type);  
-   }
-   else
-   {
-    crypto::cn_slow_hash(bd.data(), bd.size(), res);   
-   }
-    
-    return true;
-  }
-  bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
-  {
-	  blobdata bd;
-	  if (!get_bytecoin_block_hashing_blob(b, bd))
-		  return false;
-
-    const int hf_version              = b.major_version;
-    crypto::cn_slow_hash_type cn_type = cn_slow_hash_type::heavy_v1;
-    if (hf_version >= HF_VERSION_POW_VARIANT1)
-      cn_type = cn_slow_hash_type::heavy_v2;
-    
-    // v1-2 = standard, v3 = lite + monerov7 + ipbc, vX = sumo + monerov7 + ipbc
-    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT1 ? 1 : 0;
-	  crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, 0, cn_type);
-	  return true;
-  }
-  //---------------------------------------------------------------
-  bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
-  {
-    MDEBUG("Checking POW V1 - diff " << current_diffic);
-    if (bl.major_version != BLOCK_MAJOR_VERSION_1 && bl.major_version < BLOCK_MAJOR_VERSION_4)
-		  return false;
-
-	  if (!get_block_longhash(bl, proof_of_work, height)) {
-       MDEBUG("Failed to get block longhash");
-       return false;
-    }
-	  return check_hash(proof_of_work, current_diffic);
-  }
-  //---------------------------------------------------------------
-  bool check_proof_of_work_v2(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
-  {
-	  MDEBUG("Checking POW V2 - diff " << current_diffic);
-	  if (bl.major_version < BLOCK_MAJOR_VERSION_2)
-		  return false;
-
-	  if (!get_bytecoin_block_longhash(bl, proof_of_work)) {
-		  MDEBUG("Failed to get bytecoin block longhash");
-		  return false;
-	  }
-	  if (!check_hash(proof_of_work, current_diffic)) {
-		  MDEBUG("Failed to check hash for pow");
-		  return false;
-	  }
-
-	  tx_extra_merge_mining_tag mm_tag;
-	  if (!get_mm_tag_from_extra(bl.parent_block.miner_tx.extra, mm_tag))
-	  {
-		  LOG_ERROR("merge mining tag wasn't found in extra of the parent block miner transaction");
-		  return false;
-	  }
-
-	  crypto::hash genesis_block_hash;
-	  if (!get_genesis_block_hash(genesis_block_hash)) {
-		  MDEBUG("Failed to get genesis block hash");
-		  return false;
-	  }
-
-	  if (8 * sizeof(genesis_block_hash) < bl.parent_block.blockchain_branch.size()) {
-		  MDEBUG("Failed genesis block and parent block branch size comparison");
-		  return false;
-	  }
-
-	  crypto::hash aux_block_header_hash;
-	  if (!get_block_header_hash(bl, aux_block_header_hash)) {
-		  MDEBUG("Failed to get aux header hash");
-		  return false;
-	  }
-
-	  crypto::hash aux_blocks_merkle_root;
-	  crypto::tree_hash_from_branch(bl.parent_block.blockchain_branch.data(), bl.parent_block.blockchain_branch.size(),
-		  aux_block_header_hash, &genesis_block_hash, aux_blocks_merkle_root);
-	  CHECK_AND_NO_ASSERT_MES(aux_blocks_merkle_root == mm_tag.merkle_root, false, "Aux block hash wasn't found in merkle tree");
-
-	  return true;
-  }
-  //---------------------------------------------------------------
-  bool check_proof_of_work(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
-  {
-	  switch (bl.major_version)
-	  {
-	  case BLOCK_MAJOR_VERSION_2:
-	  case BLOCK_MAJOR_VERSION_3:
-		  return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
-    default:
-	    return check_proof_of_work_v1(bl, current_diffic, proof_of_work, height);
-	  }
-  }
-  //---------------------------------------------------------------
-  crypto::hash get_block_longhash(const block& b, uint64_t height)
-  {
-    crypto::hash p = null_hash;
-    get_block_longhash(b, p, height);
-    return p;
-  }
-  //---------------------------------------------------------------
-=======
->>>>>>> 81c2ad6d5b17cf280a4a55fd6159e8dde423f5a8
   std::vector<uint64_t> relative_output_offsets_to_absolute(const std::vector<uint64_t>& off)
   {
     std::vector<uint64_t> res = off;
@@ -1438,11 +1391,7 @@ namespace cryptonote
     return res;
   }
   //---------------------------------------------------------------
-<<<<<<< HEAD
-  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b)
-=======
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash *block_hash)
->>>>>>> 81c2ad6d5b17cf280a4a55fd6159e8dde423f5a8
   {
     std::stringstream ss;
     ss << b_blob;
@@ -1451,7 +1400,23 @@ namespace cryptonote
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse block from blob");
     b.invalidate_hashes();
     b.miner_tx.invalidate_hashes();
+    if (block_hash)
+    {
+      calculate_block_hash(b, *block_hash, &b_blob);
+      ++block_hashes_calculated_count;
+      b.set_hash(*block_hash);
+    }
     return true;
+  }
+  //---------------------------------------------------------------
+  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b)
+  {
+    return parse_and_validate_block_from_blob(b_blob, b, NULL);
+  }
+  //---------------------------------------------------------------
+  bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b, crypto::hash &block_hash)
+  {
+    return parse_and_validate_block_from_blob(b_blob, b, &block_hash);
   }
   //---------------------------------------------------------------
   blobdata block_to_blob(const block& b)
