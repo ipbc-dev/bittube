@@ -41,8 +41,8 @@
 #include "cryptonote_config.h"
 #include "difficulty.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "difficulty"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "difficulty"
 
 namespace cryptonote {
 

@@ -31,8 +31,8 @@
 #include "span.h"
 #include "net/levin_base.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "net"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "net"
 
 namespace epee
 {

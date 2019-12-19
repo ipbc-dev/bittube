@@ -46,8 +46,8 @@
 #include "blockchain_db/db_types.h"
 #include "cryptonote_core/cryptonote_core.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "bcutil"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "bcutil"
 
 namespace
 {

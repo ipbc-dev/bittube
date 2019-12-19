@@ -51,8 +51,8 @@
 #include <iomanip>
 #include <algorithm>
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "net"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "net"
 
 #define AGGRESSIVE_TIMEOUT_THRESHOLD 120 // sockets
 #define NEW_CONNECTION_TIMEOUT_LOCAL 1200000 // 2 minutes

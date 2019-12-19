@@ -38,8 +38,8 @@
 #include "blockchain_db/db_types.h"
 #include "version.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "bcutil"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "bcutil"
 
 #define MDB_val_set(var, val)   MDB_val var = {sizeof(val), (void *)&val}
 

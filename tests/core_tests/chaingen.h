@@ -57,8 +57,8 @@
 #include "cryptonote_basic/cryptonote_boost_serialization.h"
 #include "misc_language.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "tests.core"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "tests.core"
 
 
 

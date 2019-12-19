@@ -44,8 +44,8 @@ using namespace epee;
 #include "int-util.h"
 #include "common/dns_utils.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "cn"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "cn"
 
 namespace cryptonote {
 

@@ -41,8 +41,8 @@
 #include <crtdbg.h>
 #endif
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "wallet.wallet2"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "wallet.wallet2"
 
 // workaround for a suspected bug in pthread/kernel on MacOS X
 #ifdef __APPLE__
@@ -209,7 +209,7 @@ namespace wallet_args
     if (!command_line::is_arg_defaulted(vm, arg_log_level))
       MINFO("Setting log level = " << command_line::get_arg(vm, arg_log_level));
     else
-      MINFO("Setting log levels = " << getenv("MONERO_LOGS"));
+      MINFO("Setting log levels = " << getenv("BITTUBE_LOGS"));
     MINFO(wallet_args::tr("Logging to: ") << log_path);
 
     if (!srv_util)

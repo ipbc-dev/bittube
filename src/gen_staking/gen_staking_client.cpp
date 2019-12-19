@@ -52,8 +52,8 @@ using namespace cryptonote;
 using boost::lexical_cast;
 namespace po = boost::program_options;
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "wallet.gen_staking_client"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "wallet.gen_staking_client"
 
 namespace
 {

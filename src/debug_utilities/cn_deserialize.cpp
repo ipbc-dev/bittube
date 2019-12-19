@@ -36,8 +36,8 @@
 #include "common/command_line.h"
 #include "version.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "debugtools.deserialize"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "debugtools.deserialize"
 
 namespace po = boost::program_options;
 using namespace epee;

@@ -27,8 +27,8 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef MONERO_PROTOCOL_H
-#define MONERO_PROTOCOL_H
+#ifndef BITTUBE_PROTOCOL_H
+#define BITTUBE_PROTOCOL_H
 
 #include "trezor_defs.hpp"
 #include "device/device_cold.hpp"
@@ -328,4 +328,4 @@ namespace tx {
 }
 
 
-#endif //MONERO_PROTOCOL_H
+#endif //BITTUBE_PROTOCOL_H

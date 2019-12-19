@@ -27,8 +27,8 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef MONERO_EXCEPTIONS_H
-#define MONERO_EXCEPTIONS_H
+#ifndef BITTUBE_EXCEPTIONS_H
+#define BITTUBE_EXCEPTIONS_H
 
 #include <exception>
 #include <string>
@@ -190,4 +190,4 @@ namespace proto {
 }
 }
 }
-#endif //MONERO_EXCEPTIONS_H
+#endif //BITTUBE_EXCEPTIONS_H

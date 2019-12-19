@@ -39,8 +39,8 @@
 
 using namespace epee;
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "checkpoints"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "checkpoints"
 
 namespace cryptonote
 {

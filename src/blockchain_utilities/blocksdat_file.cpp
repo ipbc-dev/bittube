@@ -29,8 +29,8 @@
 
 #include "blocksdat_file.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "bcutil"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "bcutil"
 
 namespace po = boost::program_options;
 

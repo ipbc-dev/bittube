@@ -74,7 +74,7 @@ static inline int use_v4_jit(void)
   if (use_v4_jit_flag != -1)
     return use_v4_jit_flag;
 
-  const char *env = getenv("MONERO_USE_CNV4_JIT");
+  const char *env = getenv("BITTUBE_USE_CNV4_JIT");
   if (!env) {
     use_v4_jit_flag = 0;
   }
@@ -506,7 +506,7 @@ STATIC INLINE int force_software_aes(void)
   if (use != -1)
     return use;
 
-  const char *env = getenv("MONERO_USE_SOFTWARE_AES");
+  const char *env = getenv("BITTUBE_USE_SOFTWARE_AES");
   if (!env) {
     use = 0;
   }

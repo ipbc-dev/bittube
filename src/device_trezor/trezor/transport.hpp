@@ -27,8 +27,8 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef MONERO_TRANSPORT_H
-#define MONERO_TRANSPORT_H
+#ifndef BITTUBE_TRANSPORT_H
+#define BITTUBE_TRANSPORT_H
 
 
 #include <boost/asio.hpp>
@@ -409,4 +409,4 @@ namespace trezor {
 }}
 
 
-#endif //MONERO_TRANSPORT_H
+#endif //BITTUBE_TRANSPORT_H

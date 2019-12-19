@@ -50,10 +50,10 @@
 #include "common/password.h"
 #include "crypto/crypto.h"  // for definition of crypto::secret_key
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "wallet.simplewallet"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "wallet.simplewallet"
 // Hardcode BitTube's donation address (see #1447)
-constexpr const char MONERO_DONATION_ADDR[] = "bxdaNPkW77u6KYJuYNDSJpfocTXjVpZ7mMAsoNELySdnbAr8U6aMvnULosC456Kk7NRCAS2Xe7o14NF7bbPKyVta39KPYFia3";
+constexpr const char BITTUBE_DONATION_ADDR[] = "bxdaNPkW77u6KYJuYNDSJpfocTXjVpZ7mMAsoNELySdnbAr8U6aMvnULosC456Kk7NRCAS2Xe7o14NF7bbPKyVta39KPYFia3";
 
 /*!
  * \namespace cryptonote

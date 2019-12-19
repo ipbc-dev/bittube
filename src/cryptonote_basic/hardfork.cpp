@@ -34,8 +34,8 @@
 #include "blockchain_db/blockchain_db.h"
 #include "hardfork.h"
 
-#undef MONERO_DEFAULT_LOG_CATEGORY
-#define MONERO_DEFAULT_LOG_CATEGORY "hardfork"
+#undef BITTUBE_DEFAULT_LOG_CATEGORY
+#define BITTUBE_DEFAULT_LOG_CATEGORY "hardfork"
 
 using namespace cryptonote;
 
