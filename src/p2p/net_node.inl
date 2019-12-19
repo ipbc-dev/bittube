@@ -112,7 +112,6 @@ namespace nodetool
     command_line::add_arg(desc, arg_limit_rate_up);
     command_line::add_arg(desc, arg_limit_rate_down);
     command_line::add_arg(desc, arg_limit_rate);
-    command_line::add_arg(desc, arg_save_graph);
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -156,19 +155,55 @@ namespace nodetool
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
-  bool node_server<t_payload_net_handler>::is_remote_host_allowed(const epee::net_utils::network_address &address)
+  bool node_server<t_payload_net_handler>::is_remote_host_allowed(const epee::net_utils::network_address &address, time_t *t)
   {
     CRITICAL_REGION_LOCAL(m_blocked_hosts_lock);
-    auto it = m_blocked_hosts.find(address.host_str());
-    if(it == m_blocked_hosts.end())
-      return true;
-    if(time(nullptr) >= it->second)
+
+    const time_t now = time(nullptr);
+
+    // look in the hosts list
+    auto it = m_blocked_hosts.find(address);
+    if (it != m_blocked_hosts.end())
     {
-      m_blocked_hosts.erase(it);
-      MCLOG_CYAN(el::Level::Info, "global", "Host " << address.host_str() << " unblocked.");
-      return true;
+      if (now >= it->second)
+      {
+        m_blocked_hosts.erase(it);
+        MCLOG_CYAN(el::Level::Info, "global", "Host " << address.host_str() << " unblocked.");
+        it = m_blocked_hosts.end();
+      }
+      else
+      {
+        if (t)
+          *t = it->second - now;
+        return false;
+      }
     }
-    return false;
+
+    // manually loop in subnets
+    if (address.get_type_id() == epee::net_utils::address_type::ipv4)
+    {
+      auto ipv4_address = address.template as<epee::net_utils::ipv4_network_address>();
+      std::map<epee::net_utils::ipv4_network_subnet, time_t>::iterator it;
+      for (it = m_blocked_subnets.begin(); it != m_blocked_subnets.end(); )
+      {
+        if (now >= it->second)
+        {
+          it = m_blocked_subnets.erase(it);
+          MCLOG_CYAN(el::Level::Info, "global", "Subnet " << it->first.host_str() << " unblocked.");
+          continue;
+        }
+        if (it->first.matches(ipv4_address))
+        {
+          if (t)
+            *t = it->second - now;
+          return false;
+        }
+        ++it;
+      }
+    }
+
+    // not found in hosts or subnets, allowed
+    return true;
   }
   //-----------------------------------------------------------------------------------
   template<class t_payload_net_handler>
@@ -185,7 +220,7 @@ namespace nodetool
       limit = std::numeric_limits<time_t>::max();
     else
       limit = now + seconds;
-    m_blocked_hosts[addr.host_str()] = limit;
+    m_blocked_hosts[addr] = limit;
 
     // drop any connection to that address. This should only have to look into
     // the zone related to the connection, but really make sure everything is
@@ -215,11 +250,63 @@ namespace nodetool
   bool node_server<t_payload_net_handler>::unblock_host(const epee::net_utils::network_address &address)
   {
     CRITICAL_REGION_LOCAL(m_blocked_hosts_lock);
-    auto i = m_blocked_hosts.find(address.host_str());
+    auto i = m_blocked_hosts.find(address);
     if (i == m_blocked_hosts.end())
       return false;
     m_blocked_hosts.erase(i);
     MCLOG_CYAN(el::Level::Info, "global", "Host " << address.host_str() << " unblocked.");
+    return true;
+  }
+  //-----------------------------------------------------------------------------------
+  template<class t_payload_net_handler>
+  bool node_server<t_payload_net_handler>::block_subnet(const epee::net_utils::ipv4_network_subnet &subnet, time_t seconds)
+  {
+    const time_t now = time(nullptr);
+
+    CRITICAL_REGION_LOCAL(m_blocked_hosts_lock);
+    time_t limit;
+    if (now > std::numeric_limits<time_t>::max() - seconds)
+      limit = std::numeric_limits<time_t>::max();
+    else
+      limit = now + seconds;
+    m_blocked_subnets[subnet] = limit;
+
+    // drop any connection to that subnet. This should only have to look into
+    // the zone related to the connection, but really make sure everything is
+    // swept ...
+    std::vector<boost::uuids::uuid> conns;
+    for(auto& zone : m_network_zones)
+    {
+      zone.second.m_net_server.get_config_object().foreach_connection([&](const p2p_connection_context& cntxt)
+      {
+        if (cntxt.m_remote_address.get_type_id() != epee::net_utils::ipv4_network_address::get_type_id())
+          return true;
+        auto ipv4_address = cntxt.m_remote_address.template as<epee::net_utils::ipv4_network_address>();
+        if (subnet.matches(ipv4_address))
+        {
+          conns.push_back(cntxt.m_connection_id);
+        }
+        return true;
+      });
+      for (const auto &c: conns)
+        zone.second.m_net_server.get_config_object().close(c);
+
+      conns.clear();
+    }
+
+    MCLOG_CYAN(el::Level::Info, "global", "Subnet " << subnet.host_str() << " blocked.");
+    return true;
+  }
+  //-----------------------------------------------------------------------------------
+  template<class t_payload_net_handler>
+  bool node_server<t_payload_net_handler>::unblock_subnet(const epee::net_utils::ipv4_network_subnet &subnet)
+  {
+    CRITICAL_REGION_LOCAL(m_blocked_hosts_lock);
+    auto i = m_blocked_subnets.find(subnet);
+    if (i == m_blocked_subnets.end())
+      return false;
+    m_blocked_subnets.erase(i);
+    MCLOG_CYAN(el::Level::Info, "global", "Subnet " << subnet.host_str() << " unblocked.");
     return true;
   }
   //-----------------------------------------------------------------------------------
@@ -291,11 +378,6 @@ namespace nodetool
           m_command_line_peers.push_back(pe);
         }
       }
-    }
-
-    if(command_line::has_arg(vm, arg_save_graph))
-    {
-      set_save_graph(true);
     }
 
     if (command_line::has_arg(vm,arg_p2p_add_exclusive_node))
@@ -2250,6 +2332,15 @@ namespace nodetool
   }
 
   template<class t_payload_net_handler>
+  uint32_t node_server<t_payload_net_handler>::get_max_out_public_peers() const
+  {
+    const auto public_zone = m_network_zones.find(epee::net_utils::zone::public_);
+    if (public_zone == m_network_zones.end())
+      return 0;
+    return public_zone->second.m_config.m_net_config.max_out_connection_count;
+  }
+
+  template<class t_payload_net_handler>
   void node_server<t_payload_net_handler>::change_max_in_public_peers(size_t count)
   {
     auto public_zone = m_network_zones.find(epee::net_utils::zone::public_);
@@ -2260,6 +2351,15 @@ namespace nodetool
       if(current > count)
         public_zone->second.m_net_server.get_config_object().del_in_connections(current - count);
     }
+  }
+
+  template<class t_payload_net_handler>
+  uint32_t node_server<t_payload_net_handler>::get_max_in_public_peers() const
+  {
+    const auto public_zone = m_network_zones.find(epee::net_utils::zone::public_);
+    if (public_zone == m_network_zones.end())
+      return 0;
+    return public_zone->second.m_config.m_net_config.max_in_connection_count;
   }
 
   template<class t_payload_net_handler>

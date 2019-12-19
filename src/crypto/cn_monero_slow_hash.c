@@ -893,6 +893,9 @@ void cn_monero_slow_hash(const void *data, size_t length, char *hash, int varian
     if(hp_state == NULL)
         slow_hash_allocate_state();
 
+    // locals to avoid constant TLS dereferencing
+    uint8_t *local_hp_state = hp_state;
+
     /* CryptoNight Step 1:  Use Keccak1600 to initialize the 'state' (and 'text') buffers from the data. */
     if (prehashed) {
         memcpy(&state.hs, data, length);

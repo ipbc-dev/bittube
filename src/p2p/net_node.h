@@ -217,7 +217,6 @@ namespace nodetool
         m_hide_my_port(false),
         m_no_igd(false),
         m_offline(false),
-        m_save_graph(false),
         is_closing(false),
         m_network_id()
     {}
@@ -246,10 +245,16 @@ namespace nodetool
     size_t get_zone_count() const { return m_network_zones.size(); }
 
     void change_max_out_public_peers(size_t count);
+    uint32_t get_max_out_public_peers() const;
     void change_max_in_public_peers(size_t count);
+    uint32_t get_max_in_public_peers() const;
     virtual bool block_host(const epee::net_utils::network_address &adress, time_t seconds = P2P_IP_BLOCKTIME);
     virtual bool unblock_host(const epee::net_utils::network_address &address);
-    virtual std::map<std::string, time_t> get_blocked_hosts() { CRITICAL_REGION_LOCAL(m_blocked_hosts_lock); return m_blocked_hosts; }
+    virtual bool block_subnet(const epee::net_utils::ipv4_network_subnet &subnet, time_t seconds = P2P_IP_BLOCKTIME);
+    virtual bool unblock_subnet(const epee::net_utils::ipv4_network_subnet &subnet);
+    virtual bool is_host_blocked(const epee::net_utils::network_address &address, time_t *seconds) { CRITICAL_REGION_LOCAL(m_blocked_hosts_lock); return !is_remote_host_allowed(address, seconds); }
+    virtual std::map<epee::net_utils::network_address, time_t> get_blocked_hosts() { CRITICAL_REGION_LOCAL(m_blocked_hosts_lock); return m_blocked_hosts; }
+    virtual std::map<epee::net_utils::ipv4_network_subnet, time_t> get_blocked_subnets() { CRITICAL_REGION_LOCAL(m_blocked_hosts_lock); return m_blocked_subnets; }
 
     virtual void add_used_stripe_peer(const typename t_payload_net_handler::connection_context &context);
     virtual void remove_used_stripe_peer(const typename t_payload_net_handler::connection_context &context);
@@ -320,7 +325,7 @@ namespace nodetool
     virtual bool for_connection(const boost::uuids::uuid&, std::function<bool(typename t_payload_net_handler::connection_context&, peerid_type, uint32_t)> f);
     virtual bool add_host_fail(const epee::net_utils::network_address &address);
     //----------------- i_connection_filter  --------------------------------------------------------
-    virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address);
+    virtual bool is_remote_host_allowed(const epee::net_utils::network_address &address, time_t *t = NULL);
     //-----------------------------------------------------------------------------------------------
     bool parse_peer_from_string(epee::net_utils::network_address& pe, const std::string& node_addr, uint16_t default_port = 0);
     bool handle_command_line(
@@ -397,12 +402,6 @@ namespace nodetool
 
   public:
 
-    void set_save_graph(bool save_graph)
-    {
-      m_save_graph = save_graph;
-      epee::net_utils::connection_basic::set_save_graph(save_graph);
-    }
-
     void set_rpc_port(uint16_t rpc_port)
     {
       m_rpc_port = rpc_port;
@@ -420,7 +419,6 @@ namespace nodetool
     bool m_hide_my_port;
     bool m_no_igd;
     bool m_offline;
-    std::atomic<bool> m_save_graph;
     std::atomic<bool> is_closing;
     std::unique_ptr<boost::thread> mPeersLoggerThread;
     //critical_section m_connections_lock;
@@ -462,8 +460,9 @@ namespace nodetool
     std::map<epee::net_utils::network_address, time_t> m_conn_fails_cache;
     epee::critical_section m_conn_fails_cache_lock;
 
-    epee::critical_section m_blocked_hosts_lock;
-    std::map<std::string, time_t> m_blocked_hosts;
+    epee::critical_section m_blocked_hosts_lock; // for both hosts and subnets
+    std::map<epee::net_utils::network_address, time_t> m_blocked_hosts;
+    std::map<epee::net_utils::ipv4_network_subnet, time_t> m_blocked_subnets;
 
     epee::critical_section m_host_fails_score_lock;
     std::map<std::string, uint64_t> m_host_fails_score;
@@ -501,8 +500,6 @@ namespace nodetool
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate_up;
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate_down;
     extern const command_line::arg_descriptor<int64_t> arg_limit_rate;
-
-    extern const command_line::arg_descriptor<bool> arg_save_graph;
 }
 
 POP_WARNINGS

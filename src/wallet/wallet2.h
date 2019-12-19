@@ -842,6 +842,7 @@ private:
     void cold_tx_aux_import(const std::vector<pending_tx>& ptx, const std::vector<std::string>& tx_device_aux);
     void cold_sign_tx(const std::vector<pending_tx>& ptx_vector, signed_tx_set &exported_txs, std::vector<cryptonote::address_parse_info> &dsts_info, std::vector<std::string> & tx_device_aux);
     uint64_t cold_key_image_sync(uint64_t &spent, uint64_t &unspent);
+    void device_show_address(uint32_t account_index, uint32_t address_index, const boost::optional<crypto::hash8> &payment_id);
     bool parse_multisig_tx_from_str(std::string multisig_tx_st, multisig_tx_set &exported_txs) const;
     bool load_multisig_tx(cryptonote::blobdata blob, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
     bool load_multisig_tx_from_file(const std::string &filename, multisig_tx_set &exported_txs, std::function<bool(const multisig_tx_set&)> accept_func = NULL);
@@ -1091,6 +1092,7 @@ private:
     size_t get_num_transfer_details() const { return m_transfers.size(); }
     const transfer_details &get_transfer_details(size_t idx) const;
 
+    uint8_t get_current_hard_fork();
     void get_hard_fork_info(uint8_t version, uint64_t &earliest_height) const;
     bool use_fork_rules(uint8_t version, int64_t early_blocks = 0) const;
     int get_fee_algorithm() const;
@@ -1244,7 +1246,7 @@ private:
      */
     const char* const ATTRIBUTE_DESCRIPTION = "wallet2.description";
     void set_attribute(const std::string &key, const std::string &value);
-    std::string get_attribute(const std::string &key) const;
+    bool get_attribute(const std::string &key, std::string &value) const;
 
     crypto::public_key get_multisig_signer_public_key(const crypto::secret_key &spend_skey) const;
     crypto::public_key get_multisig_signer_public_key() const;
@@ -1499,6 +1501,7 @@ private:
     uint64_t m_device_last_key_image_sync;
     bool m_use_dns;
     bool m_offline;
+    uint32_t m_rpc_version;
 
     // Aux transaction data from device
     std::unordered_map<crypto::hash, std::string> m_tx_device;

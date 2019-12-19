@@ -85,7 +85,7 @@ namespace cryptonote
 // advance which version they will stop working with
 // Don't go over 32767 for any of these
 #define CORE_RPC_VERSION_MAJOR 2
-#define CORE_RPC_VERSION_MINOR 6
+#define CORE_RPC_VERSION_MINOR 7
 #define MAKE_CORE_RPC_VERSION(major,minor) (((major)<<16)|(minor))
 #define CORE_RPC_VERSION MAKE_CORE_RPC_VERSION(CORE_RPC_VERSION_MAJOR, CORE_RPC_VERSION_MINOR)
 
@@ -1657,8 +1657,10 @@ namespace cryptonote
   {
     struct request_t
     {
-	  uint64_t out_peers;
+      bool set;
+      uint32_t out_peers;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(set, true)
         KV_SERIALIZE(out_peers)
       END_KV_SERIALIZE_MAP()
     };
@@ -1666,9 +1668,11 @@ namespace cryptonote
     
     struct response_t
     {
+      uint32_t out_peers;
       std::string status;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(out_peers)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
@@ -1679,8 +1683,10 @@ namespace cryptonote
   {
     struct request_t
     {
-      uint64_t in_peers;
+      bool set;
+      uint32_t in_peers;
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE_OPT(set, true)
         KV_SERIALIZE(in_peers)
       END_KV_SERIALIZE_MAP()
     };
@@ -1688,55 +1694,17 @@ namespace cryptonote
 
     struct response_t
     {
+      uint32_t in_peers;
       std::string status;
 
       BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(in_peers)
         KV_SERIALIZE(status)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
   };
     
-  struct COMMAND_RPC_START_SAVE_GRAPH
-  {
-    struct request_t
-    {
-      BEGIN_KV_SERIALIZE_MAP()
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-    
-    struct response_t
-    {
-	  std::string status;
-	  
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(status)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-  
-  struct COMMAND_RPC_STOP_SAVE_GRAPH
-  {
-    struct request_t
-    {
-      BEGIN_KV_SERIALIZE_MAP()
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<request_t> request;
-    
-    struct response_t
-    {
-	  std::string status;
-	  
-      BEGIN_KV_SERIALIZE_MAP()
-        KV_SERIALIZE(status)
-      END_KV_SERIALIZE_MAP()
-    };
-    typedef epee::misc_utils::struct_init<response_t> response;
-  };
-
   struct COMMAND_RPC_HARD_FORK_INFO
   {
     struct request_t
@@ -1846,6 +1814,33 @@ namespace cryptonote
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<response_t> response;
+  };
+
+  struct COMMAND_RPC_BANNED
+  {
+    struct request_t
+    {
+      std::string address;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(address)
+      END_KV_SERIALIZE_MAP()
+    };
+    typedef epee::misc_utils::struct_init<request_t> request;
+
+    struct response_t
+    {
+      std::string status;
+      bool banned;
+      uint32_t seconds;
+
+      BEGIN_KV_SERIALIZE_MAP()
+        KV_SERIALIZE(status)
+        KV_SERIALIZE(banned)
+        KV_SERIALIZE(seconds)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;

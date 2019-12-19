@@ -1806,19 +1806,59 @@ namespace cryptonote
     PERF_TIMER(on_get_bans);
 
     auto now = time(nullptr);
-    std::map<std::string, time_t> blocked_hosts = m_p2p.get_blocked_hosts();
-    for (std::map<std::string, time_t>::const_iterator i = blocked_hosts.begin(); i != blocked_hosts.end(); ++i)
+    std::map<epee::net_utils::network_address, time_t> blocked_hosts = m_p2p.get_blocked_hosts();
+    for (std::map<epee::net_utils::network_address, time_t>::const_iterator i = blocked_hosts.begin(); i != blocked_hosts.end(); ++i)
     {
       if (i->second > now) {
         COMMAND_RPC_GETBANS::ban b;
-        b.host = i->first;
+        b.host = i->first.host_str();
         b.ip = 0;
         uint32_t ip;
-        if (epee::string_tools::get_ip_int32_from_string(ip, i->first))
+        if (epee::string_tools::get_ip_int32_from_string(ip, b.host))
           b.ip = ip;
         b.seconds = i->second - now;
         res.bans.push_back(b);
       }
+    }
+    std::map<epee::net_utils::ipv4_network_subnet, time_t> blocked_subnets = m_p2p.get_blocked_subnets();
+    for (std::map<epee::net_utils::ipv4_network_subnet, time_t>::const_iterator i = blocked_subnets.begin(); i != blocked_subnets.end(); ++i)
+    {
+      if (i->second > now) {
+        COMMAND_RPC_GETBANS::ban b;
+        b.host = i->first.host_str();
+        b.ip = 0;
+        b.seconds = i->second - now;
+        res.bans.push_back(b);
+      }
+    }
+
+    res.status = CORE_RPC_STATUS_OK;
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool core_rpc_server::on_banned(const COMMAND_RPC_BANNED::request& req, COMMAND_RPC_BANNED::response& res, epee::json_rpc::error& error_resp, const connection_context *ctx)
+  {
+    PERF_TIMER(on_banned);
+
+    auto na_parsed = net::get_network_address(req.address, 0);
+    if (!na_parsed)
+    {
+      error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
+      error_resp.message = "Unsupported host type";
+      return false;
+    }
+    epee::net_utils::network_address na = std::move(*na_parsed);
+
+    time_t seconds;
+    if (m_p2p.is_host_blocked(na, &seconds))
+    {
+      res.banned = true;
+      res.seconds = seconds;
+    }
+    else
+    {
+      res.banned = false;
+      res.seconds = 0;
     }
 
     res.status = CORE_RPC_STATUS_OK;
@@ -1832,13 +1872,29 @@ namespace cryptonote
     for (auto i = req.bans.begin(); i != req.bans.end(); ++i)
     {
       epee::net_utils::network_address na;
+
+      // try subnet first
+      if (!i->host.empty())
+      {
+        auto ns_parsed = net::get_ipv4_subnet_address(i->host);
+        if (ns_parsed)
+        {
+          if (i->ban)
+            m_p2p.block_subnet(*ns_parsed, i->seconds);
+          else
+            m_p2p.unblock_subnet(*ns_parsed);
+          continue;
+        }
+      }
+
+      // then host
       if (!i->host.empty())
       {
         auto na_parsed = net::get_network_address(i->host, 0);
         if (!na_parsed)
         {
           error_resp.code = CORE_RPC_ERROR_CODE_WRONG_PARAM;
-          error_resp.message = "Unsupported host type";
+          error_resp.message = "Unsupported host/subnet type";
           return false;
         }
         na = std::move(*na_parsed);
@@ -2071,7 +2127,9 @@ namespace cryptonote
   bool core_rpc_server::on_out_peers(const COMMAND_RPC_OUT_PEERS::request& req, COMMAND_RPC_OUT_PEERS::response& res, const connection_context *ctx)
   {
     PERF_TIMER(on_out_peers);
-    m_p2p.change_max_out_public_peers(req.out_peers);
+    if (req.set)
+      m_p2p.change_max_out_public_peers(req.out_peers);
+    res.out_peers = m_p2p.get_max_out_public_peers();
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }
@@ -2079,25 +2137,11 @@ namespace cryptonote
   bool core_rpc_server::on_in_peers(const COMMAND_RPC_IN_PEERS::request& req, COMMAND_RPC_IN_PEERS::response& res, const connection_context *ctx)
   {
     PERF_TIMER(on_in_peers);
-    m_p2p.change_max_in_public_peers(req.in_peers);
+    if (req.set)
+      m_p2p.change_max_in_public_peers(req.in_peers);
+    res.in_peers = m_p2p.get_max_in_public_peers();
     res.status = CORE_RPC_STATUS_OK;
     return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_start_save_graph(const COMMAND_RPC_START_SAVE_GRAPH::request& req, COMMAND_RPC_START_SAVE_GRAPH::response& res, const connection_context *ctx)
-  {
-	  PERF_TIMER(on_start_save_graph);
-	  m_p2p.set_save_graph(true);
-	  res.status = CORE_RPC_STATUS_OK;
-	  return true;
-  }
-  //------------------------------------------------------------------------------------------------------------------------------
-  bool core_rpc_server::on_stop_save_graph(const COMMAND_RPC_STOP_SAVE_GRAPH::request& req, COMMAND_RPC_STOP_SAVE_GRAPH::response& res, const connection_context *ctx)
-  {
-	  PERF_TIMER(on_stop_save_graph);
-	  m_p2p.set_save_graph(false);
-	  res.status = CORE_RPC_STATUS_OK;
-	  return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::on_update(const COMMAND_RPC_UPDATE::request& req, COMMAND_RPC_UPDATE::response& res, const connection_context *ctx)
