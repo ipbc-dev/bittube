@@ -4507,9 +4507,8 @@ namespace tools
       }
     }
 
-    er.code = WALLET_RPC_ERROR_CODE_WRONG_ADDRESS;
-    er.message = std::string("Invalid address");
-    return false;
+    res.valid = false;
+    return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   /* TODO: merge our and monero version
