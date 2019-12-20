@@ -36,6 +36,8 @@
 
 namespace net
 {
+    void get_network_address_host_and_port(const std::string& address, std::string& host, std::string& port);
+
     /*!
       Identifies onion, i2p and IPv4 addresses and returns them as a generic
       `network_address`. If the type is unsupported, it might be a hostname,
@@ -64,4 +66,3 @@ namespace net
     expect<epee::net_utils::ipv4_network_subnet>
         get_ipv4_subnet_address(boost::string_ref address, bool allow_implicit_32 = false);
 }
-

@@ -166,6 +166,7 @@
 #define HF_VERSION_PADDED_BULLETS               6
 #define HF_VERSION_SMALLER_BP                   8 //TODO v8?
 #define HF_VERSION_LONG_TERM_BLOCK_WEIGHT       8 //TODO v8?
+#define HF_VERSION_MIN_2_OUTPUTS                8 //TODO v8?
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
