@@ -30,6 +30,11 @@
 #include <string>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio/ip/address_v6.hpp>
+#include "int-util.h"
+
+// IP addresses are kept in network byte order
+// Masks below are little endian
+// -> convert from network byte order to host byte order before comparing
 
 namespace epee
 {
@@ -39,7 +44,7 @@ namespace epee
     inline
     bool is_ipv6_local(const std::string& ip)
     {
-      auto addr = boost::asio::ip::make_address_v6(ip);
+      auto addr = boost::asio::ip::address_v6::from_string(ip);
 
       // ipv6 link-local unicast addresses are fe80::/10
       bool is_link_local = addr.is_link_local();
@@ -64,9 +69,9 @@ namespace epee
     {
       /*
       local ip area
-      10.0.0.0 — 10.255.255.255 
-      172.16.0.0 — 172.31.255.255 
-      192.168.0.0 — 192.168.255.255 
+      10.0.0.0 ï¿½ 10.255.255.255 
+      172.16.0.0 ï¿½ 172.31.255.255 
+      192.168.0.0 ï¿½ 192.168.255.255 
       */
       if( (ip | 0xffffff00) == 0xffffff0a)
         return true;
@@ -90,7 +95,7 @@ namespace epee
       //MAKE_IP
       /*
       loopback ip
-      127.0.0.0 — 127.255.255.255 
+      127.0.0.0 ï¿½ 127.255.255.255 
       */
       return false;
     }
