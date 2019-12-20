@@ -412,7 +412,8 @@ Build BitTube: `env DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/usr/local make release-s
 
 You will need to add a few packages to your system. `pkg_add cmake gmake zeromq cppzmq libiconv boost`.
 
-The doxygen and graphviz packages are optional and require the xbase set.
+The `doxygen` and `graphviz` packages are optional and require the xbase set.
+Running the test suite also requires `py-requests` package.
 
 Build BitTube: `env DEVELOPER_LOCAL_TOOLS=1 BOOST_ROOT=/usr/local gmake release-static`
 
