@@ -206,11 +206,6 @@ namespace net_utils
 			return false;
 		}
 
-    if (m_port == 0) {
-      getsockname(m_listen_socket, (sockaddr*)&adr, sizeof(adr));
-      m_port = adr.sin_port;
-    }
-
 		::InterlockedExchange(&m_stop_server, 0);
 
 		return true;
