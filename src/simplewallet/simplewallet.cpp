@@ -4054,7 +4054,14 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
     fail_msg_writer() << tr("Failed to initialize ring database: privacy enhancing features will be inactive");
 
   m_wallet->callback(this);
-  
+
+  bool skip_check_backround_mining = !command_line::get_arg(vm, arg_command).empty();
+  if (!skip_check_backround_mining)
+    check_background_mining(password);
+
+  if (welcome)
+    message_writer(console_color_yellow, true) << tr("If you are new to Monero, type \"welcome\" for a brief overview.");
+
   if (m_long_payment_id_support)
   {
     message_writer(console_color_red, false) <<
