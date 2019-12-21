@@ -837,7 +837,6 @@ namespace cryptonote
       uint64_t block_reward;
       uint64_t difficulty;
       std::string wide_difficulty;
-      uint64_t difficulty_top64;
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(status)
@@ -855,7 +854,6 @@ namespace cryptonote
         KV_SERIALIZE(block_reward)
         KV_SERIALIZE(difficulty)
         KV_SERIALIZE(wide_difficulty)
-        KV_SERIALIZE(difficulty_top64)
       END_KV_SERIALIZE_MAP()
     };
     typedef epee::misc_utils::struct_init<response_t> response;
