@@ -209,7 +209,10 @@ namespace wallet_args
     if (!command_line::is_arg_defaulted(vm, arg_log_level))
       MINFO("Setting log level = " << command_line::get_arg(vm, arg_log_level));
     else
-      MINFO("Setting log levels = " << getenv("BITTUBE_LOGS"));
+    {
+      const char *logs = getenv("BITTUBE_LOGS");
+      MINFO("Setting log levels = " << (logs ? logs : "<default>"));
+    }
     MINFO(wallet_args::tr("Logging to: ") << log_path);
 
     if (!srv_util)
