@@ -2235,6 +2235,7 @@ namespace cryptonote
       return r;
 
     res.version = CORE_RPC_VERSION;
+    res.release = BITTUBE_VERSION_IS_RELEASE;
     res.status = CORE_RPC_STATUS_OK;
     return true;
   }

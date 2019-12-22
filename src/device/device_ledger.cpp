@@ -321,7 +321,9 @@ namespace hw {
     bool device_ledger::reset() {
       reset_buffer();
       int offset = set_command_header_noopt(INS_RESET);
-      memmove(this->buffer_send+offset, BITTUBE_VERSION, strlen(BITTUBE_VERSION));
+      const size_t verlen = strlen(BITTUBE_VERSION);
+      ASSERT_X(offset + verlen <= BUFFER_SEND_SIZE, "BITTUBE_VERSION is too long")
+      memmove(this->buffer_send+offset, BITTUBE_VERSION, verlen);
       offset += strlen(BITTUBE_VERSION);
       this->buffer_send[4] = offset-5;
       this->length_send = offset;
