@@ -15,7 +15,7 @@ def setup():
     if not args.no_apt:
         subprocess.check_call(['sudo', 'apt-get', 'install', '-qq'] + programs)
     if not os.path.isdir('gitian.sigs'):
-        subprocess.check_call(['git', 'clone', 'https://github.com/monero-project/gitian.sigs.git'])
+        subprocess.check_call(['git', 'clone', 'https://github.com/bittube-project/gitian.sigs.git'])
     if not os.path.isdir('gitian-builder'):
         subprocess.check_call(['git', 'clone', 'https://github.com/devrandom/gitian-builder.git'])
     if not os.path.isdir('bittube'):
@@ -54,7 +54,7 @@ def build():
         print('\nCompiling ' + args.version + ' Linux')
         subprocess.check_call(['bin/gbuild', '-j', args.jobs, '-m', args.memory, '--commit', 'bittube='+args.commit, '--url', 'bittube='+args.url, '../bittube/contrib/gitian/gitian-linux.yml'])
         subprocess.check_call(['bin/gsign', '-p', args.sign_prog, '--signer', args.signer, '--release', args.version+'-linux', '--destination', '../gitian.sigs/', '../bittube/contrib/gitian/gitian-linux.yml'])
-        subprocess.check_call('mv build/out/bittube-*.tar.gz ../bittube-binaries/'+args.version, shell=True)
+        subprocess.check_call('mv build/out/bittube-*.tar.bz2 ../bittube-binaries/'+args.version, shell=True)
 
     if args.windows:
         print('\nCompiling ' + args.version + ' Windows')
@@ -64,9 +64,9 @@ def build():
 
     if args.macos:
         print('\nCompiling ' + args.version + ' MacOS')
-        subprocess.check_call(['bin/gbuild', '-j', args.jobs, '-m', args.memory, '--commit', 'bittube='+args.commit, '--url', 'bittube'+args.url, '../bittube/contrib/gitian/gitian-osx.yml'])
+        subprocess.check_call(['bin/gbuild', '-j', args.jobs, '-m', args.memory, '--commit', 'bittube='+args.commit, '--url', 'bittube='+args.url, '../bittube/contrib/gitian/gitian-osx.yml'])
         subprocess.check_call(['bin/gsign', '-p', args.sign_prog, '--signer', args.signer, '--release', args.version+'-osx', '--destination', '../gitian.sigs/', '../bittube/contrib/gitian/gitian-osx.yml'])
-        subprocess.check_call('mv build/out/bittube*.tar.gz ../bittube-binaries/'+args.version, shell=True)
+        subprocess.check_call('mv build/out/bittube*.tar.bz2 ../bittube-binaries/'+args.version, shell=True)
 
     os.chdir(workdir)
 
@@ -141,8 +141,8 @@ def main():
         if not 'LXC_GUEST_IP' in os.environ.keys():
             os.environ['LXC_GUEST_IP'] = '10.0.3.5'
 
-    # Disable for MacOS if no SDK found
-    if args.macos and not os.path.isfile('gitian-builder/inputs/MacOSX10.11.sdk.tar.gz'):
+    # Disable MacOS build if no SDK found
+    if args.build and args.macos and not os.path.isfile('gitian-builder/inputs/MacOSX10.11.sdk.tar.gz'):
         print('Cannot build for MacOS, SDK does not exist. Will build for other OSes')
         args.macos = False
 

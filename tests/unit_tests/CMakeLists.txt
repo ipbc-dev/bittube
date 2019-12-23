@@ -55,6 +55,7 @@ set(unit_tests_sources
   hashchain.cpp
   http.cpp
   keccak.cpp
+  levin.cpp
   logging.cpp
   main.cpp
   memwipe.cpp

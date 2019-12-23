@@ -67,6 +67,7 @@ namespace epee
     inline
     bool is_ip_local(uint32_t ip)
     {
+      ip = SWAP32LE(ip);
       /*
       local ip area
       10.0.0.0 � 10.255.255.255 
@@ -90,6 +91,7 @@ namespace epee
     inline
     bool is_ip_loopback(uint32_t ip)
     {
+      ip = SWAP32LE(ip);
       if( (ip | 0xffffff00) == 0xffffff7f)
         return true;
       //MAKE_IP

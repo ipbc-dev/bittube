@@ -1,5 +1,4 @@
-// Copyright (c) 2014-2018, The Monero Project
-// Copyright (c) 2018, The BitTube Project
+// Copyright (c) 2019, The Monero Project
 // 
 // All rights reserved.
 // 
@@ -26,35 +25,48 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
 
-#include <cstdint>
-#include <vector>
-#include <string>
-#include <boost/multiprecision/cpp_int.hpp>
-#include "crypto/hash.h"
+#include "string_tools.h"
+#include "int-util.h"
+#include "cryptonote_basic/difficulty.h"
 
-namespace cryptonote
+template<uint64_t hash_target_high, uint64_t hash_target_low, uint64_t difficulty_high, uint64_t difficulty_low>
+class test_check_hash
 {
-    typedef std::uint64_t difficulty_type;
+public:
+  static const size_t loop_count = 100000;
 
-    /**
-     * @brief checks if a hash fits the given difficulty
-     *
-     * The hash passes if (hash * difficulty) < 2^256.
-     * Phrased differently, if (hash * difficulty) fits without overflow into
-     * the least significant 256 bits of the 320 bit multiplication result.
-     *
-     * @param hash the hash to check
-     * @param difficulty the difficulty to check against
-     *
-     * @return true if valid, else false
-     */
-    bool check_hash(const crypto::hash &hash, difficulty_type difficulty);
-    difficulty_type next_difficulty(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds, uint64_t height = 0, uint64_t last_diff_reset_height = 0, difficulty_type last_diff_reset_value = 0);
-    difficulty_type next_difficulty_v2_ipbc(std::vector<std::uint64_t> timestamps, std::vector<difficulty_type> cumulative_difficulties, size_t target_seconds, uint64_t height = 0, uint64_t last_diff_reset_height = 0, difficulty_type last_diff_reset_value = 0);
-	
- }
+  bool init()
+  {
+    cryptonote::difficulty_type hash_target = hash_target_high;
+    hash_target = (hash_target << 64) | hash_target_low;
+    difficulty = difficulty_high;
+    difficulty = (difficulty << 64) | difficulty_low;
+    boost::multiprecision::uint256_t hash_value =  std::numeric_limits<boost::multiprecision::uint256_t>::max() / hash_target;
+    uint64_t val;
+    val = (hash_value & 0xffffffffffffffff).convert_to<uint64_t>();
+    ((uint64_t*)&hash)[0] = SWAP64LE(val);
+    hash_value >>= 64;
+    val = (hash_value & 0xffffffffffffffff).convert_to<uint64_t>();
+    ((uint64_t*)&hash)[1] = SWAP64LE(val);
+    hash_value >>= 64;
+    val = (hash_value & 0xffffffffffffffff).convert_to<uint64_t>();
+    ((uint64_t*)&hash)[2] = SWAP64LE(val);
+    hash_value >>= 64;
+    val = (hash_value & 0xffffffffffffffff).convert_to<uint64_t>();
+    ((uint64_t*)&hash)[3] = SWAP64LE(val);
+    return true;
+  }
+
+  bool test()
+  {
+    cryptonote::check_hash_128(hash, difficulty);
+    return true;
+  }
+
+private:
+  crypto::hash hash;
+  cryptonote::difficulty_type difficulty;
+};
