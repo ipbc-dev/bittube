@@ -28,6 +28,9 @@
 # THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_SOURCE_DIR}/cmake")
 include(CheckCCompilerFlag)
@@ -358,54 +361,9 @@ endif()
 # memory was the default in Cryptonote before Monero implemented LMDB, it still works but is unnecessary.
 # set(DATABASE memory)
 set(DATABASE lmdb)
-
-if (DEFINED ENV{DATABASE})
-  set(DATABASE $ENV{DATABASE})
-  message(STATUS "DATABASE set: ${DATABASE}")
-else()
-  message(STATUS "Could not find DATABASE in env (not required unless you want to change database type from default: ${DATABASE})")
-endif()
-
-set(BERKELEY_DB_OVERRIDE 0)
-if (DEFINED ENV{BERKELEY_DB})
-  set(BERKELEY_DB_OVERRIDE 1)
-  set(BERKELEY_DB $ENV{BERKELEY_DB})
-elseif()
-  set(BERKELEY_DB 0)
-endif()
-
-if (DATABASE STREQUAL "lmdb")
-  message(STATUS "Using LMDB as default DB type")
-  set(BLOCKCHAIN_DB DB_LMDB)
-  add_definitions("-DDEFAULT_DB_TYPE=\"lmdb\"")
-elseif (DATABASE STREQUAL "berkeleydb")
-  find_package(BerkeleyDB)
-  if(NOT BERKELEY_DB)
-      die("Found BerkeleyDB includes, but could not find BerkeleyDB library. Please make sure you have installed libdb and libdb-dev / libdb++-dev or the equivalent.")
-  else()
-    message(STATUS "Found BerkeleyDB include (db.h) in ${BERKELEY_DB_INCLUDE_DIR}")
-    if(BERKELEY_DB_LIBRARIES)
-      message(STATUS "Found BerkeleyDB shared library")
-      set(BDB_STATIC false CACHE BOOL "BDB Static flag")
-      set(BDB_INCLUDE ${BERKELEY_DB_INCLUDE_DIR} CACHE STRING "BDB include path")
-      set(BDB_LIBRARY ${BERKELEY_DB_LIBRARIES} CACHE STRING "BDB library name")
-      set(BDB_LIBRARY_DIRS "" CACHE STRING "BDB Library dirs")
-      set(BERKELEY_DB 1)
-    else()
-      die("Found BerkeleyDB includes, but could not find BerkeleyDB library. Please make sure you have installed libdb and libdb-dev / libdb++-dev or the equivalent.")
-    endif()
-  endif()
-
-  message(STATUS "Using Berkeley DB as default DB type")
-  add_definitions("-DDEFAULT_DB_TYPE=\"berkeley\"")
-else()
-  die("Invalid database type: ${DATABASE}")
-endif()
-
-if(BERKELEY_DB)
-  add_definitions("-DBERKELEY_DB")
-endif()
-
+message(STATUS "Using LMDB as default DB type")
+set(BLOCKCHAIN_DB DB_LMDB)
+add_definitions("-DDEFAULT_DB_TYPE=\"lmdb\"")
 add_definitions("-DBLOCKCHAIN_DB=${BLOCKCHAIN_DB}")
 
 # Can't install hook in static build on OSX, because OSX linker does not support --wrap
@@ -506,11 +464,6 @@ link_directories(${EASYLOGGING_LIBRARY_DIRS})
 
 # Final setup for liblmdb
 include_directories(${LMDB_INCLUDE})
-
-# Final setup for Berkeley DB
-if (BERKELEY_DB)
-  include_directories(${BDB_INCLUDE})
-endif()
 
 # Final setup for libunwind
 include_directories(${LIBUNWIND_INCLUDE})
@@ -1054,3 +1007,13 @@ option(INSTALL_VENDORED_LIBUNBOUND "Install libunbound binary built from source 
 
 
 CHECK_C_COMPILER_FLAG(-std=c11 HAVE_C11)
+
+find_package(PythonInterp)
+find_program(iwyu_tool_path NAMES iwyu_tool.py iwyu_tool)
+if (iwyu_tool_path AND PYTHONINTERP_FOUND)
+  add_custom_target(iwyu
+    COMMAND "${PYTHON_EXECUTABLE}" "${iwyu_tool_path}" -p "${CMAKE_BINARY_DIR}" -- --no_fwd_decls
+    COMMENT "Running include-what-you-use tool"
+    VERBATIM
+  )
+endif()

@@ -182,6 +182,7 @@
 #define HF_VERSION_MIN_V2_COINBASE_TX           8 //TODO v8?
 #define HF_VERSION_SAME_MIXIN                   8 //TODO v8?
 #define HF_VERSION_REJECT_SIGS_IN_COINBASE      8 //TODO v8?
+#define HF_VERSION_ENFORCE_MIN_AGE              8 //TODO v8?
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
 
