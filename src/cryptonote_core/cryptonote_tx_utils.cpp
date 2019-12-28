@@ -38,6 +38,7 @@ using namespace epee;
 #include "common/apply_permutation.h"
 #include "cryptonote_tx_utils.h"
 #include "cryptonote_config.h"
+#include "blockchain.h"
 #include "cryptonote_basic/miner.h"
 #include "cryptonote_basic/tx_extra.h"
 #include "crypto/crypto.h"
@@ -927,9 +928,156 @@ namespace cryptonote
     bl.minor_version = CURRENT_BLOCK_MINOR_VERSION;
     bl.timestamp = 0;
     bl.nonce = nonce;
-    miner::find_nonce_for_given_block(bl, 1, 0);
+    miner::find_nonce_for_given_block(NULL, bl, 1, 0);
     bl.invalidate_hashes();
     return true;
   }
   //---------------------------------------------------------------
+  
+  void get_altblock_longhash(const block& b, crypto::hash& res, const uint64_t main_height, const uint64_t height, const uint64_t seed_height, const crypto::hash& seed_hash)
+  {
+    blobdata bd = get_block_hashing_blob(b);
+    rx_slow_hash(main_height, seed_height, seed_hash.data, bd.data(), bd.size(), res.data, 0, 1);
+  }
+
+  bool get_block_longhash(const Blockchain *pbc, const block& b, crypto::hash& res, const uint64_t height, const int miners)
+  {
+    const int hf_version = b.major_version; 
+    blobdata bd = get_block_hashing_blob(b);
+    if (hf_version >= RX_BLOCK_VERSION)
+    {
+      uint64_t seed_height, main_height;
+      crypto::hash hash;
+      if (pbc != NULL)
+      {
+        seed_height = rx_seedheight(height);
+        hash = pbc->get_pending_block_id_by_height(seed_height);
+        main_height = pbc->get_current_blockchain_height();
+      } else
+      {
+        memset(&hash, 0, sizeof(hash));  // only happens when generating genesis block
+        seed_height = 0;
+        main_height = 0;
+      }
+      rx_slow_hash(main_height, seed_height, hash.data, bd.data(), bd.size(), res.data, miners, 0);
+    } else {
+    if (hf_version >= BLOCK_MAJOR_VERSION_4){
+    crypto::cn_slow_hash_type cn_type = cn_slow_hash_type::heavy_v2;
+
+    if (hf_version >= HF_VERSION_POW_VARIANT4)
+      cn_type = cn_slow_hash_type::cn_r;
+    else if (hf_version >= HF_VERSION_POW_VARIANT2)
+      cn_type = crypto::cn_slow_hash_type::heavy_v3;
+    
+    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT4 ? 4 : b.major_version >= HF_VERSION_POW_VARIANT2 ? 2 : 1;
+    crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, height, cn_type);  
+   }
+   else
+   {
+    crypto::cn_slow_hash(bd.data(), bd.size(), res);   
+   }
+  }
+    return true;
+ }
+
+ bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
+  {
+	  blobdata bd;
+	  if (!get_bytecoin_block_hashing_blob(b, bd))
+		  return false;
+
+    const int hf_version              = b.major_version;
+    crypto::cn_slow_hash_type cn_type = cn_slow_hash_type::heavy_v1;
+    if (hf_version >= HF_VERSION_POW_VARIANT1)
+      cn_type = cn_slow_hash_type::heavy_v2;
+    
+    // v1-2 = standard, v3 = lite + monerov7 + ipbc, vX = sumo + monerov7 + ipbc
+    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT1 ? 1 : 0;
+	  crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, 0, cn_type);
+	  return true;
+  }
+  //---------------------------------------------------------------
+  bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
+  {
+    MDEBUG("Checking POW V1 - diff " << current_diffic);
+    if (bl.major_version != BLOCK_MAJOR_VERSION_1 && bl.major_version < BLOCK_MAJOR_VERSION_4)
+		  return false;
+
+	  if (!get_block_longhash(bl, proof_of_work, height)) {
+       MDEBUG("Failed to get block longhash");
+       return false;
+    }
+	  return check_hash(proof_of_work, current_diffic);
+  }
+  //---------------------------------------------------------------
+  bool check_proof_of_work_v2(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
+  {
+	  MDEBUG("Checking POW V2 - diff " << current_diffic);
+	  if (bl.major_version < BLOCK_MAJOR_VERSION_2)
+		  return false;
+
+	  if (!get_bytecoin_block_longhash(bl, proof_of_work)) {
+		  MDEBUG("Failed to get bytecoin block longhash");
+		  return false;
+	  }
+	  if (!check_hash(proof_of_work, current_diffic)) {
+		  MDEBUG("Failed to check hash for pow");
+		  return false;
+	  }
+
+	  tx_extra_merge_mining_tag mm_tag;
+	  if (!get_mm_tag_from_extra(bl.parent_block.miner_tx.extra, mm_tag))
+	  {
+		  LOG_ERROR("merge mining tag wasn't found in extra of the parent block miner transaction");
+		  return false;
+	  }
+
+	  crypto::hash genesis_block_hash;
+	  if (!get_genesis_block_hash(genesis_block_hash)) {
+		  MDEBUG("Failed to get genesis block hash");
+		  return false;
+	  }
+
+	  if (8 * sizeof(genesis_block_hash) < bl.parent_block.blockchain_branch.size()) {
+		  MDEBUG("Failed genesis block and parent block branch size comparison");
+		  return false;
+	  }
+
+	  crypto::hash aux_block_header_hash;
+	  if (!get_block_header_hash(bl, aux_block_header_hash)) {
+		  MDEBUG("Failed to get aux header hash");
+		  return false;
+	  }
+
+	  crypto::hash aux_blocks_merkle_root;
+	  crypto::tree_hash_from_branch(bl.parent_block.blockchain_branch.data(), bl.parent_block.blockchain_branch.size(),
+		  aux_block_header_hash, &genesis_block_hash, aux_blocks_merkle_root);
+	  CHECK_AND_NO_ASSERT_MES(aux_blocks_merkle_root == mm_tag.merkle_root, false, "Aux block hash wasn't found in merkle tree");
+
+	  return true;
+  }
+  //---------------------------------------------------------------
+  bool check_proof_of_work(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
+  {
+	  switch (bl.major_version)
+	  {
+	  case BLOCK_MAJOR_VERSION_2:
+	  case BLOCK_MAJOR_VERSION_3:
+		  return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
+    default:
+	    return check_proof_of_work_v1(bl, current_diffic, proof_of_work, height);
+	  }
+  }
+  //---------------------------------------------------------------
+  crypto::hash get_block_longhash(const Blockchain *pbc, const block& b, const uint64_t height, const int miners)
+  {
+    crypto::hash p = crypto::null_hash;
+    get_block_longhash(pbc, b, p, height, miners);
+    return p;
+  }
+
+  void get_block_longhash_reorg(const uint64_t split_height)
+  {
+    rx_reorg(split_height);
+  }
 }
