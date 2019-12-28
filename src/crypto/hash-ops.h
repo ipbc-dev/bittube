@@ -96,3 +96,6 @@ uint64_t rx_seedheight(const uint64_t height);
 void rx_seedheights(const uint64_t height, uint64_t *seed_height, uint64_t *next_height);
 void rx_slow_hash(const uint64_t mainheight, const uint64_t seedheight, const char *seedhash, const void *data, size_t length, char *hash, int miners, int is_alt);
 void rx_reorg(const uint64_t split_height);
+size_t tree_depth(size_t count);
+void tree_branch(const char(*hashes)[HASH_SIZE], size_t count, char(*branch)[HASH_SIZE]);
+void tree_hash_from_branch(const char(*branch)[HASH_SIZE], size_t depth, const char *leaf, const void *path, char *root_hash);
