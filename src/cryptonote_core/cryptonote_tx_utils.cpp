@@ -1003,6 +1003,7 @@ namespace cryptonote
 	  crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, 0, cn_type);
 	  return true;
   }
+  
   //---------------------------------------------------------------
   bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
   {
@@ -1010,7 +1011,7 @@ namespace cryptonote
     if (bl.major_version != BLOCK_MAJOR_VERSION_1 && bl.major_version < BLOCK_MAJOR_VERSION_4)
 		  return false;
 
-	  if (!get_block_longhash(bl, proof_of_work, height)) {
+	  if (!get_block_longhash(NULL, bl, proof_of_work, height, 0)) {
        MDEBUG("Failed to get block longhash");
        return false;
     }
