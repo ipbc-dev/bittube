@@ -799,9 +799,7 @@ namespace cryptonote
         genesis_block.minor_version = CURRENT_BLOCK_MINOR_VERSION;
         genesis_block.timestamp = 0;
         genesis_block.nonce = config::GENESIS_NONCE;
-        miner::find_nonce_for_given_block[this](const cryptonote::block &genesis_block, uint64_t 1, unsigned int 0, crypto::hash &genesis_block_hash);
-        
-        
+        miner::find_nonce_for_given_block(genesis_block, 1, 0);
         genesis_block.invalidate_hashes();
 
 			  if (!get_block_hash(genesis_block, genesis_block_hash))
