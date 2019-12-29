@@ -2338,25 +2338,6 @@ bool simple_wallet::on_cancelled_command()
   return true;
 }
 
-bool simple_wallet::on_unknown_command(const std::vector<std::string> &args)
-{
-  if (args[0] == "exit" || args[0] == "q") // backward compat
-    return false;
-  fail_msg_writer() << boost::format(tr("Unknown command '%s', try 'help'")) % args.front();
-  return true;
-}
-
-bool simple_wallet::on_empty_command()
-{
-  return true;
-}
-
-bool simple_wallet::on_cancelled_command()
-{
-  check_for_inactivity_lock(false);
-  return true;
-}
-
 bool simple_wallet::cold_sign_tx(const std::vector<tools::wallet2::pending_tx>& ptx_vector, tools::wallet2::signed_tx_set &exported_txs, std::vector<cryptonote::address_parse_info> &dsts_info, std::function<bool(const tools::wallet2::signed_tx_set &)> accept_func)
 {
   std::vector<std::string> tx_aux;

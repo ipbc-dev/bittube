@@ -986,24 +986,7 @@ namespace cryptonote
   }
     return true;
  }
-
- bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
-  {
-	  blobdata bd;
-	  if (!get_bytecoin_block_hashing_blob(b, bd))
-		  return false;
-
-    const int hf_version              = b.major_version;
-    crypto::cn_slow_hash_type cn_type = cn_slow_hash_type::heavy_v1;
-    if (hf_version >= HF_VERSION_POW_VARIANT1)
-      cn_type = cn_slow_hash_type::heavy_v2;
-    
-    // v1-2 = standard, v3 = lite + monerov7 + ipbc, vX = sumo + monerov7 + ipbc
-    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT1 ? 1 : 0;
-	  crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, 0, cn_type);
-	  return true;
-  }
-  
+ 
   //---------------------------------------------------------------
   bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
   {

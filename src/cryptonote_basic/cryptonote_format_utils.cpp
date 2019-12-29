@@ -812,6 +812,25 @@ namespace cryptonote
 	  h = genesis_block_hash;
 	  return true;
   }
+  
+  //---------------------------------------------------------------
+  bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
+  {
+	  blobdata bd;
+	  if (!get_bytecoin_block_hashing_blob(b, bd))
+		  return false;
+
+    const int hf_version              = b.major_version;
+    crypto::cn_slow_hash_type cn_type = cn_slow_hash_type::heavy_v1;
+    if (hf_version >= HF_VERSION_POW_VARIANT1)
+      cn_type = cn_slow_hash_type::heavy_v2;
+    
+    // v1-2 = standard, v3 = lite + monerov7 + ipbc, vX = sumo + monerov7 + ipbc
+    const int cn_variant = b.major_version >= HF_VERSION_POW_VARIANT1 ? 1 : 0;
+	  crypto::cn_slow_hash(bd.data(), bd.size(), res, cn_variant, 0, cn_type);
+	  return true;
+  }
+  
   //---------------------------------------------------------------
   bool get_mm_tag_from_extra(const std::vector<uint8_t>& tx_extra, tx_extra_merge_mining_tag& mm_tag)
   {
