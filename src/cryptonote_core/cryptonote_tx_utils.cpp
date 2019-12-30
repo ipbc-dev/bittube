@@ -988,13 +988,13 @@ namespace cryptonote
  }
  
   //---------------------------------------------------------------
-  bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
+  bool check_proof_of_work_v1(const Blockchain *pbc, const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
   {
     MDEBUG("Checking POW V1 - diff " << current_diffic);
     if (bl.major_version != BLOCK_MAJOR_VERSION_1 && bl.major_version < BLOCK_MAJOR_VERSION_4)
 		  return false;
 
-	  if (!get_block_longhash(NULL, bl, proof_of_work, height, 0)) {
+	  if (!get_block_longhash(pbc, bl, proof_of_work, height, 0)) {
        MDEBUG("Failed to get block longhash");
        return false;
     }
@@ -1048,7 +1048,7 @@ namespace cryptonote
 	  return true;
   }
   //---------------------------------------------------------------
-  bool check_proof_of_work(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
+  bool check_proof_of_work(const Blockchain *pbc, const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work, uint64_t height)
   {
 	  switch (bl.major_version)
 	  {
@@ -1056,7 +1056,7 @@ namespace cryptonote
 	  case BLOCK_MAJOR_VERSION_3:
 		  return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
     default:
-	    return check_proof_of_work_v1(bl, current_diffic, proof_of_work, height);
+	    return check_proof_of_work_v1(pbc, bl, current_diffic, proof_of_work, height);
 	  }
   }
   //---------------------------------------------------------------
