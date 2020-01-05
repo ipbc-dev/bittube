@@ -119,14 +119,15 @@ static const struct {
 } testnet_hard_forks[] = {
   // version 1 from the start of the blockchain
   { 1, 1, 0, 1517405674, 0 },
-  //{ 2, 5, 0, 1520036614, 100 }, // Skipped because of conflicts on mainet
-  //{ 3, 10, 0, 1523885225, 100 }, // Skipped because of conflicts on mainet
-  //{ 4, 5, 0, 1527817979, 100 },
-  { 7, 5, 0, 1527817999, 100 },
+  { 2, 5, 0, 1520036614, 100 }, // Skipped because of conflicts on mainet
+  { 3, 10, 0, 1523885225, 100 }, // Skipped because of conflicts on mainet
+  { 4, 15, 0, 1527817979, 100 },
+  { 5, 20, 0, 1533513600, 0 },
+  // version 6 starts from block 268000 around 02/07/2019.
+  { 6, 30, 0, 1549545276, 0 },
+  { 7, 40, 0, 1527817999, 0 },
   // version 8 starts from block 268000 around 02/07/2019.
-  { 8, 15, 0, 1556537316, 100 },
- // version 9 starts from block 268000 around 02/07/2019.
-  { 9, 30, 0, 1556557316, 100 },
+  { 8, 50, 0, 1556537316, 0 },
 };
 static const uint64_t testnet_hard_fork_version_1_till = 4;
 
