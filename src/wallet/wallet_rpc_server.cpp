@@ -292,7 +292,7 @@ namespace tools
     tools::wallet2::BackgroundMiningSetupType setup = m_wallet->setup_background_mining();
     if (setup == tools::wallet2::BackgroundMiningNo)
     {
-      MLOG_RED(el::Level::Warning, "Background mining not enabled. Run \"set setup-background-mining 1\" in monero-wallet-cli to change.");
+      MLOG_RED(el::Level::Warning, "Background mining not enabled. Run \"set setup-background-mining 1\" in bittube-wallet-cli to change.");
       return;
     }
 
@@ -4953,7 +4953,7 @@ public:
         quit = true;
         wal->stop();
       });
-
+      
       if (print_progress) wal->callback(new t_progress_printer(wal.get()));
 
       wal->refresh(wal->is_trusted_daemon());
@@ -5062,6 +5062,10 @@ int main(int argc, char** argv) {
   command_line::add_arg(desc_params, arg_wallet_dir);
   command_line::add_arg(desc_params, arg_prompt_for_password);
   command_line::add_arg(desc_params, arg_rpc_client_secret_key);
+  command_line::add_arg(desc_params, arg_print_progress);
+  command_line::add_arg(desc_params, arg_wallet_any_path);
+  command_line::add_arg(desc_params, arg_print_login);
+  command_line::add_arg(desc_params, arg_allow_daemon_control);
 
   daemonizer::init_options(hidden_options, desc_params);
   desc_params.add(hidden_options);
