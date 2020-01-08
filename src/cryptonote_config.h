@@ -185,7 +185,7 @@
 #define HF_VERSION_SAME_MIXIN                   8 //TODO v8?
 #define HF_VERSION_REJECT_SIGS_IN_COINBASE      8 //TODO v8?
 #define HF_VERSION_ENFORCE_MIN_AGE              8 //TODO v8?
-#define RX_BLOCK_VERSION                        8 //TODO v8?
+#define RX_BLOCK_VERSION                        99 //TODO v99?
 #define HF_VERSION_EFFECTIVE_SHORT_TERM_MEDIAN_IN_PENALTY 8 //TODO v8?
 
 #define PER_KB_FEE_QUANTIZATION_DECIMALS        8
