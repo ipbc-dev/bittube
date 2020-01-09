@@ -127,7 +127,7 @@ static const struct {
   { 6, 30, 0, 1549545276, 0 },
   { 7, 40, 0, 1553537316, 0 },
   // version 8 starts from block 268000 around 02/07/2019.
-  { 8, 50, 0, 1556537316, 0 },
+  { 8, 750, 0, 1556537316, 0 }, // move ahead testnet version 8 for more indepth V7 tests
 };
 static const uint64_t testnet_hard_fork_version_1_till = 4;
 
