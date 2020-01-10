@@ -133,10 +133,12 @@ typedef cryptonote::simple_wallet sw;
 
 #define LONG_PAYMENT_ID_SUPPORT_CHECK() \
   do { \
-    fail_msg_writer() << tr("Error: Long payment IDs are obsolete."); \
-    fail_msg_writer() << tr("Long payment IDs were not encrypted on the blockchain and would harm your privacy."); \
-    fail_msg_writer() << tr("If the party you're sending to still requires a long payment ID, please notify them."); \
-    return true; \
+    if (!m_long_payment_id_support) { \
+      fail_msg_writer() << tr("Warning: Long payment IDs are obsolete."); \
+      fail_msg_writer() << tr("Long payment IDs are not encrypted on the blockchain, and will harm your privacy."); \
+      fail_msg_writer() << tr("Use --long-payment-id-support-bad-for-privacy if you really must use one, and warn the recipient they are using an obsolete feature that will disappear in the future."); \
+      return true; \
+    } \
   } while(0)
 
 #define REFRESH_PERIOD 90 // seconds
@@ -177,6 +179,7 @@ namespace
   const command_line::arg_descriptor<bool> arg_create_address_file = {"create-address-file", sw::tr("Create an address file for new wallets"), false};
   const command_line::arg_descriptor<std::string> arg_subaddress_lookahead = {"subaddress-lookahead", tools::wallet2::tr("Set subaddress lookahead sizes to <major>:<minor>"), ""};
   const command_line::arg_descriptor<bool> arg_use_english_language_names = {"use-english-language-names", sw::tr("Display English language names"), false};
+  const command_line::arg_descriptor<bool> arg_long_payment_id_support = {"long-payment-id-support-bad-for-privacy", sw::tr("Support obsolete long (unencrypted) payment ids (using them harms your privacy)"), false};
 
   const command_line::arg_descriptor< std::vector<std::string> > arg_command = {"command", ""};
 
@@ -919,7 +922,16 @@ bool simple_wallet::change_password(const std::vector<std::string> &args)
 
 bool simple_wallet::payment_id(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
 {
-  LONG_PAYMENT_ID_SUPPORT_CHECK();
+
+  crypto::hash payment_id;
+  if (args.size() > 0)
+  {
+    PRINT_USAGE(USAGE_PAYMENT_ID);
+    return true;
+  }
+  payment_id = crypto::rand<crypto::hash>();
+  success_msg_writer() << tr("Random payment ID: ") << payment_id;
+  return true;
 }
 
 bool simple_wallet::print_fee_info(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
@@ -2577,6 +2589,21 @@ bool simple_wallet::set_refresh_type(const std::vector<std::string> &args/* = st
   return true;
 }
 
+bool simple_wallet::set_confirm_missing_payment_id(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
+{
+  LONG_PAYMENT_ID_SUPPORT_CHECK();
+
+  const auto pwd_container = get_and_verify_password();
+  if (pwd_container)
+  {
+    parse_bool_and_use(args[1], [&](bool r) {
+      m_wallet->confirm_missing_payment_id(r);
+      m_wallet->rewrite(m_wallet_file, pwd_container->password());
+    });
+  }
+  return true;
+}
+
 bool simple_wallet::set_ask_password(const std::vector<std::string> &args/* = std::vector<std::string>()*/)
 {
   const auto pwd_container = get_and_verify_password();
@@ -3619,6 +3646,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     success_msg_writer() << "auto-refresh = " << m_wallet->auto_refresh();
     success_msg_writer() << "refresh-type = " << get_refresh_type_name(m_wallet->get_refresh_type());
     success_msg_writer() << "priority = " << priority<< " (" << priority_string << ")";
+    success_msg_writer() << "confirm-missing-payment-id = " << m_wallet->confirm_missing_payment_id();
     success_msg_writer() << "ask-password = " << m_wallet->ask_password() << " (" << ask_password_string << ")";
     success_msg_writer() << "unit = " << cryptonote::get_unit(cryptonote::get_default_decimal_point());
     success_msg_writer() << "min-outputs-count = " << m_wallet->get_min_output_count();
@@ -3688,6 +3716,7 @@ bool simple_wallet::set_variable(const std::vector<std::string> &args)
     CHECK_SIMPLE_VARIABLE("auto-refresh", set_auto_refresh, tr("0 or 1"));
     CHECK_SIMPLE_VARIABLE("refresh-type", set_refresh_type, tr("full (slowest, no assumptions); optimize-coinbase (fast, assumes the whole coinbase is paid to a single address); no-coinbase (fastest, assumes we receive no coinbase transaction), default (same as optimize-coinbase)"));
     CHECK_SIMPLE_VARIABLE("priority", set_default_priority, tr("0, 1, 2, 3, or 4, or one of ") << join_priority_strings(", "));
+    CHECK_SIMPLE_VARIABLE("confirm-missing-payment-id", set_confirm_missing_payment_id, tr("0 or 1"));
     CHECK_SIMPLE_VARIABLE("ask-password", set_ask_password, tr("0|1|2 (or never|action|decrypt)"));
     CHECK_SIMPLE_VARIABLE("unit", set_unit, tr("bittube, millitube, microtube"));
     CHECK_SIMPLE_VARIABLE("min-outputs-count", set_min_output_count, tr("unsigned integer"));
@@ -4518,6 +4547,14 @@ bool simple_wallet::init(const boost::program_options::variables_map& vm)
   if (welcome)
     message_writer(console_color_yellow, true) << tr("If you are new to Bittube, type \"welcome\" for a brief overview.");
 
+  if (m_long_payment_id_support)
+  {
+    message_writer(console_color_red, false) <<
+        tr("WARNING: obsolete long payment IDs are enabled. Sending transactions with those payment IDs are bad for your privacy.");
+    message_writer(console_color_red, false) <<
+        tr("It is recommended that you do not use them, and ask recipients who ask for one to not endanger your privacy.");
+  }
+
   m_last_activity_time = time(NULL);
   return true;
 }
@@ -4551,6 +4588,7 @@ bool simple_wallet::handle_command_line(const boost::program_options::variables_
   m_do_not_relay                  = command_line::get_arg(vm, arg_do_not_relay);
   m_subaddress_lookahead          = command_line::get_arg(vm, arg_subaddress_lookahead);
   m_use_english_language_names    = command_line::get_arg(vm, arg_use_english_language_names);
+  m_long_payment_id_support       = command_line::get_arg(vm, arg_long_payment_id_support);
   m_restoring                     = !m_generate_from_view_key.empty() ||
                                     !m_generate_from_spend_key.empty() ||
                                     !m_generate_from_keys.empty() ||
@@ -5446,7 +5484,7 @@ void simple_wallet::on_money_received(uint64_t height, const crypto::hash &txid,
       }
       else if (get_payment_id_from_tx_extra_nonce(extra_nonce.nonce, payment_id))
         message_writer(console_color_red, false) <<
-          tr("WARNING: this transaction uses an unencrypted payment ID: these are obsolete and ignored. Use subaddresses instead.");
+          (m_long_payment_id_support ? tr("WARNING: this transaction uses an unencrypted payment ID: consider using subaddresses instead.") : tr("WARNING: this transaction uses an unencrypted payment ID: these are obsolete. Support will be withdrawn in the future. Use subaddresses instead."));
    }
   }
   if (unlock_time && !cryptonote::is_coinbase(tx))
@@ -6407,6 +6445,20 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
     dsts.push_back(de);
   }
 
+  // prompt is there is no payment id and confirmation is required
+  if (m_long_payment_id_support && !payment_id_seen && m_wallet->confirm_missing_payment_id() && dsts.size() > num_subaddresses)
+  {
+     std::string accepted = input_line(tr("No payment id is included with this transaction. Is this okay?"), true);
+     if (std::cin.eof())
+       return false;
+     if (!command_line::is_yes(accepted))
+     {
+       fail_msg_writer() << tr("transaction cancelled.");
+
+       return false;
+     }
+  }
+
   SCOPED_WALLET_UNLOCK_ON_BAD_PASSWORD(return false;);
 
   try
@@ -6974,6 +7026,20 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
     payment_id_seen = true;
   }
 
+  // prompt is there is no payment id and confirmation is required
+  if (m_long_payment_id_support && !payment_id_seen && m_wallet->confirm_missing_payment_id() && !info.is_subaddress)
+  {
+     std::string accepted = input_line(tr("No payment id is included with this transaction. Is this okay?"), true);
+     if (std::cin.eof())
+       return true;
+     if (!command_line::is_yes(accepted))
+     {
+       fail_msg_writer() << tr("transaction cancelled.");
+
+       return true; 
+     }
+  }
+
   SCOPED_WALLET_UNLOCK();
 
   try
@@ -7229,6 +7295,22 @@ bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
       return true;
     }
     payment_id_seen = true;
+  }
+
+  // prompt if there is no payment id and confirmation is required
+  if (m_long_payment_id_support && !payment_id_seen && m_wallet->confirm_missing_payment_id() && !info.is_subaddress)
+  {
+     std::string accepted = input_line(tr("No payment id is included with this transaction. Is this okay?"), true);
+     if (std::cin.eof())
+       return true;
+     if (!command_line::is_yes(accepted))
+     {
+       fail_msg_writer() << tr("transaction cancelled.");
+
+       // would like to return false, because no tx made, but everything else returns true
+       // and I don't know what returning false might adversely affect.  *sigh*
+       return true; 
+     }
   }
 
   SCOPED_WALLET_UNLOCK();
@@ -10152,6 +10234,7 @@ int main(int argc, char* argv[])
   command_line::add_arg(desc_params, arg_subaddress_lookahead);
   command_line::add_arg(desc_params, arg_use_english_language_names);
   command_line::add_arg(desc_params, arg_rpc_client_secret_key);
+  command_line::add_arg(desc_params, arg_long_payment_id_support);
 
   po::positional_options_description positional_options;
   positional_options.add(arg_command.name, -1);
