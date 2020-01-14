@@ -2,6 +2,14 @@
 
 Based on [Monero](https://github.com/monero-project/monero)
 
+## Coverage
+
+| Type      | Status |
+|-----------|--------|
+| WorkFlow  | [![WorkFlow Status](https://github.com/ipbc-dev/bittube/workflows/master/badge.svg)](https://github.com/ipbc-dev/bittube/actions)
+| License   | [![License](https://img.shields.io/badge/license-BSD3-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+
 ## Introduction
 
 BitTube is a private, secure, untraceable, decentralised digital currency. You are your bank, you control your funds, and nobody can trace your transfers unless you allow them to do so.
