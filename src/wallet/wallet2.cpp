@@ -5584,11 +5584,13 @@ void wallet2::load(const std::string& wallet_, const epee::wipeable_string& pass
     MERROR("Failed to save rings, will try again next time");
   }
   
-  try {
+  try
+  {
     m_message_store.read_from_file(get_multisig_wallet_state(), m_mms_file);
-  } catch (const std::exception &e) {
-    MERROR("Disabling MMS because of Error: " << e.what());
-    m_message_store.set_active(false);
+  }
+  catch (const std::exception &e)
+  {
+    MERROR("Failed to initialize MMS, it will be unusable");
   }
 }
 //----------------------------------------------------------------------------------------------------
