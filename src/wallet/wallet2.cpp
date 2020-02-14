@@ -13647,7 +13647,7 @@ std::pair<size_t, uint64_t> wallet2::estimate_tx_size_and_weight(bool use_rct, i
   if (n_outputs == 1)
     n_outputs = 2; // extra dummy output
 
-  const bool bulletproof = use_fork_rules(get_bulletproof_fork(), 0);
+  const bool bulletproof = use_fork_rules(HF_VERSION_BULLETPROOF, 0);
   size_t size = estimate_tx_size(use_rct, n_inputs, ring_size - 1, n_outputs, extra_size, bulletproof);
   uint64_t weight = estimate_tx_weight(use_rct, n_inputs, ring_size - 1, n_outputs, extra_size, bulletproof);
   return std::make_pair(size, weight);
