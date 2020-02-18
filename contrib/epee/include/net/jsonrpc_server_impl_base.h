@@ -36,7 +36,6 @@ template<class t_child_class, class t_connection_context = epee::net_utils::conn
         LOG_ERROR("Failed to bind server");
         return false;
       }
-      LOG_PRINT_L0("Bound on " << bind_ip << ":" << m_net_server.get_binded_port());
       return true;
     }
 

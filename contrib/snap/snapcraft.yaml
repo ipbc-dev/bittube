@@ -1,30 +1,31 @@
-name: bittube
+name: monero
 version: 0.11.1.0-1
-summary: "BitTube is a revolutionary video platform in which publishers can make money with their content, without ads. https://coin.bit.tube"
+summary: "Monero: the secure, private, untraceable cryptocurrency https://getmonero.org"
 description: |
-    BitTube coin is a digital cryptocurrency. Initially, at the genesis of the BitTube blockchain, the maximum number of coins minable is set to 1 billion coins.
-    Revenues from co-mining are passed on to the viewers and on to the copyright holders as content is consumed on the platform.
+    Monero is a private, secure, untraceable, decentralised digital currency.
+    You are your bank, you control your funds, and nobody can trace your transfers
+    unless you allow them to do so.
 grade: devel
 confinement: strict
 
 apps:
-    bittubed:
+    monerod:
         daemon: forking
         command: |
-          bittubed-wrapper --detach --data-dir ${SNAP_COMMON} --config-file ${SNAP_USER_DATA}/etc/bittubed.conf
+          monerod-wrapper --detach --data-dir ${SNAP_COMMON} --config-file ${SNAP_USER_DATA}/etc/monerod.conf
         plugs:
             - network
             - network-bind
-    bittube-wallet-rpc:
+    monero-wallet-rpc:
         command: |
-          bittube-wallet-rpc --log-file ${SNAP_USER_DATA}
+          monero-wallet-rpc --log-file ${SNAP_USER_DATA}
         plugs:
             - home
             - network
             - network-bind
-    bittube-wallet-cli:
+    monero-wallet-cli:
         command: |
-          bittube-wallet-cli --log-file ${SNAP_USER_DATA}
+          monero-wallet-cli --log-file ${SNAP_USER_DATA}
         plugs:
             - home
             - network
@@ -70,8 +71,8 @@ parts:
         plugin: dump
         source: .
         organize:
-            contrib/snap/bittubed.conf: etc/bittubed.conf
-            contrib/snap/bittubed-wrapper: bin/bittubed-wrapper
+            contrib/snap/monerod.conf: etc/monerod.conf
+            contrib/snap/monerod-wrapper: bin/monerod-wrapper
         prime:
             - etc
             - bin

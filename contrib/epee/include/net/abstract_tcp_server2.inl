@@ -410,7 +410,12 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       else
       {
         _dbg3("[sock " << socket().native_handle() << "] peer closed connection");
-        if (m_ready_to_close)
+        bool do_shutdown = false;
+        CRITICAL_REGION_BEGIN(m_send_que_lock);
+        if(!m_send_que.size())
+          do_shutdown = true;
+        CRITICAL_REGION_END();
+        if (m_ready_to_close || do_shutdown)
           shutdown();
       }
       m_ready_to_close = true;
@@ -470,6 +475,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       {
         MERROR("SSL handshake failed");
         boost::interprocess::ipcdetail::atomic_write32(&m_want_close_connection, 1);
+        m_ready_to_close = true;
         bool do_shutdown = false;
         CRITICAL_REGION_BEGIN(m_send_que_lock);
         if(!m_send_que.size())
@@ -559,7 +565,7 @@ PRAGMA_WARNING_DISABLE_VS(4355)
 				while (!message.empty()) {
 					byte_slice chunk = message.take_slice(chunksize_good);
 
-					MDEBUG("chunk_start="<<chunk.data()<<" ptr="<<message_data<<" pos="<<(chunk.data() - message_data));
+					MDEBUG("chunk_start="<<(void*)chunk.data()<<" ptr="<<message_data<<" pos="<<(chunk.data() - message_data));
 					MDEBUG("part of " << message.size() << ": pos="<<(chunk.data() - message_data) << " len="<<chunk.size());
 
 					bool ok = do_send_chunk(std::move(chunk)); // <====== ***
@@ -984,8 +990,9 @@ PRAGMA_WARNING_DISABLE_VS(4355)
       boost::asio::ip::tcp::resolver::query query(address, boost::lexical_cast<std::string>(port), boost::asio::ip::tcp::resolver::query::canonical_name);
       boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
       acceptor_.open(endpoint.protocol());
-      // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
+#if !defined(_WIN32)
       acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+#endif
       acceptor_.bind(endpoint);
       acceptor_.listen();
       boost::asio::ip::tcp::endpoint binded_endpoint = acceptor_.local_endpoint();
@@ -1019,8 +1026,9 @@ PRAGMA_WARNING_DISABLE_VS(4355)
         boost::asio::ip::tcp::resolver::query query(address_ipv6, boost::lexical_cast<std::string>(port_ipv6), boost::asio::ip::tcp::resolver::query::canonical_name);
         boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
         acceptor_ipv6.open(endpoint.protocol());
-        // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
+#if !defined(_WIN32)
         acceptor_ipv6.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+#endif
         acceptor_ipv6.set_option(boost::asio::ip::v6_only(true));
         acceptor_ipv6.bind(endpoint);
         acceptor_ipv6.listen();
@@ -1524,7 +1532,7 @@ POP_WARNINGS
 
     }
 
-    LOG_ERROR("Trying connect to " << adr << ":" << port << ", bind_ip = " << bind_ip_to_use);
+    MDEBUG("Trying to connect to " << adr << ":" << port << ", bind_ip = " << bind_ip_to_use);
 
     //boost::asio::ip::tcp::endpoint remote_endpoint(boost::asio::ip::address::from_string(addr.c_str()), port);
     boost::asio::ip::tcp::endpoint remote_endpoint(*iterator);
