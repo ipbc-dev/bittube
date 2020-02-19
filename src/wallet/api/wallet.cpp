@@ -2471,4 +2471,4 @@ void WalletImpl::deviceShowAddress(uint32_t accountIndex, uint32_t addressIndex,
 }
 } // namespace
 
-namespace Bitmonero = Monero;
+namespace Bitbittube = Monero;

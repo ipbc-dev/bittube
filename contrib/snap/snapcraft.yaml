@@ -1,6 +1,6 @@
-name: monero
+name: bittube
 version: 0.11.1.0-1
-summary: "Monero: the secure, private, untraceable cryptocurrency https://getmonero.org"
+summary: "Monero: the secure, private, untraceable cryptocurrency https://bittube.app"
 description: |
     Monero is a private, secure, untraceable, decentralised digital currency.
     You are your bank, you control your funds, and nobody can trace your transfers
@@ -9,23 +9,23 @@ grade: devel
 confinement: strict
 
 apps:
-    monerod:
+    bittubed:
         daemon: forking
         command: |
-          monerod-wrapper --detach --data-dir ${SNAP_COMMON} --config-file ${SNAP_USER_DATA}/etc/monerod.conf
+          bittubed-wrapper --detach --data-dir ${SNAP_COMMON} --config-file ${SNAP_USER_DATA}/etc/bittubed.conf
         plugs:
             - network
             - network-bind
-    monero-wallet-rpc:
+    bittube-wallet-rpc:
         command: |
-          monero-wallet-rpc --log-file ${SNAP_USER_DATA}
+          bittube-wallet-rpc --log-file ${SNAP_USER_DATA}
         plugs:
             - home
             - network
             - network-bind
-    monero-wallet-cli:
+    bittube-wallet-cli:
         command: |
-          monero-wallet-cli --log-file ${SNAP_USER_DATA}
+          bittube-wallet-cli --log-file ${SNAP_USER_DATA}
         plugs:
             - home
             - network
@@ -71,8 +71,8 @@ parts:
         plugin: dump
         source: .
         organize:
-            contrib/snap/monerod.conf: etc/monerod.conf
-            contrib/snap/monerod-wrapper: bin/monerod-wrapper
+            contrib/snap/bittubed.conf: etc/bittubed.conf
+            contrib/snap/bittubed-wrapper: bin/bittubed-wrapper
         prime:
             - etc
             - bin
