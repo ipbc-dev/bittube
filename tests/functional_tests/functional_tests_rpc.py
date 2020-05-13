@@ -34,7 +34,7 @@ try:
 except:
   tests = DEFAULT_TESTS
 
-N_MONERODS = 2
+N_BITTUBEDS = 2
 N_WALLETS = 4
 WALLET_DIRECTORY = builddir + "/functional-tests-directory"
 DIFFICULTY = 10
@@ -53,7 +53,7 @@ processes = []
 outputs = []
 ports = []
 
-for i in range(N_MONERODS):
+for i in range(N_BITTUBEDS):
   command_lines.append([str(18180+i) if x == "monerod_rpc_port" else str(18280+i) if x == "monerod_p2p_port" else str(18380+i) if x == "monerod_zmq_port" else x for x in monerod_base])
   if i < len(monerod_extra):
     command_lines[-1] += monerod_extra[i]

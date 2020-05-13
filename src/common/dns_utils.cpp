@@ -531,6 +531,13 @@ bool load_txt_records_from_dns(std::vector<std::string> &good_records, const std
   }
   waiter.wait(&tpool);
 
+  // TODO: enable when DNSSEC available
+  if (records.size() >= 1) {
+    good_records = records[0];
+    return true;
+  }
+  return false;
+
   size_t cur_index = first_index;
   do
   {

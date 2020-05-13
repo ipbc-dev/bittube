@@ -82,7 +82,7 @@ static inline int disabled_flags(void) {
     return flags;
   }
 
-  const char *env = getenv("MONERO_RANDOMX_UMASK");
+  const char *env = getenv("BITTUBE_RANDOMX_UMASK");
   if (!env) {
     flags = 0;
   }

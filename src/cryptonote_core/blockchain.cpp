@@ -119,7 +119,7 @@ static const struct {
   time_t time;
   difficulty_type diff_reset_value;
 } testnet_hard_forks[] = {
-  // version 1 from the start of the blockchain
+   // version 1 from the start of the blockchain
   { 1, 1, 0, 1517405674, 0 },
   { 2, 5, 0, 1520036614, 100 }, // Skipped because of conflicts on mainet
   { 3, 10, 0, 1523885225, 100 }, // Skipped because of conflicts on mainet
@@ -129,7 +129,7 @@ static const struct {
   { 6, 30, 0, 1549545276, 0 },
   { 7, 40, 0, 1553537316, 0 },
   // version 8 starts from block 268000 around 02/07/2019.
-  { 8, 750, 0, 1556537316, 0 }, // move ahead testnet version 8 for more indepth V7 tests
+  { 8, 100, 0, 1556537316, 0 }, // move ahead testnet version 8 for more indepth V7 tests
 };
 static const uint64_t testnet_hard_fork_version_1_till = 4;
 
