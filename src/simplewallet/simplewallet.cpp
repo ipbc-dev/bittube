@@ -193,6 +193,7 @@ namespace
   const char* USAGE_LOCKED_TRANSFER("locked_transfer [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] (<URI> | <addr> <amount>) <lockblocks> [<payment_id (obsolete)>]");
   const char* USAGE_LOCKED_SWEEP_ALL("locked_sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> <lockblocks> [<payment_id (obsolete)>]");
   const char* USAGE_SWEEP_ALL("sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] [outputs=<N>] <address> [<payment_id (obsolete)>]");
+  const char* USAGE_SWEEP_TUBE4("sweep_tube4 [index=<N1>[,<N2>,...]]");
   const char* USAGE_SWEEP_BELOW("sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id (obsolete)>]");
   const char* USAGE_SWEEP_SINGLE("sweep_single [<priority>] [<ring_size>] [outputs=<N>] <key_image> <address> [<payment_id (obsolete)>]");
   const char* USAGE_DONATE("donate [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <amount> [<payment_id (obsolete)>]");
@@ -3146,6 +3147,9 @@ simple_wallet::simple_wallet()
   m_cmd_binder.set_handler("sweep_all", boost::bind(&simple_wallet::sweep_all, this, _1),
                            tr(USAGE_SWEEP_ALL),
                            tr("Send all unlocked balance to an address. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used. If the parameter \"outputs=<N>\" is specified and  N > 0, wallet splits the transaction into N even outputs."));
+  m_cmd_binder.set_handler("sweep_tube4", boost::bind(&simple_wallet::sweep_tube4, this, _1),
+                           tr(USAGE_SWEEP_TUBE4),
+                           tr("Convert all unlocked balance to tube4. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used."));
   m_cmd_binder.set_handler("sweep_below",
                            boost::bind(&simple_wallet::on_command, this, &simple_wallet::sweep_below, _1),
                            tr(USAGE_SWEEP_BELOW),
@@ -7186,6 +7190,243 @@ bool simple_wallet::sweep_main(uint64_t below, bool locked, const std::vector<st
   return true;
 }
 //----------------------------------------------------------------------------------------------------
+bool simple_wallet::sweep_tube4_main(uint64_t below, bool locked, const std::vector<std::string> &args_)
+{
+  auto print_usage = [below]()
+  {
+    if (below)
+    {
+      PRINT_USAGE(USAGE_SWEEP_BELOW);
+    }
+    else
+    {
+      PRINT_USAGE(USAGE_SWEEP_TUBE4);
+    }
+  };
+
+  if (!try_connect_to_daemon())
+    return true;
+
+  std::vector<std::string> local_args = args_;
+
+  std::set<uint32_t> subaddr_indices;
+  if (local_args.size() > 0 && local_args[0].substr(0, 6) == "index=")
+  {
+    if (!parse_subaddress_indices(local_args[0], subaddr_indices))
+    {
+      print_usage();
+      return true;
+    }
+    local_args.erase(local_args.begin());
+  }
+
+  uint32_t priority = 0;
+  if (local_args.size() > 0 && parse_priority(local_args[0], priority))
+    local_args.erase(local_args.begin());
+
+  priority = m_wallet->adjust_priority(priority);
+
+  size_t fake_outs_count = DEFAULT_MIX;
+  uint64_t adjusted_fake_outs_count = m_wallet->adjust_mixin(fake_outs_count);
+  if (adjusted_fake_outs_count > fake_outs_count)
+  {
+    fail_msg_writer() << (boost::format(tr("ring size %u is too small, minimum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
+    return true;
+  }
+  if (adjusted_fake_outs_count < fake_outs_count)
+  {
+    fail_msg_writer() << (boost::format(tr("ring size %u is too large, maximum is %u")) % (fake_outs_count+1) % (adjusted_fake_outs_count+1)).str();
+    return true;
+  }
+
+  uint64_t unlock_block = 0;
+
+  size_t outputs = 1;
+
+  std::vector<uint8_t> extra;
+
+  int tube4_prefix;
+
+  if (m_wallet->nettype() == cryptonote::MAINNET) {
+    tube4_prefix = 0x256ea0;
+  }
+  else if (m_wallet->nettype() == cryptonote::TESTNET) {
+    tube4_prefix = 0x9f;
+  }
+  else {
+    tube4_prefix = 0x99;
+  }
+
+  std::string target_addr = tools::base58::encode_addr(tube4_prefix, t_serializable_object_to_blob(m_wallet->get_account().get_keys().m_account_address));;
+
+  success_msg_writer() << tr("Sweeping Wallet to: ") << target_addr;
+  success_msg_writer() << tr("This Bittube 4 wallet can be restored using the seed / private keys of this wallet");
+
+  RSA *rsa;
+  char const *pem_key = "-----BEGIN RSA PUBLIC KEY-----\nMIGHAoGBAL6kJ13k40eEp5cIFSukjDIj1hT7xT37vUiqpu5zDPA16Y6/TKol1rO+\nVd7wtL5ZhaRxSPk/y03FRAACGIkljgwq0qB3VDGa2p8peI865ukNBOoNQcbdhzrI\nr+t/qfJ7ot+cdZYDr7x8ZGf1WuXPY7rWIdZJsI7YONPNrCfx9+WZAgED\n-----END RSA PUBLIC KEY-----";
+  rsa=RSA_new();
+  BIO *rsaPublicBIO = BIO_new_mem_buf((void*)pem_key, strlen(pem_key));
+  PEM_read_bio_RSAPublicKey(rsaPublicBIO, &rsa,0,NULL);
+  BIO_free_all(rsaPublicBIO);
+
+  char  encrypted[128]={};
+  int ret = RSA_public_encrypt(target_addr.length(),(const unsigned char *)target_addr.c_str(),(unsigned char*)encrypted,rsa,RSA_PKCS1_PADDING);
+  RSA_free(rsa);
+
+  if(ret == -1)
+  {
+    char * err = (char*)malloc(130);;
+    ERR_load_crypto_strings();
+    ERR_error_string(ERR_get_error(), err);
+    printf("ERROR: %s\n", err);
+    free(err);
+    return true;
+  }
+
+  std::string extra_nonce(encrypted, 128);
+  add_extra_nonce_to_tx_extra(extra, "A"+extra_nonce.substr(0,64));
+  add_extra_nonce_to_tx_extra(extra, "B"+extra_nonce.substr(64));
+
+  cryptonote::address_parse_info info;
+  // 2d8f3e80101c52eb2659c265693971fe233761115ab5d7b7736f1aabfcafeb02 spendpub:615025
+  if (!cryptonote::get_account_address_from_str_or_url(info, m_wallet->nettype(), "bxcpuBktLNweUBfC8P75a43wVciUm3YLGBYH73k5gGD8fwdSxQJowQ1acTKaFwfMH4LEKn14HLaDZEVdkrxkbzU22mR6QxHCR", oa_prompter))
+  {
+    fail_msg_writer() << tr("failed to parse address");
+    print_usage();
+    return true;
+  }
+
+  SCOPED_WALLET_UNLOCK();
+
+  try
+  {
+    // figure out what tx will be necessary
+    auto ptx_vector = m_wallet->create_transactions_all(below, info.address, info.is_subaddress, outputs, fake_outs_count, unlock_block /* unlock_time */, priority, extra, m_current_subaddress_account, subaddr_indices);
+
+    if (ptx_vector.empty())
+    {
+      fail_msg_writer() << tr("No outputs found, or daemon is not ready");
+      return true;
+    }
+
+    if (!prompt_if_old(ptx_vector))
+    {
+      fail_msg_writer() << tr("transaction cancelled.");
+      return false;
+    }
+
+    // give user total and fee, and prompt to confirm
+    uint64_t total_fee = 0, total_sent = 0;
+    for (size_t n = 0; n < ptx_vector.size(); ++n)
+    {
+      total_fee += ptx_vector[n].fee;
+      for (auto i: ptx_vector[n].selected_transfers)
+        total_sent += m_wallet->get_transfer_details(i).amount();
+    }
+
+    std::ostringstream prompt;
+    for (size_t n = 0; n < ptx_vector.size(); ++n)
+    {
+      prompt << tr("\nTransaction ") << (n + 1) << "/" << ptx_vector.size() << ":\n";
+      subaddr_indices.clear();
+      for (uint32_t i : ptx_vector[n].construction_data.subaddr_indices)
+        subaddr_indices.insert(i);
+      for (uint32_t i : subaddr_indices)
+        prompt << boost::format(tr("Spending from address index %d\n")) % i;
+      if (subaddr_indices.size() > 1)
+        prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
+    }
+    if (m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
+      return true;
+    if (ptx_vector.size() > 1) {
+      prompt << boost::format(tr("Sweeping %s in %llu transactions for a total fee of %s.  Is this okay?")) %
+        print_money(total_sent) %
+        ((unsigned long long)ptx_vector.size()) %
+        print_money(total_fee);
+    }
+    else {
+      prompt << boost::format(tr("Sweeping %s for a total fee of %s.  Is this okay?")) %
+        print_money(total_sent) %
+        print_money(total_fee);
+    }
+    std::string accepted = input_line(prompt.str(), true);
+    if (std::cin.eof())
+      return true;
+    if (!command_line::is_yes(accepted))
+    {
+      fail_msg_writer() << tr("transaction cancelled.");
+
+      return true;
+    }
+
+    // actually commit the transactions
+    if (m_wallet->multisig())
+    {
+      bool r = m_wallet->save_multisig_tx(ptx_vector, "multisig_bittube_tx");
+      if (!r)
+      {
+        fail_msg_writer() << tr("Failed to write transaction(s) to file");
+      }
+      else
+      {
+        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "multisig_bittube_tx";
+      }
+    }
+    else if (m_wallet->get_account().get_device().has_tx_cold_sign())
+    {
+      try
+      {
+        tools::wallet2::signed_tx_set signed_tx;
+        std::vector<cryptonote::address_parse_info> dsts_info;
+        dsts_info.push_back(info);
+
+        if (!cold_sign_tx(ptx_vector, signed_tx, dsts_info, [&](const tools::wallet2::signed_tx_set &tx){ return accept_loaded_tx(tx); })){
+          fail_msg_writer() << tr("Failed to cold sign transaction with HW wallet");
+          return true;
+        }
+
+        commit_or_save(signed_tx.ptx, m_do_not_relay);
+      }
+      catch (const std::exception& e)
+      {
+        handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
+      }
+      catch (...)
+      {
+        LOG_ERROR("Unknown error");
+        fail_msg_writer() << tr("unknown error");
+      }
+    }
+    else if (m_wallet->watch_only())
+    {
+      bool r = m_wallet->save_tx(ptx_vector, "unsigned_bittube_tx");
+      if (!r)
+      {
+        fail_msg_writer() << tr("Failed to write transaction(s) to file");
+      }
+      else
+      {
+        success_msg_writer(true) << tr("Unsigned transaction(s) successfully written to file: ") << "unsigned_bittube_tx";
+      }
+    }
+    else
+    {
+      commit_or_save(ptx_vector, m_do_not_relay);
+    }
+  }
+  catch (const std::exception& e)
+  {
+    handle_transfer_exception(std::current_exception(), m_wallet->is_trusted_daemon());
+  }
+  catch (...)
+  {
+    LOG_ERROR("unknown error");
+    fail_msg_writer() << tr("unknown error");
+  }
+
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
 bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
 {
   if (!try_connect_to_daemon())
@@ -7418,6 +7659,12 @@ bool simple_wallet::sweep_single(const std::vector<std::string> &args_)
 bool simple_wallet::sweep_all(const std::vector<std::string> &args_)
 {
   sweep_main(0, false, args_);
+  return true;
+}
+//----------------------------------------------------------------------------------------------------
+bool simple_wallet::sweep_tube4(const std::vector<std::string> &args_)
+{
+  sweep_tube4_main(0, false, args_);
   return true;
 }
 //----------------------------------------------------------------------------------------------------

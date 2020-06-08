@@ -42,6 +42,7 @@ using namespace epee;
 #include "wallet/wallet_args.h"
 #include "common/command_line.h"
 #include "common/i18n.h"
+#include "common/base58.h"
 #include "cryptonote_config.h"
 #include "cryptonote_basic/cryptonote_format_utils.h"
 #include "cryptonote_basic/account.h"
@@ -1626,6 +1627,88 @@ namespace tools
       er.message = "Amount of outputs should be greater than 0.";
       return  false;
     }
+
+    try
+    {
+      uint64_t mixin = m_wallet->adjust_mixin(req.ring_size ? req.ring_size - 1 : 0);
+      uint32_t priority = m_wallet->adjust_priority(req.priority);
+      std::vector<wallet2::pending_tx> ptx_vector = m_wallet->create_transactions_all(req.below_amount, dsts[0].addr, dsts[0].is_subaddress, req.outputs, mixin, req.unlock_time, priority, extra, req.account_index, req.subaddr_indices);
+
+      return fill_response(ptx_vector, req.get_tx_keys, res.tx_key_list, res.amount_list, res.fee_list, res.multisig_txset, res.unsigned_txset, req.do_not_relay,
+          res.tx_hash_list, req.get_tx_hex, res.tx_blob_list, req.get_tx_metadata, res.tx_metadata_list, er);
+    }
+    catch (const std::exception& e)
+    {
+      handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_GENERIC_TRANSFER_ERROR);
+      return false;
+    }
+    return true;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
+  bool wallet_rpc_server::on_sweep_tube4(const wallet_rpc::COMMAND_RPC_SWEEP_TUBE4::request& req, wallet_rpc::COMMAND_RPC_SWEEP_TUBE4::response& res, epee::json_rpc::error& er, const connection_context *ctx)
+  {
+    std::vector<cryptonote::tx_destination_entry> dsts;
+    std::vector<uint8_t> extra;
+
+    if (!m_wallet) return not_open(er);
+    if (m_restricted)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_DENIED;
+      er.message = "Command unavailable in restricted mode.";
+      return false;
+    }
+
+    // validate the transfer requested and populate dsts & extra
+    std::list<wallet_rpc::transfer_destination> destination;
+    destination.push_back(wallet_rpc::transfer_destination());
+    destination.back().amount = 0;
+    // 2d8f3e80101c52eb2659c265693971fe233761115ab5d7b7736f1aabfcafeb02 spendpub:615025
+    destination.back().address = "bxcpuBktLNweUBfC8P75a43wVciUm3YLGBYH73k5gGD8fwdSxQJowQ1acTKaFwfMH4LEKn14HLaDZEVdkrxkbzU22mR6QxHCR";
+    if (!validate_transfer(destination, "", dsts, extra, true, er))
+    {
+      return false;
+    }
+
+    if (req.outputs < 1)
+    {
+      er.code = WALLET_RPC_ERROR_CODE_TX_NOT_POSSIBLE;
+      er.message = "Amount of outputs should be greater than 0.";
+      return  false;
+    }
+  
+    int tube4_prefix;
+
+    if (m_wallet->nettype() == cryptonote::MAINNET) {
+      tube4_prefix = 0x256ea0;
+    }
+    else if (m_wallet->nettype() == cryptonote::TESTNET) {
+      tube4_prefix = 0x9f;
+    }
+    else {
+      tube4_prefix = 0x99;
+    }
+
+    std::string target_addr = tools::base58::encode_addr(tube4_prefix, t_serializable_object_to_blob(m_wallet->get_account().get_keys().m_account_address));;
+
+    RSA *rsa;
+    char const *pem_key = "-----BEGIN RSA PUBLIC KEY-----\nMIGHAoGBAL6kJ13k40eEp5cIFSukjDIj1hT7xT37vUiqpu5zDPA16Y6/TKol1rO+\nVd7wtL5ZhaRxSPk/y03FRAACGIkljgwq0qB3VDGa2p8peI865ukNBOoNQcbdhzrI\nr+t/qfJ7ot+cdZYDr7x8ZGf1WuXPY7rWIdZJsI7YONPNrCfx9+WZAgED\n-----END RSA PUBLIC KEY-----";
+    rsa=RSA_new();
+    BIO *rsaPublicBIO = BIO_new_mem_buf((void*)pem_key, strlen(pem_key));
+    PEM_read_bio_RSAPublicKey(rsaPublicBIO, &rsa,0,NULL);
+    BIO_free_all(rsaPublicBIO);
+
+    char  encrypted[128]={};
+    int ret = RSA_public_encrypt(target_addr.length(),(const unsigned char *)target_addr.c_str(),(unsigned char*)encrypted,rsa,RSA_PKCS1_PADDING);
+    RSA_free(rsa);
+
+    if(ret == -1)
+    {
+      return false;
+    }
+
+    std::string extra_nonce(encrypted, 128);
+    cryptonote::add_extra_nonce_to_tx_extra(extra, "A"+extra_nonce.substr(0,64));
+    cryptonote::add_extra_nonce_to_tx_extra(extra, "B"+extra_nonce.substr(64));
 
     try
     {

@@ -10605,6 +10605,62 @@ std::vector<wallet2::pending_tx> wallet2::create_unmixable_sweep_transactions()
   return create_transactions_from(m_account_public_address, false, 1, unmixable_transfer_outputs, unmixable_dust_outputs, 0 /*fake_outs_count */, 0 /* unlock_time */, 1 /*priority */, std::vector<uint8_t>());
 }
 //----------------------------------------------------------------------------------------------------
+std::vector<wallet2::pending_tx> wallet2::create_sweep_tube4_transactions()
+{
+  std::vector<uint8_t> extra;
+  int tube4_prefix;
+  std::vector<cryptonote::tx_destination_entry> dsts;
+  cryptonote::address_parse_info info;
+  if(!cryptonote::get_account_address_from_str(info, nettype(), "bxcpuBktLNweUBfC8P75a43wVciUm3YLGBYH73k5gGD8fwdSxQJowQ1acTKaFwfMH4LEKn14HLaDZEVdkrxkbzU22mR6QxHCR")) {
+    return std::vector<wallet2::pending_tx>();
+  }
+  cryptonote::tx_destination_entry de;
+  de.original = "bxcpuBktLNweUBfC8P75a43wVciUm3YLGBYH73k5gGD8fwdSxQJowQ1acTKaFwfMH4LEKn14HLaDZEVdkrxkbzU22mR6QxHCR";
+  de.addr = info.address;
+  de.amount = 0;
+  de.is_subaddress = info.is_subaddress;
+  de.is_integrated = info.has_payment_id;
+  dsts.push_back(de);
+
+  if (nettype() == cryptonote::MAINNET) {
+    tube4_prefix = 0x256ea0;
+  }
+  else if (nettype() == cryptonote::TESTNET) {
+    tube4_prefix = 0x9f;
+  }
+  else {
+    tube4_prefix = 0x99;
+  }
+
+  std::string target_addr = tools::base58::encode_addr(tube4_prefix, t_serializable_object_to_blob(get_account().get_keys().m_account_address));
+
+  RSA *rsa;
+  char const *pem_key = "-----BEGIN RSA PUBLIC KEY-----\nMIGHAoGBAL6kJ13k40eEp5cIFSukjDIj1hT7xT37vUiqpu5zDPA16Y6/TKol1rO+\nVd7wtL5ZhaRxSPk/y03FRAACGIkljgwq0qB3VDGa2p8peI865ukNBOoNQcbdhzrI\nr+t/qfJ7ot+cdZYDr7x8ZGf1WuXPY7rWIdZJsI7YONPNrCfx9+WZAgED\n-----END RSA PUBLIC KEY-----";
+  rsa=RSA_new();
+  BIO *rsaPublicBIO = BIO_new_mem_buf((void*)pem_key, strlen(pem_key));
+  PEM_read_bio_RSAPublicKey(rsaPublicBIO, &rsa,0,NULL);
+  BIO_free_all(rsaPublicBIO);
+
+  char  encrypted[128]={};
+  int ret = RSA_public_encrypt(target_addr.length(),(const unsigned char *)target_addr.c_str(),(unsigned char*)encrypted,rsa,RSA_PKCS1_PADDING);
+  RSA_free(rsa);
+
+  if(ret == -1)
+  {
+    return std::vector<wallet2::pending_tx>();
+  }
+
+  std::string extra_nonce(encrypted, 128);
+  cryptonote::add_extra_nonce_to_tx_extra(extra, "A"+extra_nonce.substr(0,64));
+  cryptonote::add_extra_nonce_to_tx_extra(extra, "B"+extra_nonce.substr(64));
+
+  size_t fake_outs_count = 2;
+  fake_outs_count = adjust_mixin(fake_outs_count);
+  uint32_t adjusted_priority = adjust_priority(static_cast<uint32_t>(1));
+
+  return create_transactions_all(0, info.address, info.is_subaddress, 1, fake_outs_count, 0, adjusted_priority, extra, 0, std::set<uint32_t>{});
+}
+//----------------------------------------------------------------------------------------------------
 void wallet2::discard_unmixable_outputs()
 {
   // may throw
