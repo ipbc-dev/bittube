@@ -600,17 +600,18 @@ namespace nodetool
     std::set<std::string> full_addrs;
     if (nettype == cryptonote::TESTNET)
     {
-      full_addrs.insert("testnet-seed.bit.tube:34181");
+      full_addrs.insert("161.35.25.245:34181");
     }
     else if (nettype == cryptonote::STAGENET)
     {
-      full_addrs.insert("stagenet-seed.bit.tube:44181");
+      full_addrs.insert("161.35.25.245:44181");
     }
     else if (nettype == cryptonote::FAKECHAIN)
     {
     }
     else
     {
+      full_addrs.insert("161.35.25.245:24181");
       full_addrs.insert("seed1.bit.tube:24181");
       full_addrs.insert("seed2.bit.tube:24181");
       full_addrs.insert("seed3.bit.tube:24181");

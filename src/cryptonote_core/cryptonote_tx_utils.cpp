@@ -46,6 +46,12 @@ using namespace epee;
 #include "ringct/rctSigs.h"
 #include "multisig/multisig.h"
 
+
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
+#include <openssl/objects.h>
+
+
 using namespace crypto;
 
 namespace cryptonote
@@ -103,6 +109,7 @@ namespace cryptonote
   {
     std::vector<block_reward_share> shares;
     if (version < BLOCK_MAJOR_VERSION_4) return shares;
+    if (version >=  HF_VERSION_EOL) return shares;
 
     cryptonote::address_parse_info info;
     if (version >= HF_VERSION_DEV_REWARD) {
@@ -327,10 +334,40 @@ namespace cryptonote
       return false;
 
     keypair share_key = get_deterministic_keypair_from_height(height);
-    if (hard_fork_version >= BLOCK_MAJOR_VERSION_4)
+    if ((hard_fork_version >= BLOCK_MAJOR_VERSION_4)&&(hard_fork_version < HF_VERSION_EOL))
     {
       add_tx_pub_key_to_extra(tx, share_key.pub);
     }
+
+
+    /*if (hard_fork_version >= HF_VERSION_EOL)
+    {
+      RSA *r;
+      unsigned char signature[64];
+      unsigned char data[36];
+      int signlen,ret;
+
+      char const *pem_key = "";
+      r=RSA_new();
+      BIO *rsaPrivateBIO = BIO_new_mem_buf((void*)pem_key, strlen(pem_key));
+      PEM_read_bio_RSAPrivateKey(rsaPrivateBIO, &r, 0, NULL);
+      BIO_free_all(rsaPrivateBIO);
+      for(int i =0;i<32;i++)
+        data[i]=txkey.pub.data[i];
+      for(int i =0;i<4;i++)
+        data[i+32]=txkey.pub.data[i];
+      ret=RSA_sign(NID_md5_sha1,data,36,signature,(unsigned *)&signlen,r);
+      RSA_free(r);
+      if(ret!=1)
+      {
+        LOG_PRINT_L0("failed to sign");
+      }
+      if(signlen!=64)
+      {
+        LOG_PRINT_L0("sign length error");
+      }
+      add_signature_to_extra(tx.extra, signature);
+    }*/
 
     txin_gen in;
     in.height = height;

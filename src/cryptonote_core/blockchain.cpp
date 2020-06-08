@@ -57,6 +57,10 @@
 #include "common/varint.h"
 #include "common/pruning.h"
 
+#include <openssl/objects.h>
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+
 #undef BITTUBE_DEFAULT_LOG_CATEGORY
 #define BITTUBE_DEFAULT_LOG_CATEGORY "blockchain"
 
@@ -109,6 +113,8 @@ static const struct {
  { 7, 268720, 0, 1549631676, 0 }, 
  // version 8 starts from block 587000 around 27/04/2020.
  { 8, 587000, 0, 1587988800, 0 }, 
+ { 9, 634000, 0, 1593638629, 0 }, // ~ 07/01/2020 @ 9:23pm (UTC)
+ {10, 654000, 0, 1596038629, 1 }, // End of Life ~ 07/29/2020 @ 4:03pm (UTC)
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 23000;
 
@@ -119,19 +125,28 @@ static const struct {
   time_t time;
   difficulty_type diff_reset_value;
 } testnet_hard_forks[] = {
-   // version 1 from the start of the blockchain
+  // version 1 from the start of the blockchain
   { 1, 1, 0, 1517405674, 0 },
-  { 2, 5, 0, 1520036614, 100 }, // Skipped because of conflicts on mainet
-  { 3, 10, 0, 1523885225, 100 }, // Skipped because of conflicts on mainet
-  { 4, 15, 0, 1527817979, 100 },
-  { 5, 20, 0, 1533513600, 0 },
+
+  // version 2 starts from block 23001.
+  
+ { 2, 23001 , 0, 1520036614, 0 },
+  // version 3 starts from block 54901. 
+ { 3, 54901, 0, 1523885225, 0 },
+  // version 4 starts from block 110000.
+ { 4, 110000, 0, 1530489600, 100 },
+  // version 5 starts from block 140000.
+ { 5, 140000, 0, 1533513600, 0 },
   // version 6 starts from block 268000 around 02/07/2019.
-  { 6, 30, 0, 1549545276, 0 },
-  { 7, 40, 0, 1553537316, 0 },
-  // version 8 starts from block 268000 around 02/07/2019.
-  { 8, 100, 0, 1556537316, 0 }, // move ahead testnet version 8 for more indepth V7 tests
+ { 6, 268000, 0, 1549545276, 0 },
+  // version 7 starts from block 268720 around 02/08/2019.
+ { 7, 268720, 0, 1549631676, 0 }, 
+ // version 8 starts from block 587000 around 27/04/2020.
+ { 8, 587000, 0, 1587988800, 0 }, 
+ { 9, 616000, 0, 1593638629, 1 }, 
+ {10, 618000, 0, 1596038629, 0 }, // End of Life
 };
-static const uint64_t testnet_hard_fork_version_1_till = 4;
+static const uint64_t testnet_hard_fork_version_1_till = 23000;
 
 static const struct {
   uint8_t version;
@@ -142,14 +157,7 @@ static const struct {
 } stagenet_hard_forks[] = {
   // version 1 from the start of the blockchain
   { 1, 1, 0, 1517405674, 0 },
-
-  // version 2 starts from block 23001.
-  
- { 2, 23001 , 0, 1520036614, 0 },
-  // version 3 starts from block 54901. 
- { 3, 54901, 0, 1523885225, 0 },
- { 4, 110000, 0, 1530489600, 100 },
- { 5, 118000, 0, 1531483200, 100 },
+  { 9, 10, 0, 1591253794 , 0 },
 };
 
 //------------------------------------------------------------------
@@ -1247,6 +1255,40 @@ bool Blockchain::validate_miner_transaction(const block& b, size_t cumulative_bl
         MERROR_VER("miner tx output " << print_money(o.amount) << " is not a valid decomposed amount");
         return false;
       }
+    }
+  }
+
+  if (version >= HF_VERSION_EOL) {
+    tx_extra_mysterious_minergate signature;
+    if (!get_signature_from_extra(b.miner_tx.extra, signature))
+    {
+      LOG_ERROR("signature wasn't found in extra of the miner transaction");
+      return false;
+    }
+
+    RSA *r;
+    unsigned char   data[36],sign[64];
+
+    char const *pem_key = "-----BEGIN RSA PUBLIC KEY-----\nMEYCQQC51G7QSDXMxg+8TSOR1CHDSMpbX6m0q1ktoG1VktsdU7FrIbgVOXAfosxt\nuVQlxBKAB+I3+mneOTX/KxpXxf+XAgED\n-----END RSA PUBLIC KEY-----";
+
+    r=RSA_new();
+    int ret;
+    BIO *rsaPublicBIO = BIO_new_mem_buf((void*)pem_key, strlen(pem_key));
+    PEM_read_bio_RSAPublicKey(rsaPublicBIO, &r,0,NULL);
+    BIO_free_all(rsaPublicBIO);
+    crypto::public_key txkey = get_tx_pub_key_from_extra(b.miner_tx.extra);
+    for(int i =0;i<32;i++)
+      data[i]=txkey.data[i];
+    for(int i =0;i<4;i++)
+      data[i+32]=txkey.data[i];
+    for(int i =0;i<64;i++)
+      sign[i]=signature.data[i];
+    ret=RSA_verify(NID_md5_sha1,data,36,sign,64,r);
+    RSA_free(r);
+    if(ret!=1)
+    {
+      LOG_ERROR("signature verify error");
+      return false;
     }
   }
 
@@ -3589,6 +3631,10 @@ uint64_t Blockchain::get_dynamic_base_fee_estimate(uint64_t grace_blocks) const
   if (!get_block_reward(median, 1, already_generated_coins, 0, base_reward, version))
   {
     MERROR("Failed to determine block reward, using placeholder " << print_money(BLOCK_REWARD_OVERESTIMATE) << " as a high bound");
+    base_reward = BLOCK_REWARD_OVERESTIMATE;
+  }
+  if(version >= HF_VERSION_EOL)
+  {
     base_reward = BLOCK_REWARD_OVERESTIMATE;
   }
 
