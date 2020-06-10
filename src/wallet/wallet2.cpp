@@ -11795,6 +11795,7 @@ uint64_t wallet2::get_daemon_blockchain_target_height(string &err)
 
 uint64_t wallet2::get_approximate_blockchain_height() const
 {
+  if ((m_nettype == TESTNET) || (m_nettype == STAGENET)) return 0;
   const int seconds_per_block         = DIFFICULTY_TARGET_V2;
   const time_t epochTimeMiningStarted = (m_nettype == TESTNET || m_nettype == STAGENET ?  1549545276: 1530489600) + (60 * 60 * 24 * 7); // 2018-04-30 ~3:55PM + 1 week to be conservative.
   const time_t currentTime            = time(NULL);
