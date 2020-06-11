@@ -20,10 +20,10 @@ jobs:
     - uses: actions/checkout@v1
       with:
         submodules: recursive
-    - uses: numworks/setup-msys2@v1
-    - name: update pacman
-      run: msys2do pacman -Syu --noconfirm
-    - name: install monero dependencies
+    - uses: eine/setup-msys2@v0
+      with:
+        update: true
+    - name: install bittube dependencies
       run: msys2do pacman -S --noconfirm mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-protobuf-c mingw-w64-x86_64-libusb git
     - name: build
       run: msys2do make release-static-win64 -j3
@@ -38,7 +38,7 @@ jobs:
       run: sudo rm -rf /usr/local/share/boost
     - name: update apt
       run: sudo apt update
-    - name: install monero dependencies
+    - name: install bittube dependencies
       run: sudo apt -y install build-essential cmake libboost-all-dev miniupnpc libunbound-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libzmq3-dev libsodium-dev libhidapi-dev libnorm-dev libusb-1.0-0-dev libpgm-dev
     - name: build
       run: make -j3
