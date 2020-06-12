@@ -120,7 +120,11 @@ namespace cryptonote
     }
 
     if (version >= HF_VERSION_AIRTIME_REWARD) {
-      get_airtime_wallet_address(nettype, info);
+      if (version >= HF_VERSION_AIRTIME2) {
+        get_airtime_wallet_address_2(nettype, info);
+      }else{
+        get_airtime_wallet_address(nettype, info);
+      }
       shares.emplace_back(block_reward_share{"airtime", get_airtime_reward(block_reward, version), info.address});
     }
     
@@ -300,6 +304,25 @@ namespace cryptonote
         break;
       case MAINNET:
         cryptonote::get_account_address_from_str(address, nettype, ::config::AIRTIME_WALLET_ADDRESS);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  bool get_airtime_wallet_address_2(const network_type nettype, cryptonote::address_parse_info &address)
+  {
+    switch (nettype)
+    {
+      case STAGENET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::stagenet::AIRTIME_WALLET_ADDRESS_2);
+        break;
+      case TESTNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::testnet::AIRTIME_WALLET_ADDRESS_2);
+        break;
+      case MAINNET:
+        cryptonote::get_account_address_from_str(address, nettype, ::config::AIRTIME_WALLET_ADDRESS_2);
         break;
       default:
         return false;

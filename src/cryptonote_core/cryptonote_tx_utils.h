@@ -61,6 +61,7 @@ namespace cryptonote
   bool get_development_wallet_address(const network_type nettype, address_parse_info &address);
   bool get_marketing_wallet_address(const network_type nettype, address_parse_info &address);
   bool get_airtime_wallet_address(const network_type nettype, address_parse_info &address);
+  bool get_airtime_wallet_address_2(const network_type nettype, address_parse_info &address);
   bool get_community_devs_wallet_address(const network_type nettype, address_parse_info &address);
   bool get_community_mods_wallet_address(const network_type nettype, address_parse_info &address);
   bool get_community_ref_wallet_address(const network_type nettype, address_parse_info &address);
