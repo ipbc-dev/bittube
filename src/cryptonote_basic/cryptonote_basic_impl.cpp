@@ -142,6 +142,10 @@ namespace cryptonote {
     {
       base_reward = FINAL_SUBSIDY_PER_MINUTE*target_minutes;
     }
+    if (version >= HF_VERSION_EOL)
+    {
+      base_reward = 1;
+    }
     uint64_t product_hi;
     // BUGFIX: 32-bit saturation bug (e.g. ARM7), the result was being
     // treated as 32-bit by default.

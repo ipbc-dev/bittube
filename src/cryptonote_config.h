@@ -185,6 +185,8 @@
 #define HF_VERSION_SAME_MIXIN                   8 //TODO v8?
 #define HF_VERSION_REJECT_SIGS_IN_COINBASE      8 //TODO v8?
 #define HF_VERSION_ENFORCE_MIN_AGE              8 //TODO v8?
+#define HF_VERSION_AIRTIME2                     9
+#define HF_VERSION_EOL                          10
 #define RX_BLOCK_VERSION                        99 //TODO v99?
 #define HF_VERSION_EFFECTIVE_SHORT_TERM_MEDIAN_IN_PENALTY 8 //TODO v8?
 
@@ -227,6 +229,7 @@ namespace config
   std::string const DEVELOPMENT_WALLET_ADDRESS = "bxdaNPkW77u6KYJuYNDSJpfocTXjVpZ7mMAsoNELySdnbAr8U6aMvnULosC456Kk7NRCAS2Xe7o14NF7bbPKyVta39KPYFia3";
   std::string const MARKETING_WALLET_ADDRESS = "bxdEc4zm1g2ZQZkSwjYThuMJouTSfzL2xJXTC2o4q7Dq17sEcsMdwgRfNuBgg59TPCLJwCj4jJH7rT8bdKjx5p6Z35LJDknWU";
   std::string const AIRTIME_WALLET_ADDRESS = "bxcfouydX4Q2jxw2Thx49bM7tmBiEhP7c8rUoXSVmYxxDpEqqSpBzdRe9WQDkg5LekBtX9W9XinTuG6ttKBtBnpT14KNegFD1"; // view key d6809b482464de15defbbb4127a94118c2ebf77997f45a496863a7266b1406a9
+  std::string const AIRTIME_WALLET_ADDRESS_2 = "bxdbjgfG5QhZHiK69WieSt4RYW8WeQYQT9PVoW6oCpSuPwMT4QY5jgsJ4azngCoSo7Ky3iRw61bBeTHFdKNAywTP2kjGRHmJb";
   std::string const COMMUNITY_DEVS_WALLET_ADDRESS = "bxdpg2rivP4g1PzBsm9nq3YXU2V3kDcmogGPxeGvdsup4DBLzdHqW3bEmepzhzS6RPgye1MbiGVbq95UbZxPN19531E9YPMta";
   std::string const COMMUNITY_MODS_WALLET_ADDRESS = "bxdKezUkPt4aci2PqZrEp7gqzkG3e7UC2R7zLn3Bd6dh1NhwRHPuXiB17uejH22dLh2qxj6mVVVZjTvGkbSSthbo2PeM429FW";
   std::string const COMMUNITY_REF_WALLET_ADDRESS = "bxbuTE8eqwtXvQJEoNiDDPXoTExxuLu6igJsEbFuMQ4nBJgSYXHUR9u3PG26UrFZeYJ9d2uyPp28DgUm7SaXwA9u2uirzK4Ef";
@@ -244,14 +247,15 @@ namespace config
         // 0x2c ,0xa6, 0xf4, 0xa7 , 0x7d, 0x0c , 0x78, 0xdc, 0x44, 0x3f, 0xd5, 0x69, 0xcb, 0x6d, 0x4e, 0x1c
       } }; // Bender's daydream
     std::string const GENESIS_TX = "010a01ff000180a094a58d1d029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121015bfdea2f96583074c2fbd4092d6cd7e5e618b8eee918f321099cf24d54c52afc";
-    uint32_t const GENESIS_NONCE = 74;
+    uint32_t const GENESIS_NONCE = 70;
 	
-    std::string const DEVELOPMENT_WALLET_ADDRESS = "bxc8aUkTt6q3wjN3zE4v85ZvYaBnMxTL3ZJ7VGh1jUqKSciCPSo2oo1eZhV1MDbyN3LLFZ8JsuMGLPg8MRFYtaFE27WTuFo52"; //Mnemonic: saxophone donuts jobs mocked boxes cuisine rhythm devoid pawnshop reheat does ditch jeans elope pepper psychic mugged heron butter binocular island answers tiger toaster boxes
-    std::string const MARKETING_WALLET_ADDRESS = "bxcu1pvpaesG6gp4gTcFoc1dxofNLwn6X3KhgWp4r5cr6e5Lun98PrL2vtyFLULVH74PNyLHDb6ovDoZQWsm55hz3BHgREmd3"; //Mnemonic: roomy rudely tagged taunts sadness needed hive gave upgrade fitting nerves lipstick gawk juvenile tuesday bobsled identity bomb suede toenail ember winter cuisine dizzy toenail
-    std::string const AIRTIME_WALLET_ADDRESS = "bxcrzjfBngtjdxEmc7PoaiXWZbXZQjnEyNWSmAG5zwDJTqgtoQPTiwPSgFaPXLZsVCFPrmyeDDmMWcdSj2k6Txb42d81UZ7wF"; //Mnemonic: weird doing laptop mixture nocturnal myth cigar pyramid dual ruffled pimple fences veered punch sieve august cottage lids lakes waveform patio ability lettuce lied ruffled
-    std::string const COMMUNITY_DEVS_WALLET_ADDRESS = "bxcmCVeX65oe6hV4UHPYuBWo7fTC6jMUkJpLUrakrSavNgZLfgUMEKpgksTkShgQcY1wRzfGYV5MsRPQbSeFRUYU2Vj2Bt1BJ"; //TODO
-    std::string const COMMUNITY_MODS_WALLET_ADDRESS = "bxcmCVeX65oe6hV4UHPYuBWo7fTC6jMUkJpLUrakrSavNgZLfgUMEKpgksTkShgQcY1wRzfGYV5MsRPQbSeFRUYU2Vj2Bt1BJ"; //TODO
-    std::string const COMMUNITY_REF_WALLET_ADDRESS = "bxcmCVeX65oe6hV4UHPYuBWo7fTC6jMUkJpLUrakrSavNgZLfgUMEKpgksTkShgQcY1wRzfGYV5MsRPQbSeFRUYU2Vj2Bt1BJ"; //TODO
+    std::string const DEVELOPMENT_WALLET_ADDRESS = "bxdaNPkW77u6KYJuYNDSJpfocTXjVpZ7mMAsoNELySdnbAr8U6aMvnULosC456Kk7NRCAS2Xe7o14NF7bbPKyVta39KPYFia3";
+    std::string const MARKETING_WALLET_ADDRESS = "bxdEc4zm1g2ZQZkSwjYThuMJouTSfzL2xJXTC2o4q7Dq17sEcsMdwgRfNuBgg59TPCLJwCj4jJH7rT8bdKjx5p6Z35LJDknWU";
+    std::string const AIRTIME_WALLET_ADDRESS = "bxcfouydX4Q2jxw2Thx49bM7tmBiEhP7c8rUoXSVmYxxDpEqqSpBzdRe9WQDkg5LekBtX9W9XinTuG6ttKBtBnpT14KNegFD1"; // view key d6809b482464de15defbbb4127a94118c2ebf77997f45a496863a7266b1406a9
+    std::string const AIRTIME_WALLET_ADDRESS_2 = "bxdbjgfG5QhZHiK69WieSt4RYW8WeQYQT9PVoW6oCpSuPwMT4QY5jgsJ4azngCoSo7Ky3iRw61bBeTHFdKNAywTP2kjGRHmJb";
+    std::string const COMMUNITY_DEVS_WALLET_ADDRESS = "bxdpg2rivP4g1PzBsm9nq3YXU2V3kDcmogGPxeGvdsup4DBLzdHqW3bEmepzhzS6RPgye1MbiGVbq95UbZxPN19531E9YPMta";
+    std::string const COMMUNITY_MODS_WALLET_ADDRESS = "bxdKezUkPt4aci2PqZrEp7gqzkG3e7UC2R7zLn3Bd6dh1NhwRHPuXiB17uejH22dLh2qxj6mVVVZjTvGkbSSthbo2PeM429FW";
+    std::string const COMMUNITY_REF_WALLET_ADDRESS = "bxbuTE8eqwtXvQJEoNiDDPXoTExxuLu6igJsEbFuMQ4nBJgSYXHUR9u3PG26UrFZeYJ9d2uyPp28DgUm7SaXwA9u2uirzK4Ef";
   }
 
   namespace stagenet
@@ -271,6 +275,7 @@ namespace config
     std::string const DEVELOPMENT_WALLET_ADDRESS = "bxcGifhyYCZH9SyAkEizkmUTRD6zjAJsWiua5zsXeyGyB1i2dyzGu4hZhUixhetA8jXzqSffetDEBahXX98jB2jb2DvBvPfDS"; //Mnemonic: megabyte digit were reruns slug wetsuit ignore narrate budget adrenalin chlorine wiggle wield veteran himself sample yanks muzzle jogger owls peaches easy fancy geek narrate
     std::string const MARKETING_WALLET_ADDRESS = "bxd76ATsNNy6Jt2dQ9kaz14P7wrjFL5h54HGzEY55VvHLoA5Qpuw23S2TY3gkw4atqbHjUJd7r95cHUWchiBqHGG2DQsuAHbJ"; //Mnemonic: karate jury torch jewels coal inline inwardly seventh kitchens viking afloat liquid oozed utility duties ozone drinks syllabus weird lunar yodel liquid wetsuit afar coal
     std::string const AIRTIME_WALLET_ADDRESS = "bxdEqBAAgJcSBj7fSRvsEQUsVgC2eBz87FyFDxDrBSPxY7UQYdfgvQJ72hwC56k6p76chVZuoEQ2RXN85wpjTbJE2gffyT3wz"; //Mnemonic: artistic waist eden prying roles lamb already unnoticed twofold vaults aptitude school gels eagle lobster pledge symptoms solved tarnished laptop vaults afield zesty affair afield
+    std::string const AIRTIME_WALLET_ADDRESS_2 = "bxdEqBAAgJcSBj7fSRvsEQUsVgC2eBz87FyFDxDrBSPxY7UQYdfgvQJ72hwC56k6p76chVZuoEQ2RXN85wpjTbJE2gffyT3wz"; //Mnemonic: artistic waist eden prying roles lamb already unnoticed twofold vaults aptitude school gels eagle lobster pledge symptoms solved tarnished laptop vaults afield zesty affair afield
     std::string const COMMUNITY_DEVS_WALLET_ADDRESS = "bxcmCVeX65oe6hV4UHPYuBWo7fTC6jMUkJpLUrakrSavNgZLfgUMEKpgksTkShgQcY1wRzfGYV5MsRPQbSeFRUYU2Vj2Bt1BJ"; //TODO
     std::string const COMMUNITY_MODS_WALLET_ADDRESS = "bxcmCVeX65oe6hV4UHPYuBWo7fTC6jMUkJpLUrakrSavNgZLfgUMEKpgksTkShgQcY1wRzfGYV5MsRPQbSeFRUYU2Vj2Bt1BJ"; //TODO
     std::string const COMMUNITY_REF_WALLET_ADDRESS = "bxcmCVeX65oe6hV4UHPYuBWo7fTC6jMUkJpLUrakrSavNgZLfgUMEKpgksTkShgQcY1wRzfGYV5MsRPQbSeFRUYU2Vj2Bt1BJ"; //TODO

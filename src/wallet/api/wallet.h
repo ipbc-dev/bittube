@@ -161,6 +161,7 @@ public:
                                         uint32_t subaddr_account = 0,
                                         std::set<uint32_t> subaddr_indices = {}) override;
     virtual PendingTransaction * createSweepUnmixableTransaction() override;
+    virtual PendingTransaction * createSweepTube4Transaction() override;
     bool submitTransaction(const std::string &fileName) override;
     virtual UnsignedTransaction * loadUnsignedTx(const std::string &unsigned_filename) override;
     bool exportKeyImages(const std::string &filename) override;

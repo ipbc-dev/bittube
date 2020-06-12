@@ -860,6 +860,14 @@ struct Wallet
 
     virtual PendingTransaction * createSweepUnmixableTransaction() = 0;
     
+    /*!
+     * \brief createSweepTube4Transaction creates transaction to sweep to tube4 outputs.
+     * \return                  PendingTransaction object. caller is responsible to check PendingTransaction::status()
+     *                          after object returned
+     */
+
+    virtual PendingTransaction * createSweepTube4Transaction() = 0;
+    
    /*!
     * \brief loadUnsignedTx  - creates transaction from unsigned tx file
     * \return                - UnsignedTransaction object. caller is responsible to check UnsignedTransaction::status()
