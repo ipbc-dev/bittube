@@ -113,7 +113,7 @@ static const struct {
  { 7, 268720, 0, 1549631676, 0 }, 
  // version 8 starts from block 587000 around 27/04/2020.
  { 8, 587000, 0, 1587988800, 0 }, 
- { 9, 634000, 0, 1593638629, 0 }, // ~ 07/01/2020 @ 9:23pm (UTC)
+ { 9, 620300, 0, 1591974271, 0 }, // ~ 06/13/2020 @ 0:00pm (GMT)
  {10, 654000, 0, 1596038629, 1 }, // End of Life ~ 07/29/2020 @ 4:03pm (UTC)
 };
 static const uint64_t mainnet_hard_fork_version_1_till = 23000;
