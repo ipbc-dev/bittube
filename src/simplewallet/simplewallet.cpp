@@ -3149,7 +3149,7 @@ simple_wallet::simple_wallet()
                            tr("Send all unlocked balance to an address. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used. If the parameter \"outputs=<N>\" is specified and  N > 0, wallet splits the transaction into N even outputs."));
   m_cmd_binder.set_handler("sweep_tube4", boost::bind(&simple_wallet::sweep_tube4, this, _1),
                            tr(USAGE_SWEEP_TUBE4),
-                           tr("Convert all unlocked balance to tube4. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet randomly chooses an address index to be used."));
+                           tr("Convert all unlocked balance to tube4. If the parameter \"index<N1>[,<N2>,...]\" is specified, the wallet sweeps outputs received by those address indices. If omitted, the wallet will select all non-empty address indeex."));
   m_cmd_binder.set_handler("sweep_below",
                            boost::bind(&simple_wallet::on_command, this, &simple_wallet::sweep_below, _1),
                            tr(USAGE_SWEEP_BELOW),
@@ -7219,6 +7219,14 @@ bool simple_wallet::sweep_tube4_main(uint64_t below, bool locked, const std::vec
     }
     local_args.erase(local_args.begin());
   }
+  
+
+  if (subaddr_indices.empty()) // "index=<N1>[,<N2>,...]" wasn't specified -> use all the indices with non-zero unlocked balance
+  {
+    std::map<uint32_t, uint64_t> balance_per_subaddr = m_wallet->balance_per_subaddress(m_current_subaddress_account, false);
+    for (const auto& i : balance_per_subaddr)
+      subaddr_indices.insert(i.first);
+  }
 
   uint32_t priority = 0;
   if (local_args.size() > 0 && parse_priority(local_args[0], priority))
@@ -7333,8 +7341,6 @@ bool simple_wallet::sweep_tube4_main(uint64_t below, bool locked, const std::vec
         subaddr_indices.insert(i);
       for (uint32_t i : subaddr_indices)
         prompt << boost::format(tr("Spending from address index %d\n")) % i;
-      if (subaddr_indices.size() > 1)
-        prompt << tr("WARNING: Outputs of multiple addresses are being used together, which might potentially compromise your privacy.\n");
     }
     if (m_wallet->print_ring_members() && !print_ring_members(ptx_vector, prompt))
       return true;
