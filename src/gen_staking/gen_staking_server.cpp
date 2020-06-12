@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
     return 0;
   } catch (std::exception &e) {
     // TODO: actual json output with rapidjson etc instead of this hack
-    std::cout << "{\"success\": false, \"error\": " << std::quoted(e.what()) << "}";
+    std::cout << "{\"success\": false, \"error\": " << boost::io::quoted(e.what()) << "}";
   } catch (...) {
     // TODO: actual json output with rapidjson etc instead of this hack
     std::cout << "{\"success\": false, \"error\": \"Unexpected error\"}";
