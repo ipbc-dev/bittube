@@ -10658,7 +10658,12 @@ std::vector<wallet2::pending_tx> wallet2::create_sweep_tube4_transactions()
   fake_outs_count = adjust_mixin(fake_outs_count);
   uint32_t adjusted_priority = adjust_priority(static_cast<uint32_t>(1));
 
-  return create_transactions_all(0, info.address, info.is_subaddress, 1, fake_outs_count, 0, adjusted_priority, extra, 0, std::set<uint32_t>{});
+  std::set<uint32_t> subaddr_indices;
+  std::map<uint32_t, uint64_t> balance_per_subaddr = balance_per_subaddress(0, false);
+  for (const auto& i : balance_per_subaddr)
+    subaddr_indices.insert(i.first);
+
+  return create_transactions_all(0, info.address, info.is_subaddress, 1, fake_outs_count, 0, adjusted_priority, extra, 0, subaddr_indices);
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::discard_unmixable_outputs()
