@@ -826,7 +826,6 @@ namespace wallet_rpc
     struct request_t
     {
       uint32_t account_index;
-      std::set<uint32_t> subaddr_indices;
       uint32_t priority;
       uint64_t ring_size;
       uint64_t outputs;
@@ -839,7 +838,6 @@ namespace wallet_rpc
 
       BEGIN_KV_SERIALIZE_MAP()
         KV_SERIALIZE(account_index)
-        KV_SERIALIZE(subaddr_indices)
         KV_SERIALIZE(priority)
         KV_SERIALIZE_OPT(ring_size, (uint64_t)0)
         KV_SERIALIZE_OPT(outputs, (uint64_t)1)
