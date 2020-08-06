@@ -3822,13 +3822,13 @@ namespace tools
     if (!ptr)
       ptr = strchr(req.filename.c_str(), ':');
   #endif
-    if (ptr)
+    if (ptr && !m_wallet_any_path)
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = "Invalid filename";
       return false;
     }
-    std::string wallet_file = req.filename.empty() ? "" : (m_wallet_dir + "/" + req.filename);
+    std::string wallet_file = req.filename.empty() ? "" : (m_wallet_any_path ? req.filename : m_wallet_dir + "/" + req.filename);
     // check if wallet file already exists
     if (!wallet_file.empty())
     {
@@ -3957,7 +3957,7 @@ namespace tools
   //------------------------------------------------------------------------------------------------------------------------------
   bool wallet_rpc_server::on_restore_deterministic_wallet(const wallet_rpc::COMMAND_RPC_RESTORE_DETERMINISTIC_WALLET::request &req, wallet_rpc::COMMAND_RPC_RESTORE_DETERMINISTIC_WALLET::response &res, epee::json_rpc::error &er, const connection_context *ctx)
   {
-    if (m_wallet_dir.empty())
+    if (m_wallet_dir.empty() && !m_wallet_any_path)
     {
       er.code = WALLET_RPC_ERROR_CODE_NO_WALLET_DIR;
       er.message = "No wallet dir configured";
