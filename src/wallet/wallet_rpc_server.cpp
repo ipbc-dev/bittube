@@ -3952,6 +3952,7 @@ namespace tools
       delete m_wallet;
     m_wallet = wal.release();
     res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
+    LOG_PRINT_L0("Restored wallet keys file, with public address: " << res.address);
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
