@@ -3949,8 +3949,21 @@ namespace tools
     }
 
     if (m_wallet)
+    {
+      try
+      {
+        m_wallet->store();
+      }
+      catch (const std::exception &e)
+      {
+        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
+        return false;
+      }
+      if (m_print_progress) delete m_wallet->callback();
       delete m_wallet;
+    }
     m_wallet = wal.release();
+    if (m_print_progress) m_wallet->callback(new t_progress_printer(m_wallet));
     res.address = m_wallet->get_account().get_public_address_str(m_wallet->nettype());
     LOG_PRINT_L0("Restored wallet keys file, with public address: " << res.address);
     return true;
