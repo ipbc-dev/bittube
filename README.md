@@ -109,7 +109,7 @@ invokes cmake commands as needed.
 * Change to the root of the source code directory, change to the most recent release branch, and build:
 
         cd bittube
-        git checkout 2.1.0.2
+        git checkout v3.1.0.2
         make
 
     *Optional*: If your machine has several cores and enough memory, enable
@@ -183,7 +183,7 @@ Tested on a Raspberry Pi Zero with a clean install of minimal Raspbian Stretch (
 ```
         git clone https://github.com/ipbc-dev/bittube.git
 	cd bittube
-	git checkout tags/2.1.0.2
+	git checkout tags/v3.1.0.2
 ```
 * Build:
 
@@ -295,9 +295,9 @@ application.
 	
         cd bittube
 
-* If you would like a specific [version/tag](https://github.com/ipbc-dev/bittube/tags), do a git checkout for that version. eg. '2.1.0.2'. If you dont care about the version and just want binaries from master, skip this step:
+* If you would like a specific [version/tag](https://github.com/ipbc-dev/bittube/tags), do a git checkout for that version. eg. 'v3.1.0.2'. If you dont care about the version and just want binaries from master, skip this step:
 	
-        git checkout 2.1.0.2
+        git checkout v3.1.0.2
 
 * If you are on a 64-bit system, run:
 
