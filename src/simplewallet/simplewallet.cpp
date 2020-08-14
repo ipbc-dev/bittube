@@ -7254,18 +7254,27 @@ bool simple_wallet::sweep_tube4_main(uint64_t below, bool locked, const std::vec
   std::vector<uint8_t> extra;
 
   int tube4_prefix;
+  int tube4_prefix_sub;
 
   if (m_wallet->nettype() == cryptonote::MAINNET) {
     tube4_prefix = 0x256ea0;
+    tube4_prefix_sub = 0x2beea0;
   }
   else if (m_wallet->nettype() == cryptonote::TESTNET) {
     tube4_prefix = 0x9f;
+    tube4_prefix_sub = 0x699a;
   }
   else {
     tube4_prefix = 0x99;
+    tube4_prefix_sub = 0x5c1a;
   }
 
   std::string target_addr = tools::base58::encode_addr(tube4_prefix, t_serializable_object_to_blob(m_wallet->get_account().get_keys().m_account_address));;
+
+  if(m_current_subaddress_account!=0)
+  {
+    target_addr = tools::base58::encode_addr(tube4_prefix_sub, t_serializable_object_to_blob(m_wallet->get_subaddress({m_current_subaddress_account,0})));;
+  };
 
   success_msg_writer() << tr("Sweeping Wallet to: ") << target_addr;
   success_msg_writer() << tr("This Bittube 4 wallet can be restored using the seed / private keys of this wallet");

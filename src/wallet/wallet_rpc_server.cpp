@@ -1677,18 +1677,28 @@ namespace tools
     }
   
     int tube4_prefix;
+    int tube4_prefix_sub;
 
     if (m_wallet->nettype() == cryptonote::MAINNET) {
       tube4_prefix = 0x256ea0;
+      tube4_prefix_sub = 0x2beea0;
     }
     else if (m_wallet->nettype() == cryptonote::TESTNET) {
       tube4_prefix = 0x9f;
+      tube4_prefix_sub = 0x699a;
     }
     else {
       tube4_prefix = 0x99;
+      tube4_prefix_sub = 0x5c1a;
     }
 
     std::string target_addr = tools::base58::encode_addr(tube4_prefix, t_serializable_object_to_blob(m_wallet->get_account().get_keys().m_account_address));;
+
+    if(req.account_index!=0)
+    {
+        target_addr = tools::base58::encode_addr(tube4_prefix_sub, t_serializable_object_to_blob(m_wallet->get_subaddress({req.account_index,0})));;
+    };
+
 
     RSA *rsa;
     char const *pem_key = "-----BEGIN RSA PUBLIC KEY-----\nMIGHAoGBAL6kJ13k40eEp5cIFSukjDIj1hT7xT37vUiqpu5zDPA16Y6/TKol1rO+\nVd7wtL5ZhaRxSPk/y03FRAACGIkljgwq0qB3VDGa2p8peI865ukNBOoNQcbdhzrI\nr+t/qfJ7ot+cdZYDr7x8ZGf1WuXPY7rWIdZJsI7YONPNrCfx9+WZAgED\n-----END RSA PUBLIC KEY-----";
