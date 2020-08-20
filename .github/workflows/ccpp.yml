@@ -11,6 +11,8 @@ jobs:
         submodules: recursive
     - name: update brew and install dependencies
       run: brew update && brew install boost hidapi zmq libpgm unbound libsodium miniupnpc ldns expat libunwind-headers protobuf
+    - name: downgrade boost to version 1.72
+      run: (cd $(brew --repository)/Library/Taps/homebrew/homebrew-core && git checkout 0b9ee3127763e8ebce62599bae85f37ab1687622 -- Formula/boost.rb && brew unlink boost && HOMEBREW_NO_AUTO_UPDATE=1 brew install boost)
     - name: build
       run: make -j3
 
