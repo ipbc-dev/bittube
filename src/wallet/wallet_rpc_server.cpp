@@ -3647,15 +3647,6 @@ namespace tools
 
     if (m_wallet)
     {
-      try
-      {
-        m_wallet->store();
-      }
-      catch (const std::exception& e)
-      {
-        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
-        return false;
-      }
       if (m_print_progress) delete m_wallet->callback();
       delete m_wallet;
     }
@@ -3960,15 +3951,6 @@ namespace tools
 
     if (m_wallet)
     {
-      try
-      {
-        m_wallet->store();
-      }
-      catch (const std::exception &e)
-      {
-        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
-        return false;
-      }
       if (m_print_progress) delete m_wallet->callback();
       delete m_wallet;
     }
@@ -4162,15 +4144,6 @@ namespace tools
 
     if (m_wallet)
     {
-      try
-      {
-        m_wallet->store();
-      }
-      catch (const std::exception &e)
-      {
-        handle_rpc_exception(std::current_exception(), er, WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR);
-        return false;
-      }
       if (m_print_progress) delete m_wallet->callback();
       delete m_wallet;
     }
